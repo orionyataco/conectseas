@@ -1,0 +1,8 @@
+{
+  "name": "CONECTSEAS",
+  "description": "Workspace corporativo unificado para a Secretaria de Assistência Social do Amapá, integrando mural, sistemas externos, workflows administrativos e assistente de IA.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
