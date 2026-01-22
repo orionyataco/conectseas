@@ -40,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
           </div>
 
           <nav className="flex-1 p-4 space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => item.id !== 'admin' || user.role === 'ADMIN').map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}

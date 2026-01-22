@@ -1,5 +1,8 @@
 
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pool from './db.js';
+import bcrypt from 'bcryptjs';
 
 const initDB = async () => {
   try {
@@ -139,27 +142,32 @@ const initDB = async () => {
         title TEXT NOT NULL,
         description TEXT,
         event_date DATE NOT NULL,
+        event_end_date DATE,
         event_time TIME,
+        event_end_time TIME,
         visibility TEXT DEFAULT 'public',
         event_type TEXT DEFAULT 'other',
+        meeting_link TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('Tabela "calendar_events" verificada/criada.');
-    try {
-      await connection.query('ALTER TABLE calendar_events ADD COLUMN event_end_time TIME');
-      console.log('Coluna "event_end_time" adicionada à tabela calendar_events.');
-    } catch (error) {
-      // Ignore if column already exists
-    }
-    try {
-      await connection.query('ALTER TABLE calendar_events ADD COLUMN meeting_link TEXT');
-      console.log('Coluna "meeting_link" adicionada à tabela calendar_events.');
-    } catch (error) {
-      // Ignore if column already exists
-    }
+
+    // Create event_shares table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS event_shares (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES calendar_events(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(event_id, user_id)
+      )
+    `);
+    console.log('Tabela "event_shares" verificada/criada.');
 
     // Create user_folders table
     await connection.query(`
@@ -191,6 +199,21 @@ const initDB = async () => {
       )
     `);
     console.log('Tabela "user_files" verificada/criada.');
+
+    // Create folder_shares table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS folder_shares (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folder_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        permission TEXT DEFAULT 'READ', -- 'READ' or 'WRITE'
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (folder_id) REFERENCES user_folders(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(folder_id, user_id)
+      )
+    `);
+    console.log('Tabela "folder_shares" verificada/criada.');
 
     // Create user_notes table
     await connection.query(`
@@ -257,6 +280,68 @@ const initDB = async () => {
     `);
     console.log('Tabela "todos" verificada/criada.');
 
+    // Create system_settings table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "system_settings" verificada/criada.');
+
+    // Seed default system settings if empty
+    const [existingSettings] = await connection.query('SELECT COUNT(*) as count FROM system_settings');
+    if (existingSettings[0].count === 0) {
+      const defaultSettings = [
+        {
+          key: 'ldap_config',
+          value: JSON.stringify({
+            enabled: false,
+            host: '',
+            port: 389,
+            baseDn: '',
+            bindDn: '',
+            bindPassword: ''
+          })
+        },
+        {
+          key: 'login_ui',
+          value: JSON.stringify({
+            title: 'Login Administrativo',
+            subtitle: 'Entre com as credenciais locais ou de rede.',
+            logo_url: '',
+            background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
+            welcome_text: 'Gestão Administrativa Integrada',
+            description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
+          })
+        },
+        {
+          key: 'security_policy',
+          value: JSON.stringify({
+            min_password_length: 8,
+            require_special_chars: true,
+            session_timeout: 1440 // in minutes (24h)
+          })
+        },
+        {
+          key: 'upload_config',
+          value: JSON.stringify({
+            max_file_size: 10 * 1024 * 1024, // 10MB
+            allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+          })
+        }
+      ];
+
+      for (const setting of defaultSettings) {
+        await connection.query(`
+          INSERT INTO system_settings (key, value)
+          VALUES (?, ?)
+        `, [setting.key, setting.value]);
+      }
+      console.log('Configurações de sistema padrão inseridas.');
+    }
+
     // Seed default system shortcuts if empty
     const [existingSystems] = await connection.query('SELECT COUNT(*) as count FROM system_shortcuts');
     if (existingSystems[0].count === 0) {
@@ -283,12 +368,13 @@ const initDB = async () => {
 
     if (rows.length === 0) {
       // Insert default admin
+      const hashedPassword = await bcrypt.hash('admin', 10);
       await connection.query(`
         INSERT INTO users (username, password, name, email, role, department, position, avatar)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         'admin',
-        'admin',
+        hashedPassword,
         'Administrador Sistema',
         'admin@seas.ap.gov.br',
         'ADMIN',
@@ -296,9 +382,19 @@ const initDB = async () => {
         'Super Usuário',
         'https://ui-avatars.com/api/?name=Admin+Sistema&background=0D8ABC&color=fff'
       ]);
-      console.log('Usuário "admin" criado com sucesso (senha: admin).');
+      console.log('Usuário "admin" criado com sucesso (senha hasheada).');
     } else {
       console.log('Usuário "admin" já existe.');
+    }
+
+    // Migrate existing plaintext passwords to bcrypt
+    const [allUsers] = await connection.query('SELECT id, password FROM users');
+    for (const u of allUsers) {
+      if (!u.password.startsWith('$2a$') && !u.password.startsWith('$2b$')) {
+        console.log(`Migrando senha do usuário ID ${u.id}...`);
+        const hashed = await bcrypt.hash(u.password, 10);
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashed, u.id]);
+      }
     }
 
     connection.release();

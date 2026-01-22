@@ -5,6 +5,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pool from './db.js';
 import initDB from './init.js';
+import eventRoutes from './routes/events.js';
+import aiRoutes from './routes/ai.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import authMiddleware from './middleware/auth.js';
+import adminMiddleware from './middleware/admin.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +41,43 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Routes
+app.use('/api/events', eventRoutes);
+app.use('/api/ai', aiRoutes);
+
+// Routes with authentication
+app.use('/api/users', authMiddleware);
+app.use('/api/warnings', authMiddleware);
+app.use('/api/notes', authMiddleware);
+app.use('/api/shortcuts', authMiddleware);
+app.use('/api/system-shortcuts', authMiddleware);
+app.use('/api/todos', authMiddleware);
+app.use('/api/posts', authMiddleware);
+app.use('/api/mural/feed', authMiddleware);
+app.use('/api/drive', authMiddleware);
+
+// Admin routes
+app.use('/api/admin', [authMiddleware, adminMiddleware]);
+
+// Public Settings Route (No auth needed)
+app.get('/api/public/settings/:key', async (req, res) => {
+    const { key } = req.params;
+    // Only allow specific keys to be public
+    const publicKeys = ['login_ui'];
+    if (!publicKeys.includes(key)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT value FROM system_settings WHERE key = ?', [key]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Configuração não encontrada' });
+        res.json(JSON.parse(rows[0].value));
+    } catch (error) {
+        console.error(`Erro ao buscar configuração pública ${key}:`, error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
 // Initialize DB
 initDB();
 
@@ -39,7 +85,7 @@ initDB();
 app.get('/api/test-db', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT 1 + 1 AS solution');
-        res.json({ message: 'Conectado ao MySQL com sucesso!', result: rows[0].solution });
+        res.json({ message: 'Conectado ao banco de dados com sucesso!', result: rows[0].solution });
     } catch (error) {
         console.error('Erro ao conectar no banco:', error);
         res.status(500).json({ error: 'Erro ao conectar no banco de dados', details: error.message });
@@ -51,20 +97,96 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
+        // Check LDAP configuration
+        const [ldapSettings] = await pool.query('SELECT value FROM system_settings WHERE key = ?', ['ldap_config']);
+        const ldapConfig = ldapSettings.length > 0 ? JSON.parse(ldapSettings[0].value) : { enabled: false };
+
+        // Try LDAP authentication if enabled
+        if (ldapConfig.enabled) {
+            try {
+                const { authenticateLDAP } = await import('./ldapAuth.js');
+                const ldapResult = await authenticateLDAP(username, password, ldapConfig);
+
+                if (ldapResult.success) {
+                    // LDAP authentication successful - create or update local user
+                    let [users] = await pool.query('SELECT * FROM users WHERE username = ?', [ldapResult.userInfo.username]);
+
+                    if (users.length === 0) {
+                        // Create new user from LDAP
+                        const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+                        await pool.query(
+                            'INSERT INTO users (username, name, email, password, role, department, position) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                            [ldapResult.userInfo.username, ldapResult.userInfo.name, ldapResult.userInfo.email, randomPassword, 'USER', ldapResult.userInfo.department, ldapResult.userInfo.position]
+                        );
+                        [users] = await pool.query('SELECT * FROM users WHERE username = ?', [ldapResult.userInfo.username]);
+                        console.log(`✓ Created new user from LDAP: ${ldapResult.userInfo.username}`);
+                    }
+
+                    const user = users[0];
+                    const token = jwt.sign(
+                        { id: user.id, username: user.username, role: user.role },
+                        process.env.JWT_SECRET || 'secret',
+                        { expiresIn: '24h' }
+                    );
+
+                    return res.json({
+                        success: true,
+                        token,
+                        user: {
+                            id: user.id.toString(),
+                            name: user.name,
+                            email: user.email,
+                            role: user.role,
+                            department: user.department,
+                            position: user.position,
+                            avatar: user.avatar,
+                            nickname: user.nickname,
+                            bio: user.bio,
+                            birth_date: user.birth_date,
+                            mobile_phone: user.mobile_phone,
+                            registration_number: user.registration_number,
+                            appointment_date: user.appointment_date
+                        }
+                    });
+                } else {
+                    console.log(`LDAP auth failed for ${username}: ${ldapResult.reason}`);
+                }
+            } catch (ldapError) {
+                console.error('LDAP authentication error:', ldapError.message);
+            }
+        }
+
+        // Fallback to local authentication
         const [rows] = await pool.query(
-            'SELECT * FROM users WHERE username = ? AND password = ?',
-            [username, password]
+            'SELECT * FROM users WHERE username = ?',
+            [username]
         );
 
         if (rows.length > 0) {
             const user = rows[0];
+
+            // Verify password
+            const isMatch = await bcrypt.compare(password, user.password);
+
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+            }
+
+            // Generate JWT
+            const token = jwt.sign(
+                { id: user.id, username: user.username, role: user.role },
+                process.env.JWT_SECRET || 'secret',
+                { expiresIn: '24h' }
+            );
+
             res.json({
                 success: true,
+                token,
                 user: {
                     id: user.id.toString(),
                     name: user.name,
                     email: user.email,
-                    role: user.role, // Ensure this matches UserRole enum values roughly
+                    role: user.role,
                     department: user.department,
                     position: user.position,
                     avatar: user.avatar,
@@ -82,6 +204,17 @@ app.post('/api/login', async (req, res) => {
     } catch (error) {
         console.error('Erro no login:', error);
         res.status(500).json({ success: false, message: 'Erro interno no servidor' });
+    }
+});
+
+// GET Users (for sharing)
+app.get('/api/users', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, name, email, avatar FROM users ORDER BY name ASC');
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+        res.status(500).json({ error: 'Erro ao buscar usuários' });
     }
 });
 
@@ -711,116 +844,7 @@ app.delete('/api/comments/:id', async (req, res) => {
     }
 });
 
-// ============= CALENDAR EVENTS API =============
-
-// Get all events (filtered by visibility and user permissions)
-app.get('/api/events', async (req, res) => {
-    const { userId, userRole } = req.query;
-
-    try {
-        let query = `
-            SELECT 
-                e.*,
-                u.name as author_name,
-                u.position as author_role,
-                u.avatar as author_avatar
-            FROM calendar_events e
-            JOIN users u ON e.user_id = u.id
-        `;
-
-        const conditions = [];
-        const params = [];
-
-        // If user is not admin, filter visibility
-        if (userRole !== 'ADMIN') {
-            if (userId) {
-                conditions.push('(e.visibility = ? OR e.user_id = ?)');
-                params.push('public', userId);
-            } else {
-                conditions.push('e.visibility = ?');
-                params.push('public');
-            }
-        }
-
-        if (conditions.length > 0) {
-            query += ' WHERE ' + conditions.join(' AND ');
-        }
-
-        query += ' ORDER BY e.event_date ASC, e.event_time ASC';
-
-        const [events] = await pool.query(query, params);
-        res.json(events);
-    } catch (error) {
-        console.error('Erro ao buscar eventos:', error);
-        res.status(500).json({ error: 'Erro ao buscar eventos' });
-    }
-});
-
-// Create new event
-app.post('/api/events', async (req, res) => {
-    const { userId, title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink } = req.body;
-
-    try {
-        const [result] = await pool.query(
-            'INSERT INTO calendar_events (user_id, title, description, event_date, event_end_date, event_time, event_end_time, visibility, event_type, meeting_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [userId, title, description || null, eventDate, eventEndDate || null, eventTime || null, eventEndTime || null, visibility || 'public', eventType || 'other', meetingLink || null]
-        );
-
-        res.json({ success: true, eventId: result.insertId });
-    } catch (error) {
-        console.error('Erro ao criar evento:', error);
-        res.status(500).json({ error: 'Erro ao criar evento' });
-    }
-});
-
-// Edit event
-app.put('/api/events/:id', async (req, res) => {
-    const { id } = req.params;
-    const { userId, userRole, title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink } = req.body;
-
-    try {
-        // Verify ownership or admin
-        const [events] = await pool.query('SELECT user_id FROM calendar_events WHERE id = ?', [id]);
-        if (events.length === 0) {
-            return res.status(404).json({ error: 'Evento não encontrado' });
-        }
-        if (events[0].user_id != userId && userRole !== 'ADMIN') {
-            return res.status(403).json({ error: 'Não autorizado' });
-        }
-
-        await pool.query(
-            'UPDATE calendar_events SET title = ?, description = ?, event_date = ?, event_end_date = ?, event_time = ?, event_end_time = ?, visibility = ?, event_type = ?, meeting_link = ? WHERE id = ?',
-            [title, description || null, eventDate, eventEndDate || null, eventTime || null, eventEndTime || null, visibility, eventType, meetingLink || null, id]
-        );
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao editar evento:', error);
-        res.status(500).json({ error: 'Erro ao editar evento' });
-    }
-});
-
-// Delete event
-app.delete('/api/events/:id', async (req, res) => {
-    const { id } = req.params;
-    const { userId, userRole } = req.query;
-
-    try {
-        // Verify ownership or admin
-        const [events] = await pool.query('SELECT user_id FROM calendar_events WHERE id = ?', [id]);
-        if (events.length === 0) {
-            return res.status(404).json({ error: 'Evento não encontrado' });
-        }
-        if (events[0].user_id != userId && userRole !== 'ADMIN') {
-            return res.status(403).json({ error: 'Não autorizado' });
-        }
-
-        await pool.query('DELETE FROM calendar_events WHERE id = ?', [id]);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao deletar evento:', error);
-        res.status(500).json({ error: 'Erro ao deletar evento' });
-    }
-});
+// Event routes removed (now in ./routes/events.js)
 
 // Get unified mural feed (posts + public events)
 app.get('/api/mural/feed', async (req, res) => {
@@ -854,7 +878,7 @@ app.get('/api/mural/feed', async (req, res) => {
             post.attachments = attachments;
         }
 
-        // Get public events
+        // Get events (public + shared + own)
         const [events] = await pool.query(`
             SELECT 
                 e.id,
@@ -874,8 +898,9 @@ app.get('/api/mural/feed', async (req, res) => {
                 u.avatar as author_avatar
             FROM calendar_events e
             JOIN users u ON e.user_id = u.id
-            WHERE e.visibility = 'public'
-        `);
+            LEFT JOIN event_shares es ON e.id = es.event_id
+            WHERE e.visibility = 'public' OR e.user_id = ? OR es.user_id = ?
+        `, [userId, userId]);
 
         // Combine and sort by created_at
         const feed = [...posts, ...events].sort((a, b) =>
@@ -896,19 +921,44 @@ app.get('/api/drive/folders', async (req, res) => {
     const { userId, parentId } = req.query;
 
     try {
-        let query = 'SELECT * FROM user_folders WHERE user_id = ?';
-        const params = [userId];
-
+        let folders;
         if (parentId && parentId !== 'null') {
-            query += ' AND parent_id = ?';
-            params.push(parentId);
+            // Verify access to subfolder
+            const [access] = await pool.query(`
+                SELECT f.*, COALESCE(s.permission, 'OWNER') as permission
+                FROM user_folders f
+                LEFT JOIN folder_shares s ON f.id = s.folder_id AND s.user_id = ?
+            WHERE f.id = ? AND(f.user_id = ? OR s.user_id = ?)
+                `, [userId, parentId, userId, userId]);
+
+            if (access.length === 0) {
+                return res.status(403).json({ error: 'Acesso negado' });
+            }
+
+            const [rows] = await pool.query(
+                `SELECT f.*, 'WRITE' as permission 
+                 FROM user_folders f 
+                 WHERE f.parent_id = ?
+            ORDER BY name ASC`,
+                [parentId]
+            );
+            folders = rows;
         } else {
-            query += ' AND parent_id IS NULL';
+            // Root level: My folders + folders shared with me
+            const [rows] = await pool.query(`
+                SELECT f.*, 'OWNER' as permission, NULL as share_id
+                FROM user_folders f
+                WHERE f.user_id = ? AND f.parent_id IS NULL
+                UNION ALL
+                SELECT f.*, s.permission, s.id as share_id
+                FROM user_folders f
+                JOIN folder_shares s ON f.id = s.folder_id
+                WHERE s.user_id = ?
+            ORDER BY name ASC
+                `, [userId, userId]);
+            folders = rows;
         }
 
-        query += ' ORDER BY name ASC';
-
-        const [folders] = await pool.query(query, params);
         res.json(folders);
     } catch (error) {
         console.error('Erro ao buscar pastas:', error);
@@ -921,6 +971,20 @@ app.post('/api/drive/folders', async (req, res) => {
     const { userId, parentId, name } = req.body;
 
     try {
+        if (parentId) {
+            // Verify WRITE permission to parent folder
+            const [access] = await pool.query(`
+                SELECT f.id 
+                FROM user_folders f
+                LEFT JOIN folder_shares s ON f.id = s.folder_id AND s.user_id = ?
+            WHERE f.id = ? AND(f.user_id = ? OR s.permission = 'WRITE')
+                `, [userId, parentId, userId]);
+
+            if (access.length === 0) {
+                return res.status(403).json({ error: 'Acesso negado para criação de pastas' });
+            }
+        }
+
         await pool.query(
             'INSERT INTO user_folders (user_id, parent_id, name) VALUES (?, ?, ?)',
             [userId, parentId || null, name]
@@ -960,20 +1024,32 @@ app.get('/api/drive/files', async (req, res) => {
     const { userId, folderId } = req.query;
 
     try {
-        let query = 'SELECT * FROM user_files WHERE user_id = ?';
-        const params = [userId];
-
         if (folderId && folderId !== 'null') {
-            query += ' AND folder_id = ?';
-            params.push(folderId);
+            // Verify access to folder
+            const [access] = await pool.query(`
+                SELECT f.id 
+                FROM user_folders f
+                LEFT JOIN folder_shares s ON f.id = s.folder_id AND s.user_id = ?
+            WHERE f.id = ? AND(f.user_id = ? OR s.user_id = ?)
+                `, [userId, folderId, userId, userId]);
+
+            if (access.length === 0) {
+                return res.status(403).json({ error: 'Acesso negado' });
+            }
+
+            const [files] = await pool.query(
+                'SELECT * FROM user_files WHERE folder_id = ? ORDER BY created_at DESC',
+                [folderId]
+            );
+            res.json(files);
         } else {
-            query += ' AND folder_id IS NULL';
+            // Root level files (only owner's files)
+            const [files] = await pool.query(
+                'SELECT * FROM user_files WHERE user_id = ? AND folder_id IS NULL ORDER BY created_at DESC',
+                [userId]
+            );
+            res.json(files);
         }
-
-        query += ' ORDER BY created_at DESC';
-
-        const [files] = await pool.query(query, params);
-        res.json(files);
     } catch (error) {
         console.error('Erro ao buscar arquivos:', error);
         res.status(500).json({ error: 'Erro ao buscar arquivos' });
@@ -988,6 +1064,20 @@ app.post('/api/drive/upload', upload.single('file'), async (req, res) => {
     if (!file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
 
     try {
+        if (folderId && folderId !== 'null') {
+            // Verify WRITE permission
+            const [access] = await pool.query(`
+                SELECT f.id 
+                FROM user_folders f
+                LEFT JOIN folder_shares s ON f.id = s.folder_id AND s.user_id = ?
+            WHERE f.id = ? AND(f.user_id = ? OR s.permission = 'WRITE')
+                `, [userId, folderId, userId]);
+
+            if (access.length === 0) {
+                return res.status(403).json({ error: 'Acesso negado para upload' });
+            }
+        }
+
         await pool.query(
             'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?)',
             [userId, folderId || null, file.filename, file.originalname, file.mimetype, file.size]
@@ -1017,6 +1107,202 @@ app.delete('/api/drive/files/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro ao deletar arquivo' });
     }
 });
+
+// SHARING ENDPOINTS
+app.post('/api/drive/folders/:id/share', async (req, res) => {
+    const { id } = req.params;
+    const { userId, targetUserId, permission } = req.body;
+
+    try {
+        // Verify ownership
+        const [owner] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
+        if (owner.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
+        if (owner[0].user_id != userId) return res.status(403).json({ error: 'Apenas o dono pode compartilhar' });
+
+        await pool.query(
+            'INSERT INTO folder_shares (folder_id, user_id, permission) VALUES (?, ?, ?) ON CONFLICT(folder_id, user_id) DO UPDATE SET permission = EXCLUDED.permission',
+            [id, targetUserId, permission]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao compartilhar:', error);
+        res.status(500).json({ error: 'Erro ao compartilhar pasta' });
+    }
+});
+
+app.get('/api/drive/folders/:id/shares', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await pool.query(`
+            SELECT s.*, u.name as user_name, u.email as user_email, u.avatar as user_avatar
+            FROM folder_shares s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.folder_id = ?
+            `, [id]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao buscar compartilhamentos:', error);
+        res.status(500).json({ error: 'Erro ao buscar compartilhamentos' });
+    }
+});
+
+app.delete('/api/drive/folders/:id/shares/:targetUserId', async (req, res) => {
+    const { id, targetUserId } = req.params;
+    const { userId } = req.query;
+
+    try {
+        // Verify ownership or self-unshare
+        const [owner] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
+        if (owner[0].user_id != userId && targetUserId != userId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
+
+        await pool.query('DELETE FROM folder_shares WHERE folder_id = ? AND user_id = ?', [id, targetUserId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao remover compartilhamento:', error);
+        res.status(500).json({ error: 'Erro ao remover compartilhamento' });
+    }
+});
+
+// ============= ADMIN API =============
+// Note: These routes are prefixed with /api/admin by the middleware on line 60
+
+// Get System Settings
+app.get('/api/admin/settings', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM system_settings');
+        const settings = {};
+        rows.forEach(row => {
+            settings[row.key] = JSON.parse(row.value);
+        });
+        res.json(settings);
+    } catch (error) {
+        console.error('Erro ao buscar configurações:', error);
+        res.status(500).json({ error: 'Erro ao buscar configurações' });
+    }
+});
+
+// Update System Setting
+app.put('/api/admin/settings/:key', async (req, res) => {
+    const { key } = req.params;
+    const { value } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP',
+            [key, JSON.stringify(value)]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao atualizar configuração ${key}:`, error);
+        res.status(500).json({ error: `Erro ao atualizar configuração ${key}` });
+    }
+});
+
+// Upload Setting Image (e.g. login background)
+app.post('/api/admin/settings/upload/:key', upload.single('file'), async (req, res) => {
+    const { key } = req.params;
+    const { field } = req.body; // Sub-field within the setting JSON
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    try {
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const filePath = `${protocol}://${host}/uploads/${req.file.filename}`;
+
+        // Get current setting
+        const [rows] = await pool.query('SELECT value FROM system_settings WHERE key = ?', [key]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Configuração não encontrada' });
+
+        const settingValue = JSON.parse(rows[0].value);
+        settingValue[field] = filePath;
+
+        // Update with new file path
+        await pool.query(
+            'UPDATE system_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+            [JSON.stringify(settingValue), key]
+        );
+
+        res.json({ success: true, url: filePath });
+    } catch (error) {
+        console.error(`Erro ao fazer upload para configuração ${key}:`, error);
+        res.status(500).json({ error: 'Erro ao salvar arquivo' });
+    }
+});
+
+// Admin Dashboard stats
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const [userCount] = await pool.query('SELECT COUNT(*) as total FROM users');
+        const [adminCount] = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = "ADMIN"');
+        const [postCount] = await pool.query('SELECT COUNT(*) as total FROM posts');
+        const [fileCount] = await pool.query('SELECT COUNT(*) as total FROM user_files');
+
+        res.json({
+            users: userCount[0].total,
+            activeUsers: userCount[0].total - adminCount[0].total, // Non-admins
+            posts: postCount[0].total,
+            files: fileCount[0].total
+        });
+    } catch (error) {
+        console.error('Erro ao buscar estatísticas:', error);
+        res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+    }
+});
+
+// Update User Role (Admin only)
+app.put('/api/admin/users/:id/role', async (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['USER', 'ADMIN'].includes(role)) {
+        return res.status(400).json({ error: 'Role inválida' });
+    }
+
+    try {
+        await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao atualizar role do usuário ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao atualizar permissão' });
+    }
+});
+
+// Manage Users (Admin only)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, username, name, email, role, department, position, avatar FROM users ORDER BY name ASC');
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao buscar usuários (admin):', error);
+        res.status(500).json({ error: 'Erro ao buscar usuários' });
+    }
+});
+
+
+// Test LDAP Connection (Admin only)
+app.post('/api/admin/ldap/test', async (req, res) => {
+    try {
+        const [ldapSettings] = await pool.query('SELECT value FROM system_settings WHERE key = ?', ['ldap_config']);
+        const ldapConfig = ldapSettings.length > 0 ? JSON.parse(ldapSettings[0].value) : { enabled: false };
+
+        const { testLDAPConnection } = await import('./ldapTest.js');
+        const result = await testLDAPConnection(ldapConfig);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Erro ao testar LDAP:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao testar conexão LDAP',
+            details: error.message
+        });
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);

@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Printer, RefreshCcw, Plus, X, Edit2, Trash2, Calendar as CalendarIcon, Clock, Eye, EyeOff } from 'lucide-react';
 import { Event, User } from '../types';
+import api from '../services/api';
 
 interface CalendarProps {
   user: User | null;
@@ -10,8 +11,10 @@ interface CalendarProps {
 const Calendar: React.FC<CalendarProps> = ({ user }) => {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [events, setEvents] = React.useState<Event[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
   const [showModal, setShowModal] = React.useState(false);
   const [editingEvent, setEditingEvent] = React.useState<Event | null>(null);
+  const [sharedWith, setSharedWith] = React.useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -22,7 +25,7 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
     eventTime: '',
     eventEndTime: '',
     meetingLink: '',
-    visibility: 'public' as 'public' | 'private',
+    visibility: 'public' as 'public' | 'private' | 'shared',
     eventType: 'other' as 'meeting' | 'holiday' | 'birthday' | 'vacation' | 'other'
   });
 
@@ -44,14 +47,23 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
 
   React.useEffect(() => {
     fetchEvents();
+    fetchUsers();
   }, [user]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      setUsers(res.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
 
   const fetchEvents = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:3002/api/events?userId=${user.id}&userRole=${user.role}`);
-      const data = await res.json();
-      setEvents(data);
+      const res = await api.get(`/events?userId=${user.id}&userRole=${user.role}`);
+      setEvents(res.data);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
@@ -61,21 +73,18 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
     if (!user || !formData.title || !formData.eventDate) return;
 
     try {
-      await fetch('http://localhost:3002/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          title: formData.title,
-          description: formData.description,
-          eventDate: formData.eventDate,
-          eventEndDate: formData.eventEndDate || null,
-          eventTime: formData.eventTime || null,
-          eventEndTime: formData.eventEndTime || null,
-          visibility: formData.visibility,
-          eventType: formData.eventType,
-          meetingLink: formData.meetingLink || null
-        })
+      await api.post('/events', {
+        userId: user.id,
+        title: formData.title,
+        description: formData.description,
+        eventDate: formData.eventDate,
+        eventEndDate: formData.eventEndDate || null,
+        eventTime: formData.eventTime || null,
+        eventEndTime: formData.eventEndTime || null,
+        visibility: formData.visibility,
+        eventType: formData.eventType,
+        meetingLink: formData.meetingLink || null,
+        sharedWith: formData.visibility === 'shared' ? sharedWith : []
       });
 
       resetForm();
@@ -89,22 +98,19 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
     if (!user || !editingEvent) return;
 
     try {
-      await fetch(`http://localhost:3002/api/events/${editingEvent.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          userRole: user.role,
-          title: formData.title,
-          description: formData.description,
-          eventDate: formData.eventDate,
-          eventEndDate: formData.eventEndDate || null,
-          eventTime: formData.eventTime || null,
-          eventEndTime: formData.eventEndTime || null,
-          visibility: formData.visibility,
-          eventType: formData.eventType,
-          meetingLink: formData.meetingLink || null
-        })
+      await api.put(`/events/${editingEvent.id}`, {
+        userId: user.id,
+        userRole: user.role,
+        title: formData.title,
+        description: formData.description,
+        eventDate: formData.eventDate,
+        eventEndDate: formData.eventEndDate || null,
+        eventTime: formData.eventTime || null,
+        eventEndTime: formData.eventEndTime || null,
+        visibility: formData.visibility,
+        eventType: formData.eventType,
+        meetingLink: formData.meetingLink || null,
+        sharedWith: formData.visibility === 'shared' ? sharedWith : []
       });
 
       resetForm();
@@ -118,9 +124,7 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
     if (!user || !confirm('Deseja realmente excluir este evento?')) return;
 
     try {
-      await fetch(`http://localhost:3002/api/events/${eventId}?userId=${user.id}&userRole=${user.role}`, {
-        method: 'DELETE'
-      });
+      await api.delete(`/events/${eventId}?userId=${user.id}&userRole=${user.role}`);
       fetchEvents();
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -139,6 +143,7 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
       visibility: 'public',
       eventType: 'other'
     });
+    setSharedWith([]);
     setEditingEvent(null);
     setShowModal(false);
   };
@@ -161,6 +166,11 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
       visibility: event.visibility,
       eventType: event.event_type
     });
+    if (event.visibility === 'shared' && event.shared_with) {
+      setSharedWith(event.shared_with.split(','));
+    } else {
+      setSharedWith([]);
+    }
     setShowModal(true);
   };
 
@@ -689,8 +699,48 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
                     <EyeOff size={16} className="text-slate-500" />
                     <span className="text-sm text-slate-700">Privado</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      checked={formData.visibility === 'shared'}
+                      onChange={() => setFormData({ ...formData, visibility: 'shared' })}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <Eye size={16} className="text-blue-500" />
+                    <span className="text-sm text-slate-700">Compartilhado</span>
+                  </label>
                 </div>
               </div>
+
+              {formData.visibility === 'shared' && (
+                <div className="border border-slate-100 rounded-xl p-3 bg-slate-50 space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase">Compartilhar com:</label>
+                  <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                    {users.filter(u => u.id != user?.id).map(u => (
+                      <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors group">
+                        <input
+                          type="checkbox"
+                          checked={sharedWith.includes(u.id.toString())}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSharedWith([...sharedWith, u.id.toString()]);
+                            } else {
+                              setSharedWith(sharedWith.filter(id => id !== u.id.toString()));
+                            }
+                          }}
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-6 h-6 rounded-full" alt="" />
+                        <span className="text-sm text-slate-700 group-hover:text-blue-600 font-medium">{u.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {sharedWith.length === 0 && (
+                    <p className="text-[10px] text-red-500 font-medium italic">Selecione pelo menos um usuário.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { User, Folder, DriveFile } from '../types';
+import api from '../services/api';
 import {
   Folder as FolderIcon,
   FileText,
@@ -15,7 +16,11 @@ import {
   File,
   Image,
   MoreVertical,
-  X
+  X,
+  Share2,
+  Users as UsersIcon,
+  Shield,
+  ShieldCheck
 } from 'lucide-react';
 
 interface DirectoryProps {
@@ -32,6 +37,12 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
   // Modals state
   const [showNewFolderModal, setShowNewFolderModal] = React.useState(false);
   const [newFolderName, setNewFolderName] = React.useState('');
+  const [showShareModal, setShowShareModal] = React.useState(false);
+  const [sharingFolder, setSharingFolder] = React.useState<Folder | null>(null);
+  const [allUsers, setAllUsers] = React.useState<User[]>([]);
+  const [folderShares, setFolderShares] = React.useState<any[]>([]);
+  const [shareLoading, setShareLoading] = React.useState(false);
+
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -47,14 +58,12 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
       const parentId = currentFolder ? currentFolder.id : 'null';
 
       // Fetch folders
-      const foldersRes = await fetch(`http://localhost:3002/api/drive/folders?userId=${user.id}&parentId=${parentId}`);
-      const foldersData = await foldersRes.json();
-      setFolders(foldersData);
+      const foldersRes = await api.get(`/drive/folders?userId=${user.id}&parentId=${parentId}`);
+      setFolders(foldersRes.data);
 
       // Fetch files
-      const filesRes = await fetch(`http://localhost:3002/api/drive/files?userId=${user.id}&folderId=${parentId}`);
-      const filesData = await filesRes.json();
-      setFiles(filesData);
+      const filesRes = await api.get(`/drive/files?userId=${user.id}&folderId=${parentId}`);
+      setFiles(filesRes.data);
     } catch (error) {
       console.error('Failed to fetch content:', error);
     } finally {
@@ -62,18 +71,66 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      setAllUsers(res.data);
+    } catch (e) {
+      console.error('Failed to fetch users:', e);
+    }
+  };
+
+  const fetchShares = async (folderId: number) => {
+    try {
+      const res = await api.get(`/drive/folders/${folderId}/shares`);
+      setFolderShares(res.data);
+    } catch (e) {
+      console.error('Failed to fetch shares:', e);
+    }
+  };
+
+  const handleShare = async (targetUserId: string, permission: 'READ' | 'WRITE') => {
+    if (!user || !sharingFolder) return;
+    setShareLoading(true);
+    try {
+      await api.post(`/drive/folders/${sharingFolder.id}/share`, {
+        userId: user.id,
+        targetUserId,
+        permission
+      });
+      fetchShares(sharingFolder.id);
+    } catch (e) {
+      console.error('Failed to share:', e);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRemoveShare = async (targetUserId: string) => {
+    if (!user || !sharingFolder) return;
+    try {
+      await api.delete(`/drive/folders/${sharingFolder.id}/shares/${targetUserId}?userId=${user.id}`);
+      fetchShares(sharingFolder.id);
+    } catch (e) {
+      console.error('Failed to remove share:', e);
+    }
+  };
+
+  const openShareModal = (folder: Folder) => {
+    setSharingFolder(folder);
+    setShowShareModal(true);
+    fetchUsers();
+    fetchShares(folder.id);
+  };
+
   const handleCreateFolder = async () => {
     if (!user || !newFolderName.trim()) return;
 
     try {
-      await fetch('http://localhost:3002/api/drive/folders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          parentId: currentFolder?.id,
-          name: newFolderName
-        })
+      await api.post('/drive/folders', {
+        userId: user.id,
+        parentId: currentFolder?.id,
+        name: newFolderName
       });
 
       setNewFolderName('');
@@ -88,9 +145,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
     if (!user || !confirm('Tem certeza? Isso excluirá a pasta e todo seu conteúdo.')) return;
 
     try {
-      await fetch(`http://localhost:3002/api/drive/folders/${folderId}?userId=${user.id}`, {
-        method: 'DELETE'
-      });
+      await api.delete(`/drive/folders/${folderId}?userId=${user.id}`);
       fetchContent();
     } catch (error) {
       console.error('Failed to delete folder:', error);
@@ -110,9 +165,8 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
 
     setUploading(true);
     try {
-      await fetch('http://localhost:3002/api/drive/upload', {
-        method: 'POST',
-        body: formData
+      await api.post('/drive/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchContent();
     } catch (error) {
@@ -127,9 +181,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
     if (!user || !confirm('Deseja excluir este arquivo?')) return;
 
     try {
-      await fetch(`http://localhost:3002/api/drive/files/${fileId}?userId=${user.id}`, {
-        method: 'DELETE'
-      });
+      await api.delete(`/drive/files/${fileId}?userId=${user.id}`);
       fetchContent();
     } catch (error) {
       console.error('Failed to delete file:', error);
@@ -204,14 +256,15 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
           />
           <button
             onClick={() => setShowNewFolderModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            disabled={currentFolder !== null && (currentFolder as any).permission === 'READ'}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
           >
             <FolderIcon size={18} />
             Nova Pasta
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || (currentFolder !== null && (currentFolder as any).permission === 'READ')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-70"
           >
             {uploading ? (
@@ -282,15 +335,41 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                 onDoubleClick={() => navigateToFolder(folder)}
                 className="group relative p-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center text-center gap-3"
               >
-                <FolderIcon size={48} className="text-blue-400 group-hover:text-blue-500 fill-blue-100" />
-                <span className="text-sm font-medium text-slate-700 truncate w-full">{folder.name}</span>
+                <FolderIcon size={48} className={`group-hover:text-blue-500 fill-blue-100 ${folder.user_id != user?.id ? 'text-indigo-400' : 'text-blue-400'}`} />
+                <div className="flex items-center gap-1 w-full justify-center">
+                  {folder.user_id != user?.id && <UsersIcon size={12} className="text-indigo-400" />}
+                  <span className="text-sm font-medium text-slate-700 truncate">{folder.name}</span>
+                </div>
 
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
-                  className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 rounded p-1 shadow-sm">
+                  {folder.user_id == user?.id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openShareModal(folder); }}
+                      className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                      title="Compartilhar"
+                    >
+                      <Share2 size={14} />
+                    </button>
+                  )}
+                  {folder.user_id == user?.id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+                      title="Excluir"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                  {folder.user_id != user?.id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveShare(user!.id.toString()); }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+                      title="Sair do compartilhamento"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
@@ -312,7 +391,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
 
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 rounded p-1 shadow-sm">
                   <a
-                    href={`http://localhost:3002/uploads/${file.filename}`}
+                    href={`/uploads/${file.filename}`}
                     download={file.original_name}
                     className="p-1 hover:text-blue-600"
                     title="Baixar"
@@ -360,6 +439,111 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50"
               >
                 Criar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Share Modal */}
+      {showShareModal && sharingFolder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl animate-fadeIn flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Compartilhar Pasta</h3>
+                <p className="text-sm text-slate-500">{sharingFolder.name}</p>
+              </div>
+              <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
+              {/* Search/Add User */}
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Adicionar novo usuário</label>
+                <div className="relative">
+                  <select
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleShare(e.target.value, 'READ');
+                        e.target.value = '';
+                      }
+                    }}
+                    disabled={shareLoading}
+                  >
+                    <option value="">Selecione um usuário...</option>
+                    {allUsers
+                      .filter(u => u.id != user?.id && !folderShares.some(s => s.user_id == u.id))
+                      .map(u => (
+                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              </div>
+
+              {/* Current Shares */}
+              <div className="flex-1 overflow-y-auto">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pessoas com acesso</label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                        {user?.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-700">{user?.name} (Você)</p>
+                        <p className="text-xs text-slate-500">Proprietário</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {folderShares.map(share => (
+                    <div key={share.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        {share.user_avatar ? (
+                          <img src={share.user_avatar} alt={share.user_name} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
+                            {share.user_name.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700">{share.user_name}</p>
+                          <p className="text-xs text-slate-500">{share.user_email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="text-xs font-semibold bg-white border border-slate-200 rounded p-1 outline-none"
+                          value={share.permission}
+                          onChange={(e) => handleShare(share.user_id.toString(), e.target.value as any)}
+                        >
+                          <option value="READ">Pode Ver</option>
+                          <option value="WRITE">Pode Editar</option>
+                        </select>
+                        <button
+                          onClick={() => handleRemoveShare(share.user_id.toString())}
+                          className="p-1 hover:text-red-500"
+                          title="Remover acesso"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="w-full py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Concluído
               </button>
             </div>
           </div>

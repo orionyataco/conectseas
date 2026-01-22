@@ -1,0 +1,39 @@
+1. Create Folder as User 1
+{"success":true}
+2. Get User 1 Folders to find ID
+Folder ID: 5
+
+3. Get Users to find User 2
+User 2 ID: 
+
+4. Share Folder with User 2 (READ)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>SyntaxError: Unexpected token , in JSON at position 30<br> &nbsp; &nbsp;at JSON.parse (&lt;anonymous&gt;)<br> &nbsp; &nbsp;at parse (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/body-parser/lib/types/json.js:72:19)<br> &nbsp; &nbsp;at /home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/body-parser/lib/read.js:162:18<br> &nbsp; &nbsp;at AsyncResource.runInAsyncScope (node:async_hooks:203:9)<br> &nbsp; &nbsp;at invokeCallback (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:238:16)<br> &nbsp; &nbsp;at done (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:227:7)<br> &nbsp; &nbsp;at IncomingMessage.onEnd (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:287:7)<br> &nbsp; &nbsp;at IncomingMessage.emit (node:events:517:28)<br> &nbsp; &nbsp;at endReadableNT (node:internal/streams/readable:1400:12)<br> &nbsp; &nbsp;at process.processTicksAndRejections (node:internal/process/task_queues:82:21)</pre>
+</body>
+</html>
+
+5. Verify User 2 can see the shared folder
+
+6. Try to upload as User 2 (Should Fail with 403)
+
+7. Update to WRITE permission
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>SyntaxError: Unexpected token , in JSON at position 30<br> &nbsp; &nbsp;at JSON.parse (&lt;anonymous&gt;)<br> &nbsp; &nbsp;at parse (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/body-parser/lib/types/json.js:72:19)<br> &nbsp; &nbsp;at /home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/body-parser/lib/read.js:162:18<br> &nbsp; &nbsp;at AsyncResource.runInAsyncScope (node:async_hooks:203:9)<br> &nbsp; &nbsp;at invokeCallback (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:238:16)<br> &nbsp; &nbsp;at done (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:227:7)<br> &nbsp; &nbsp;at IncomingMessage.onEnd (/home/orionyataco/Documentos/portal-interno-seas-amapá/node_modules/raw-body/index.js:287:7)<br> &nbsp; &nbsp;at IncomingMessage.emit (node:events:517:28)<br> &nbsp; &nbsp;at endReadableNT (node:internal/streams/readable:1400:12)<br> &nbsp; &nbsp;at process.processTicksAndRejections (node:internal/process/task_queues:82:21)</pre>
+</body>
+</html>
+
+8. Try to upload as User 2 (Should Succeed)
+HTTP/1.1 200 OK
+test_script.sh: linha 31: kill: (18026) - Processo inexistente

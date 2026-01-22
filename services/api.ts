@@ -4,6 +4,18 @@ const api = axios.create({
     baseURL: '/api',
 });
 
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    console.log('🔑 Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'NOT FOUND');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✓ Authorization header set');
+    } else {
+        console.warn('⚠️ No token found in localStorage');
+    }
+    return config;
+});
+
 export interface LoginCredentials {
     username: string;
     password?: string;
@@ -11,8 +23,9 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
     success: boolean;
-    user?: any;
     message?: string;
+    user?: any; // Keeping 'any' as 'User' is not defined elsewhere and not explicitly requested to be added.
+    token?: string;
 }
 
 export const checkDbConnection = async () => {
@@ -364,5 +377,133 @@ export const deleteTodo = async (id: number) => {
     }
 };
 
+
+// Events
+export const getEvents = async (userId: string, userRole: string) => {
+    try {
+        const response = await api.get(`/events?userId=${userId}&userRole=${userRole}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching events:', error);
+        throw error;
+    }
+};
+
+export const createEvent = async (data: any) => {
+    try {
+        const response = await api.post('/events', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating event:', error);
+        throw error;
+    }
+};
+
+export const updateEvent = async (id: number, data: any) => {
+    try {
+        const response = await api.put(`/events/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating event:', error);
+        throw error;
+    }
+};
+
+export const deleteEvent = async (id: number, userId: string, userRole: string) => {
+    try {
+        const response = await api.delete(`/events/${id}?userId=${userId}&userRole=${userRole}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        throw error;
+    }
+};
+
+// Admin API
+export const getAdminSettings = async () => {
+    try {
+        const response = await api.get('/admin/settings');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching admin settings:', error);
+        throw error;
+    }
+};
+
+export const updateAdminSetting = async (key: string, value: any) => {
+    try {
+        const response = await api.put(`/admin/settings/${key}`, { value });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating admin setting ${key}:`, error);
+        throw error;
+    }
+};
+
+export const uploadAdminFile = async (key: string, field: string, file: File) => {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('field', field);
+        const response = await api.post(`/admin/settings/upload/${key}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Error uploading admin file for ${key}:`, error);
+        throw error;
+    }
+};
+
+export const getAdminStats = async () => {
+    try {
+        const response = await api.get('/admin/stats');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching admin stats:', error);
+        throw error;
+    }
+};
+
+export const getAdminUsers = async () => {
+    try {
+        const response = await api.get('/admin/users');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching admin users:', error);
+        throw error;
+    }
+};
+
+export const updateUserRole = async (userId: number, role: string) => {
+    try {
+        const response = await api.put(`/admin/users/${userId}/role`, { role });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating user role for ${userId}:`, error);
+        throw error;
+    }
+};
+
+export const testLDAPConnection = async () => {
+    try {
+        const response = await api.post('/admin/ldap/test');
+        return response.data;
+    } catch (error) {
+        console.error('Error testing LDAP connection:', error);
+        throw error;
+    }
+};
+
+// Public API
+export const getPublicSetting = async (key: string) => {
+    try {
+        const response = await api.get(`/public/settings/${key}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching public setting ${key}:`, error);
+        throw error;
+    }
+};
 
 export default api;

@@ -79,7 +79,8 @@ export interface Event {
   event_time?: string;
   event_end_time?: string;
   meeting_link?: string;
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'shared';
+  shared_with?: string; // Comma separated IDs from SQLite
   event_type: 'meeting' | 'holiday' | 'birthday' | 'vacation' | 'other';
   created_at: string;
   updated_at: string;

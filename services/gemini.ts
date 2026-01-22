@@ -1,30 +1,11 @@
-
-import { GoogleGenAI } from "@google/genai";
+import axios from 'axios';
 
 export async function askAI(prompt: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const systemInstruction = `
-    Você é o Assistente Virtual da Secretaria de Assistência Social do Estado do Amapá (SEAS-AP).
-    Sua função é auxiliar servidores na redação de documentos oficiais (ofícios, memorandos, circulares)
-    seguindo as normas da redação oficial brasileira.
-    Além disso, você deve fornecer suporte técnico básico sobre a legislação da assistência social no Brasil (SUAS, LOAS) 
-    e especificidades do estado do Amapá quando solicitado.
-    Mantenha sempre um tom profissional, cordial e institucional.
-  `;
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
-    });
-    return response.text;
+    const response = await axios.post('/api/ai/chat', { prompt });
+    return response.data.text;
   } catch (error) {
-    console.error("Erro ao consultar Gemini:", error);
+    console.error("Erro ao consultar backend de IA:", error);
     return "Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.";
   }
 }

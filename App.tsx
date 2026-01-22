@@ -8,19 +8,21 @@ import Directory from './components/Directory';
 import AIAssistant from './components/AIAssistant';
 import Workflows from './components/Workflows';
 import Profile from './components/Profile';
+import AdminPanel from './components/AdminPanel';
 import { User, UserRole } from './types';
-import { LogIn, ShieldCheck, Database, Key } from 'lucide-react';
+import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff } from 'lucide-react';
 import { checkDbConnection, login } from './services/api';
+import { useAuth } from './context/AuthContext';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const { user, isAuthenticated, login: authLogin, logout: authLogout, loading: authLoading } = useAuth();
   const [loading, setLoading] = React.useState(false);
-  const [user, setUser] = React.useState<User | null>(null);
 
   // Login form states
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [dbStatus, setDbStatus] = React.useState<{ connected: boolean; message: string } | null>(null);
   const [loginError, setLoginError] = React.useState('');
 
@@ -30,6 +32,25 @@ const App: React.FC = () => {
       .catch(() => setDbStatus({ connected: false, message: 'Erro ao conectar ao banco de dados' }));
   }, []);
 
+  // Fetch dynamic login screen settings
+  const [loginSettings, setLoginSettings] = React.useState({
+    title: 'Login Administrativo',
+    subtitle: 'Entre com as credenciais locais ou de rede.',
+    welcome_text: 'Gestão Administrativa Integrada',
+    background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
+    description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
+  });
+
+  React.useEffect(() => {
+    import('./services/api').then(({ getPublicSetting }) => {
+      getPublicSetting('login_ui')
+        .then(data => {
+          if (data) setLoginSettings(data);
+        })
+        .catch(err => console.error('Erro ao carregar configurações de login:', err));
+    });
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -37,9 +58,8 @@ const App: React.FC = () => {
 
     try {
       const response = await login({ username, password });
-      if (response.success && response.user) {
-        setIsAuthenticated(true);
-        setUser(response.user);
+      if (response.success && response.user && response.token) {
+        authLogin(response.user, response.token);
       } else {
         setLoginError(response.message || 'Falha no login');
       }
@@ -51,9 +71,16 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
+    authLogout();
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -65,8 +92,8 @@ const App: React.FC = () => {
               <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-200">
                 <Key size={28} />
               </div>
-              <h1 className="text-3xl font-extrabold text-slate-800 mb-2">Login Administrativo</h1>
-              <p className="text-slate-500">Entre com as credenciais locais ou de rede.</p>
+              <h1 className="text-3xl font-extrabold text-slate-800 mb-2">{loginSettings.title}</h1>
+              <p className="text-slate-500">{loginSettings.subtitle}</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
@@ -92,14 +119,24 @@ const App: React.FC = () => {
                     <span className="font-bold">Erro:</span> {loginError}
                   </div>
                 )}
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite sua senha institucional"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Digite sua senha institucional"
+                    className="w-full px-5 py-4 pr-12 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 px-1">
@@ -125,7 +162,7 @@ const App: React.FC = () => {
 
             <div className="mt-12 flex flex-col gap-3 text-center md:text-left">
               <p className="text-xs text-slate-400">Problemas com LDAP? <a href="#" className="text-blue-600 font-bold hover:underline">Contate o suporte TI</a></p>
-              <p className="text-xs text-slate-300">© 2024 Governo do Estado do Amapá. Todos os direitos reservados.</p>
+              <p className="text-xs text-slate-300">© {new Date().getFullYear()} Governo do Estado do Amapá. Todos os direitos reservados.</p>
               {dbStatus && (
                 <div className={`flex items-center gap-2 text-xs font-bold ${dbStatus.connected ? 'text-green-600' : 'text-red-500'}`}>
                   <Database size={14} />
@@ -139,8 +176,8 @@ const App: React.FC = () => {
           <div className="hidden md:block md:w-5/12 lg:w-1/2 relative">
             <div className="absolute inset-0 bg-blue-900 overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000"
-                className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+                src={loginSettings.background_url}
+                className="w-full h-full object-cover opacity-40 mix-blend-overlay transition-opacity duration-700"
                 alt="Workspace"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent"></div>
@@ -148,9 +185,9 @@ const App: React.FC = () => {
 
             <div className="absolute inset-0 flex flex-col justify-end p-12 text-white">
               <div className="w-16 h-1 bg-white mb-8 rounded-full"></div>
-              <h2 className="text-4xl font-extrabold mb-4 leading-tight">Gestão Administrativa Integrada</h2>
+              <h2 className="text-4xl font-extrabold mb-4 leading-tight">{loginSettings.welcome_text}</h2>
               <p className="text-blue-100/80 text-lg leading-relaxed max-w-md">
-                Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.
+                {loginSettings.description_text}
               </p>
 
               <div className="mt-12 flex gap-2">
@@ -178,7 +215,10 @@ const App: React.FC = () => {
       case 'documentos':
         return <Workflows />;
       case 'profile':
-        return <Profile user={user!} onUpdate={(updatedUser) => setUser(updatedUser)} />;
+        return <Profile user={user!} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
+      case 'admin':
+        if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
+        return <AdminPanel />;
       default: return <Dashboard user={user} />;
     }
   };
