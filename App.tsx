@@ -16,8 +16,10 @@ import { useAuth } from './context/AuthContext';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [targetUserId, setTargetUserId] = React.useState<string | null>(null);
   const { user, isAuthenticated, login: authLogin, logout: authLogout, loading: authLoading } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [searchContext, setSearchContext] = React.useState<{ type: string; id: string | number } | null>(null);
 
   // Login form states
   const [username, setUsername] = React.useState('');
@@ -206,8 +208,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard user={user} />;
       case 'mural': return <Mural user={user} />;
-      case 'calendario': return <Calendar user={user} />;
-      case 'diretorio': return <Directory user={user} />;
+      case 'calendario': return <Calendar user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
+      case 'diretorio': return <Directory user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
       case 'ai': return <AIAssistant />;
       case 'ti':
       case 'urh':
@@ -215,7 +217,7 @@ const App: React.FC = () => {
       case 'documentos':
         return <Workflows />;
       case 'profile':
-        return <Profile user={user!} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
+        return <Profile user={user!} targetUserId={targetUserId} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
       case 'admin':
         if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
         return <AdminPanel />;
@@ -228,7 +230,9 @@ const App: React.FC = () => {
       user={user!}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      setTargetUserId={setTargetUserId}
       onLogout={handleLogout}
+      setSearchContext={setSearchContext}
     >
       {renderContent()}
     </Layout>

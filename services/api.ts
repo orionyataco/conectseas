@@ -66,6 +66,16 @@ export const updateProfile = async (id: string, formData: FormData): Promise<Log
     }
 };
 
+export const getUserProfile = async (id: string) => {
+    try {
+        const response = await api.get(`/users/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        throw error;
+    }
+};
+
 // Mural API
 export const getMuralFeed = async () => {
     try {
@@ -419,6 +429,26 @@ export const deleteEvent = async (id: number, userId: string, userRole: string) 
     }
 };
 
+export const getHolidays = async (year: number) => {
+    try {
+        const response = await api.get(`/holidays?year=${year}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching holidays:', error);
+        throw error;
+    }
+};
+
+export const globalSearch = async (query: string, userId: string, userRole: string) => {
+    try {
+        const response = await api.get(`/search?q=${query}&userId=${userId}&userRole=${userRole}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error in global search:', error);
+        throw error;
+    }
+};
+
 // Admin API
 export const getAdminSettings = async () => {
     try {
@@ -485,6 +515,16 @@ export const updateUserRole = async (userId: number, role: string) => {
     }
 };
 
+export const updateUserQuota = async (userId: number, quota: number) => {
+    try {
+        const response = await api.put(`/admin/users/${userId}/quota`, { quota });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating user quota for ${userId}:`, error);
+        throw error;
+    }
+};
+
 export const testLDAPConnection = async () => {
     try {
         const response = await api.post('/admin/ldap/test');
@@ -502,6 +542,36 @@ export const getPublicSetting = async (key: string) => {
         return response.data;
     } catch (error) {
         console.error(`Error fetching public setting ${key}:`, error);
+        throw error;
+    }
+};
+
+export const renameFolder = async (id: number, userId: string, name: string) => {
+    try {
+        const response = await api.put(`/drive/folders/${id}`, { userId, name });
+        return response.data;
+    } catch (error) {
+        console.error(`Error renaming folder ${id}:`, error);
+        throw error;
+    }
+};
+
+export const renameFile = async (id: number, userId: string, name: string) => {
+    try {
+        const response = await api.put(`/drive/files/${id}`, { userId, name });
+        return response.data;
+    } catch (error) {
+        console.error(`Error renaming file ${id}:`, error);
+        throw error;
+    }
+};
+
+export const getStorageStats = async (userId: string) => {
+    try {
+        const response = await api.get(`/drive/storage-stats/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching storage stats:', error);
         throw error;
     }
 };

@@ -7,22 +7,97 @@ import {
   User as UserIcon,
   Menu,
   X,
-  MessageCircle,
-  HelpCircle
+  HelpCircle,
+  Loader2
 } from 'lucide-react';
 import { NAV_ITEMS } from '../constants';
 import { User, UserRole } from '../types';
+import { globalSearch } from '../services/api';
+import SearchOverlay from './SearchOverlay';
 
 interface LayoutProps {
   user: User;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  setTargetUserId: (id: string | null) => void;
   onLogout: () => void;
+  setSearchContext: (context: { type: string; id: string | number } | null) => void;
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout, children }) => {
+const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState({ users: [], events: [], documents: [] });
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = React.useState(false);
+  const searchRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchOverlay(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  React.useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSearchOverlay(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  React.useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults({ users: [], events: [], documents: [] });
+      setIsSearching(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await globalSearch(searchQuery, user.id, user.role);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, user.id, user.role]);
+
+  const handleSelectSearchResult = (item: any) => {
+    setShowSearchOverlay(false);
+    setSearchQuery('');
+
+    switch (item.type) {
+      case 'user':
+        setTargetUserId(item.id.toString());
+        setActiveTab('profile');
+        break;
+      case 'event':
+        setSearchContext({ type: 'event', id: item.id });
+        setActiveTab('calendario');
+        break;
+      case 'folder':
+        setSearchContext({ type: 'folder', id: item.id });
+        setActiveTab('diretorio');
+        break;
+      case 'file':
+        setSearchContext({ type: 'file', id: item.id });
+        setActiveTab('diretorio');
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -43,7 +118,10 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
             {NAV_ITEMS.filter(item => item.id !== 'admin' || user.role === 'ADMIN').map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setTargetUserId(null);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === item.id
                   ? 'bg-blue-50 text-blue-600 font-medium'
                   : 'text-slate-600 hover:bg-slate-50'
@@ -60,7 +138,10 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
               <div className="relative z-10">
                 <p className="text-xs opacity-80 mb-1 font-medium">Precisa de Ajuda?</p>
                 <p className="text-sm font-semibold mb-3">Suporte técnico disponível para você.</p>
-                <button onClick={() => setActiveTab('ti')} className="bg-white text-blue-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                <button onClick={() => {
+                  setActiveTab('ti');
+                  setTargetUserId(null);
+                }} className="bg-white text-blue-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
                   Abrir Chamado
                 </button>
               </div>
@@ -73,7 +154,10 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
 
           <div className="p-4 border-t border-slate-100">
             <button
-              onClick={() => setActiveTab('profile')}
+              onClick={() => {
+                setActiveTab('profile');
+                setTargetUserId(null);
+              }}
               className="flex items-center gap-3 w-full text-left hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group"
             >
               <img
@@ -107,13 +191,46 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500">
               <Menu size={20} />
             </button>
-            <div className="max-w-md w-full relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <div className="max-w-md w-full relative hidden md:block" ref={searchRef}>
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
               <input
                 type="text"
                 placeholder="Buscar processos, circulares ou pessoas..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchOverlay(true);
+                }}
+                onFocus={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.length >= 2) {
+                    setShowSearchOverlay(true);
+                  }
+                }}
+                className="w-full pl-10 pr-12 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
               />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {isSearching ? (
+                  <Loader2 className="text-blue-500 animate-spin" size={16} />
+                ) : (
+                  <button
+                    onClick={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
+                    className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    <Search size={16} />
+                  </button>
+                )}
+              </div>
+
+              {showSearchOverlay && searchQuery.length >= 2 && (
+                <SearchOverlay
+                  results={searchResults}
+                  isLoading={isSearching}
+                  searchQuery={searchQuery}
+                  onClose={() => setShowSearchOverlay(false)}
+                  onSelect={handleSelectSearchResult}
+                />
+              )}
             </div>
           </div>
 
@@ -122,13 +239,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, onLogout
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <button
-              onClick={() => window.open('https://chat.institucional.ap.gov.br', '_blank')}
-              className="p-2 text-slate-500 hover:bg-slate-100 rounded-full flex items-center gap-2 border border-slate-200 px-4"
-            >
-              <MessageCircle size={20} className="text-blue-500" />
-              <span className="hidden sm:inline text-xs font-semibold text-slate-700">Rocket.Chat</span>
-            </button>
+
           </div>
         </header>
 

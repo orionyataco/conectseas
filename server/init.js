@@ -30,6 +30,7 @@ const initDB = async () => {
         mobile_phone TEXT,
         registration_number TEXT,
         appointment_date DATE,
+        storage_quota INTEGER DEFAULT 1073741824,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -41,7 +42,8 @@ const initDB = async () => {
       { name: 'birth_date', type: 'DATE' },
       { name: 'mobile_phone', type: 'TEXT' },
       { name: 'registration_number', type: 'TEXT' },
-      { name: 'appointment_date', type: 'DATE' }
+      { name: 'appointment_date', type: 'DATE' },
+      { name: 'storage_quota', type: 'INTEGER DEFAULT 1073741824' }
     ];
 
     for (const col of columnsToAdd) {
@@ -176,11 +178,26 @@ const initDB = async () => {
         user_id INTEGER NOT NULL,
         parent_id INTEGER DEFAULT NULL,
         name TEXT NOT NULL,
+        is_favorite BOOLEAN DEFAULT 0,
+        is_deleted BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (parent_id) REFERENCES user_folders(id) ON DELETE CASCADE
       )
     `);
+
+    // Migration for user_folders
+    try {
+      await connection.query('ALTER TABLE user_folders ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE user_folders ADD COLUMN updated_at DATETIME');
+      await connection.query('UPDATE user_folders SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE user_folders ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
+    } catch (e) { }
     console.log('Tabela "user_folders" verificada/criada.');
 
     // Create user_files table
@@ -193,11 +210,26 @@ const initDB = async () => {
         original_name TEXT NOT NULL,
         file_type TEXT,
         file_size INTEGER,
+        is_favorite BOOLEAN DEFAULT 0,
+        is_deleted BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (folder_id) REFERENCES user_folders(id) ON DELETE CASCADE
       )
     `);
+
+    // Migration for user_files
+    try {
+      await connection.query('ALTER TABLE user_files ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE user_files ADD COLUMN updated_at DATETIME');
+      await connection.query('UPDATE user_files SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE user_files ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
+    } catch (e) { }
     console.log('Tabela "user_files" verificada/criada.');
 
     // Create folder_shares table

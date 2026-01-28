@@ -1,27 +1,72 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { updateProfile } from '../services/api';
-import { Camera, Save, X, Edit2, Calendar, Mail, Hash, Award, User as UserIcon, FileText } from 'lucide-react';
+import { getUserProfile, updateProfile } from '../services/api';
+import { Camera, Save, X, Edit2, Calendar, Mail, Hash, Award, User as UserIcon, FileText, Loader2, Briefcase } from 'lucide-react';
 
 interface ProfileProps {
-    user: User;
+    user: User; // Current logged-in user
+    targetUserId?: string | null;
     onUpdate: (user: User) => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
+const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUpdate }) => {
+    const [user, setUser] = useState<User>(currentUser);
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
-        nickname: user.nickname || '',
-        bio: user.bio || '',
-        birthDate: user.birth_date || '',
-        mobilePhone: user.mobile_phone || '',
-        registrationNumber: user.registration_number || '',
-        appointmentDate: user.appointment_date || '',
+        nickname: '',
+        email: '',
+        bio: '',
+        birthDate: '',
+        mobilePhone: '',
+        registrationNumber: '',
+        appointmentDate: '',
+        department: '',
+        position: '',
     });
+
+    const isOwnProfile = !targetUserId || targetUserId === currentUser.id;
+
+    React.useEffect(() => {
+        if (!isOwnProfile && targetUserId) {
+            fetchUserProfile(targetUserId);
+        } else {
+            setUser(currentUser);
+            resetFormData(currentUser);
+        }
+    }, [targetUserId, currentUser]);
+
+    const fetchUserProfile = async (id: string) => {
+        setFetching(true);
+        setError(null);
+        try {
+            const data = await getUserProfile(id);
+            setUser(data);
+            resetFormData(data);
+        } catch (err) {
+            setError('Não foi possível carregar o perfil do usuário.');
+        } finally {
+            setFetching(false);
+        }
+    };
+
+    const resetFormData = (userData: User) => {
+        setFormData({
+            nickname: userData.nickname || '',
+            email: userData.email || '',
+            bio: userData.bio || '',
+            birthDate: userData.birth_date || '',
+            mobilePhone: userData.mobile_phone || '',
+            registrationNumber: userData.registration_number || '',
+            appointmentDate: userData.appointment_date || '',
+            department: userData.department || '',
+            position: userData.position || '',
+        });
+    };
 
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
@@ -48,11 +93,14 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
         try {
             const data = new FormData();
             data.append('nickname', formData.nickname);
+            data.append('email', formData.email);
             data.append('bio', formData.bio);
             data.append('birthDate', formData.birthDate);
             data.append('mobilePhone', formData.mobilePhone);
             data.append('registrationNumber', formData.registrationNumber);
             data.append('appointmentDate', formData.appointmentDate);
+            data.append('department', formData.department);
+            data.append('position', formData.position);
 
             if (avatarFile) {
                 data.append('avatar', avatarFile);
@@ -78,7 +126,12 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '';
-        const date = new Date(dateString);
+        // Para evitar problemas de fuso horário (UTC vs Local), pegamos apenas a parte da data YYYY-MM-DD
+        const [year, month, day] = dateString.split(/[-T]/).map(Number);
+        if (!year || !month || !day) return '';
+
+        // Criar a data usando o construtor local (ano, mês 0-indexado, dia)
+        const date = new Date(year, month - 1, day);
         return date.toLocaleDateString('pt-BR');
     };
 
@@ -93,7 +146,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                 {/* Header / Cover */}
                 <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative">
                     <div className="absolute top-4 right-4">
-                        {!isEditing && (
+                        {!isEditing && isOwnProfile && (
                             <button
                                 onClick={() => setIsEditing(true)}
                                 className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl backdrop-blur-sm flex items-center gap-2 transition-all font-medium text-sm"
@@ -129,6 +182,11 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                             <p className="text-slate-500 font-medium">{user.role} - {user.position}</p>
                             <p className="text-slate-400 text-sm">{user.department}</p>
                         </div>
+                        {fetching && (
+                            <div className="pb-2">
+                                <Loader2 className="animate-spin text-blue-600" size={24} />
+                            </div>
+                        )}
                     </div>
 
                     {error && (
@@ -196,16 +254,26 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                                 </div>
                             )}
 
-                            {/* Official Data */}
-                            {/* Email - Always visible usually, but assuming read-only is fine */}
+                            {/* Email */}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                                     <Mail size={16} className="text-slate-400" />
                                     Email Institucional
                                 </label>
-                                <div className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500">
-                                    {user.email}
-                                </div>
+                                {isEditing ? (
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleInputChange}
+                                        placeholder="Ex: joao@seas.ap.gov.br"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                ) : (
+                                    <div className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500">
+                                        {user.email}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Matrícula */}
@@ -226,6 +294,50 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                                         />
                                     ) : (
                                         <p className="text-slate-800 font-mono">{user.registration_number}</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Departamento */}
+                            {(isEditing || user.department) && (
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                        <Award size={16} className="text-blue-500" />
+                                        Departamento
+                                    </label>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            name="department"
+                                            value={formData.department}
+                                            onChange={handleInputChange}
+                                            placeholder="Ex: Recursos Humanos"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    ) : (
+                                        <p className="text-slate-800">{user.department}</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Cargo */}
+                            {(isEditing || user.position) && (
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                        <Briefcase size={16} className="text-teal-500" />
+                                        Cargo / Função
+                                    </label>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            name="position"
+                                            value={formData.position}
+                                            onChange={handleInputChange}
+                                            placeholder="Ex: Analista Administrativo"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    ) : (
+                                        <p className="text-slate-800">{user.position}</p>
                                     )}
                                 </div>
                             )}
@@ -286,6 +398,8 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                                             mobilePhone: user.mobile_phone || '',
                                             registrationNumber: user.registration_number || '',
                                             appointmentDate: user.appointment_date || '',
+                                            department: user.department || '',
+                                            position: user.position || '',
                                         });
                                         setPreviewAvatar(null);
                                         setAvatarFile(null);

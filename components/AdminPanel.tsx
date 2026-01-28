@@ -296,8 +296,8 @@ const AdminPanel: React.FC = () => {
 
             {ldapTestResult && (
                 <div className={`p-6 rounded-2xl border-2 ${ldapTestResult.success
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-red-50 border-red-200'
                     }`}>
                     <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
                         {ldapTestResult.success ? (
@@ -316,8 +316,8 @@ const AdminPanel: React.FC = () => {
                             <p className="font-bold text-sm">Etapas do Teste:</p>
                             {ldapTestResult.steps.map((step: any, idx: number) => (
                                 <div key={idx} className={`p-3 rounded-lg ${step.status === 'success' ? 'bg-green-100' :
-                                        step.status === 'warning' ? 'bg-yellow-100' :
-                                            'bg-red-100'
+                                    step.status === 'warning' ? 'bg-yellow-100' :
+                                        'bg-red-100'
                                     }`}>
                                     <p className="font-bold text-sm">{idx + 1}. {step.step}</p>
                                     <p className="text-xs mt-1">{step.message}</p>
@@ -613,6 +613,7 @@ const AdminPanel: React.FC = () => {
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Permissão</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cota (GB)</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                         </tr>
                     </thead>
@@ -646,6 +647,36 @@ const AdminPanel: React.FC = () => {
                                         {user.role}
                                     </span>
                                 </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="5"
+                                            value={Math.round((user.storage_quota || 1073741824) / (1024 * 1024 * 1024))}
+                                            onChange={async (e) => {
+                                                const newGB = parseInt(e.target.value);
+                                                if (newGB >= 1 && newGB <= 5) {
+                                                    const newBytes = newGB * 1024 * 1024 * 1024;
+                                                    try {
+                                                        setSaving(true);
+                                                        const { updateUserQuota } = await import('../services/api');
+                                                        await updateUserQuota(user.id, newBytes);
+                                                        setUsersList(usersList.map(u => u.id === user.id ? { ...u, storage_quota: newBytes } : u));
+                                                        setSuccess('Cota atualizada!');
+                                                        setTimeout(() => setSuccess(''), 3000);
+                                                    } catch (err) {
+                                                        setError('Erro ao atualizar cota.');
+                                                    } finally {
+                                                        setSaving(false);
+                                                    }
+                                                }
+                                            }}
+                                            className="w-16 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                        <span className="text-xs font-bold text-slate-400">GB</span>
+                                    </div>
+                                </td>
                                 <td className="px-6 py-4 text-right">
                                     <button
                                         onClick={async () => {
@@ -676,7 +707,7 @@ const AdminPanel: React.FC = () => {
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div >
     );
 
     const tabs = [

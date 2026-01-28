@@ -1,0 +1,11 @@
+
+[2026-01-27T18:36:15.190Z] Profile update for ID: 1
+Body: {
+  "nickname": "Admin",
+  "email": "marcos.junior@seas.ap.gov.br",
+  "bio": "gerente do sistema que será responsável por isto",
+  "birthDate": "2026-01-12",
+  "mobilePhone": "",
+  "registrationNumber": "",
+  "appointmentDate": ""
+}

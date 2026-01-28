@@ -120,7 +120,9 @@ export interface Folder {
   user_id: number;
   parent_id: number | null;
   name: string;
+  is_favorite: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface DriveFile {
@@ -131,5 +133,7 @@ export interface DriveFile {
   original_name: string;
   file_type: string;
   file_size: number;
+  is_favorite: boolean;
   created_at: string;
+  updated_at: string;
 }

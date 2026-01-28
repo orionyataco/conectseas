@@ -6,11 +6,14 @@ import api from '../services/api';
 
 interface CalendarProps {
   user: User | null;
+  searchContext?: { type: string; id: string | number } | null;
+  onClearContext?: () => void;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ user }) => {
+const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext }) => {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [events, setEvents] = React.useState<Event[]>([]);
+  const [holidays, setHolidays] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
   const [showModal, setShowModal] = React.useState(false);
   const [editingEvent, setEditingEvent] = React.useState<Event | null>(null);
@@ -48,7 +51,34 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
   React.useEffect(() => {
     fetchEvents();
     fetchUsers();
-  }, [user]);
+    fetchHolidays();
+  }, [user, currentDate.getFullYear()]);
+
+  React.useEffect(() => {
+    if (searchContext && searchContext.type === 'event' && events.length > 0) {
+      const eventId = Number(searchContext.id);
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        // Navigate to event month if needed
+        const eventDate = parseLocalDate(event.event_date);
+        setCurrentDate(eventDate);
+        // Open modal
+        openEditModal(event);
+        // Clear context so it doesn't trigger again on every render
+        onClearContext?.();
+      }
+    }
+  }, [searchContext, events]);
+
+  const fetchHolidays = async () => {
+    try {
+      const { getHolidays } = await import('../services/api');
+      const data = await getHolidays(currentDate.getFullYear());
+      setHolidays(data);
+    } catch (error) {
+      console.error('Failed to fetch holidays:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -153,7 +183,8 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
     setShowModal(true);
   };
 
-  const openEditModal = (event: Event) => {
+  const openEditModal = (event: any) => {
+    if (event.is_holiday_api) return;
     setEditingEvent(event);
     setFormData({
       title: event.title,
@@ -247,11 +278,25 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
   };
 
   const getEventsForDay = (date: Date) => {
-    return events.filter(e => {
+    const dayEvents = events.filter(e => {
       const eventStart = parseLocalDate(e.event_date.split('T')[0]);
       const eventEnd = e.event_end_date ? parseLocalDate(e.event_end_date.split('T')[0]) : eventStart;
       return isBetween(date, eventStart, eventEnd);
     });
+
+    // Add holidays
+    const dayStr = date.toISOString().split('T')[0];
+    const dayHolidays = holidays.filter(h => h.date === dayStr).map(h => ({
+      id: `holiday-${h.date}-${h.name}`,
+      title: h.name,
+      event_type: 'holiday',
+      event_date: h.date,
+      description: h.type === 'state' ? 'Feriado Estadual (Amapá)' : 'Feriado Nacional (Brasil)',
+      visibility: 'public',
+      is_holiday_api: true
+    }));
+
+    return [...dayEvents, ...dayHolidays];
   };
 
   const renderDayView = () => {
@@ -266,8 +311,8 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
             dayEvents.map(event => (
               <div
                 key={event.id}
-                onClick={() => openEditModal(event)}
-                className={`p-4 rounded-2xl border-l-4 ${getEventColor(event.event_type)} cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => !event.is_holiday_api && openEditModal(event)}
+                className={`p-4 rounded-2xl border-l-4 ${getEventColor(event.event_type)} ${event.is_holiday_api ? 'cursor-default' : 'cursor-pointer hover:shadow-md'} transition-all`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-bold text-lg">{event.title}</h4>
@@ -331,8 +376,8 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
                 {dayEvents.map(event => (
                   <div
                     key={event.id}
-                    onClick={() => openEditModal(event)}
-                    className={`${getEventColor(event.event_type)} text-[10px] font-bold p-2 rounded-xl cursor-pointer hover:opacity-80 transition-opacity`}
+                    onClick={() => !event.is_holiday_api && openEditModal(event)}
+                    className={`${getEventColor(event.event_type)} text-[10px] font-bold p-2 rounded-xl ${event.is_holiday_api ? 'cursor-default' : 'cursor-pointer hover:opacity-80'} transition-opacity`}
                     title={event.title}
                   >
                     <div className="truncate">{event.title}</div>
@@ -374,8 +419,8 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
                   {dayEvents.map(event => (
                     <div
                       key={event.id}
-                      className={`${getEventColor(event.event_type)} text-[9px] font-bold px-1.5 py-1 rounded truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-between`}
-                      onClick={() => openEditModal(event)}
+                      className={`${getEventColor(event.event_type)} text-[9px] font-bold px-1.5 py-1 rounded truncate ${event.is_holiday_api ? 'cursor-default' : 'cursor-pointer hover:opacity-80'} transition-opacity flex items-center justify-between`}
+                      onClick={() => !event.is_holiday_api && openEditModal(event)}
                       title={event.title}
                     >
                       <span className="truncate flex-1">{event.title}</span>
@@ -413,11 +458,8 @@ const Calendar: React.FC<CalendarProps> = ({ user }) => {
                 {monthDaysList.map((d, i) => {
                   if (d === null) return <div key={i}></div>;
                   const date = new Date(currentDate.getFullYear(), m, d);
-                  const hasEvents = events.some(e => {
-                    const s = parseLocalDate(e.event_date.split('T')[0]);
-                    const end = e.event_end_date ? parseLocalDate(e.event_end_date.split('T')[0]) : s;
-                    return isBetween(date, s, end);
-                  });
+                  const dayEvents = getEventsForDay(date);
+                  const hasEvents = dayEvents.length > 0;
 
                   return (
                     <div

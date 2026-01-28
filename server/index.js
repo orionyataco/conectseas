@@ -7,6 +7,8 @@ import pool from './db.js';
 import initDB from './init.js';
 import eventRoutes from './routes/events.js';
 import aiRoutes from './routes/ai.js';
+import holidayRoutes from './routes/holidays.js';
+import searchRoutes from './routes/search.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -55,6 +57,8 @@ app.use('/api/todos', authMiddleware);
 app.use('/api/posts', authMiddleware);
 app.use('/api/mural/feed', authMiddleware);
 app.use('/api/drive', authMiddleware);
+app.use('/api/holidays', holidayRoutes);
+app.use('/api/search', searchRoutes);
 
 // Admin routes
 app.use('/api/admin', [authMiddleware, adminMiddleware]);
@@ -218,10 +222,23 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
+// GET Single User Profile
+app.get('/api/users/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await pool.query('SELECT id, name, email, avatar, role, position, department, nickname, bio, birth_date, mobile_phone, registration_number, appointment_date FROM users WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar perfil do usuário:', error);
+        res.status(500).json({ error: 'Erro ao buscar perfil do usuário' });
+    }
+});
+
 // Update User Profile
 app.put('/api/users/:id', upload.single('avatar'), async (req, res) => {
     const { id } = req.params;
-    const { nickname, bio, birthDate, mobilePhone, registrationNumber, appointmentDate } = req.body;
+    const { nickname, email, bio, birthDate, mobilePhone, registrationNumber, appointmentDate, department, position } = req.body;
     let avatarPath = null;
 
     if (req.file) {
@@ -244,11 +261,14 @@ app.put('/api/users/:id', upload.single('avatar'), async (req, res) => {
         const updates = [];
 
         if (nickname !== undefined) { updates.push('nickname = ?'); params.push(nickname); }
+        if (email !== undefined) { updates.push('email = ?'); params.push(email); }
         if (bio !== undefined) { updates.push('bio = ?'); params.push(bio); }
         if (birthDate !== undefined) { updates.push('birth_date = ?'); params.push(birthDate); }
         if (mobilePhone !== undefined) { updates.push('mobile_phone = ?'); params.push(mobilePhone); }
         if (registrationNumber !== undefined) { updates.push('registration_number = ?'); params.push(registrationNumber); }
         if (appointmentDate !== undefined) { updates.push('appointment_date = ?'); params.push(appointmentDate); }
+        if (department !== undefined) { updates.push('department = ?'); params.push(department); }
+        if (position !== undefined) { updates.push('position = ?'); params.push(position); }
 
         if (avatarPath) {
             updates.push('avatar = ?');
@@ -938,8 +958,8 @@ app.get('/api/drive/folders', async (req, res) => {
             const [rows] = await pool.query(
                 `SELECT f.*, 'WRITE' as permission 
                  FROM user_folders f 
-                 WHERE f.parent_id = ?
-            ORDER BY name ASC`,
+                 WHERE f.parent_id = ? AND f.is_deleted = 0
+            ORDER BY is_favorite DESC, name ASC`,
                 [parentId]
             );
             folders = rows;
@@ -948,13 +968,13 @@ app.get('/api/drive/folders', async (req, res) => {
             const [rows] = await pool.query(`
                 SELECT f.*, 'OWNER' as permission, NULL as share_id
                 FROM user_folders f
-                WHERE f.user_id = ? AND f.parent_id IS NULL
+                WHERE f.user_id = ? AND f.parent_id IS NULL AND f.is_deleted = 0
                 UNION ALL
                 SELECT f.*, s.permission, s.id as share_id
                 FROM user_folders f
                 JOIN folder_shares s ON f.id = s.folder_id
-                WHERE s.user_id = ?
-            ORDER BY name ASC
+                WHERE s.user_id = ? AND f.is_deleted = 0
+            ORDER BY is_favorite DESC, name ASC
                 `, [userId, userId]);
             folders = rows;
         }
@@ -963,6 +983,20 @@ app.get('/api/drive/folders', async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar pastas:', error);
         res.status(500).json({ error: 'Erro ao buscar pastas' });
+    }
+});
+
+// GET Single Folder Info
+app.get('/api/drive/folders/:id', async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.query;
+    try {
+        const [rows] = await pool.query('SELECT * FROM user_folders WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar folder:', error);
+        res.status(500).json({ error: 'Erro ao buscar folder' });
     }
 });
 
@@ -986,7 +1020,7 @@ app.post('/api/drive/folders', async (req, res) => {
         }
 
         await pool.query(
-            'INSERT INTO user_folders (user_id, parent_id, name) VALUES (?, ?, ?)',
+            'INSERT INTO user_folders (user_id, parent_id, name, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
             [userId, parentId || null, name]
         );
         res.json({ success: true });
@@ -1038,14 +1072,14 @@ app.get('/api/drive/files', async (req, res) => {
             }
 
             const [files] = await pool.query(
-                'SELECT * FROM user_files WHERE folder_id = ? ORDER BY created_at DESC',
+                'SELECT * FROM user_files WHERE folder_id = ? AND is_deleted = 0 ORDER BY is_favorite DESC, updated_at DESC',
                 [folderId]
             );
             res.json(files);
         } else {
             // Root level files (only owner's files)
             const [files] = await pool.query(
-                'SELECT * FROM user_files WHERE user_id = ? AND folder_id IS NULL ORDER BY created_at DESC',
+                'SELECT * FROM user_files WHERE user_id = ? AND folder_id IS NULL AND is_deleted = 0 ORDER BY is_favorite DESC, updated_at DESC',
                 [userId]
             );
             res.json(files);
@@ -1079,7 +1113,7 @@ app.post('/api/drive/upload', upload.single('file'), async (req, res) => {
         }
 
         await pool.query(
-            'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
             [userId, folderId || null, file.filename, file.originalname, file.mimetype, file.size]
         );
         res.json({ success: true });
@@ -1105,6 +1139,147 @@ app.delete('/api/drive/files/:id', async (req, res) => {
     } catch (error) {
         console.error('Erro ao deletar arquivo:', error);
         res.status(500).json({ error: 'Erro ao deletar arquivo' });
+    }
+});
+
+// Toggle Folder Favorite
+app.post('/api/drive/folders/:id/favorite', async (req, res) => {
+    const { id } = req.params;
+    const { userId, is_favorite } = req.body;
+    try {
+        await pool.query(
+            'UPDATE user_folders SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+            [is_favorite ? 1 : 0, id, userId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao favoritar pasta:', error);
+        res.status(500).json({ error: 'Erro ao favoritar pasta' });
+    }
+});
+
+// Toggle File Favorite
+app.post('/api/drive/files/:id/favorite', async (req, res) => {
+    const { id } = req.params;
+    const { userId, is_favorite } = req.body;
+    try {
+        await pool.query(
+            'UPDATE user_files SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+            [is_favorite ? 1 : 0, id, userId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao favoritar arquivo:', error);
+        res.status(500).json({ error: 'Erro ao favoritar arquivo' });
+    }
+});
+
+// Get Recent Items (unified)
+app.get('/api/drive/recent', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [folders] = await pool.query(
+            "SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_deleted = 0 ORDER BY updated_at DESC LIMIT 10",
+            [userId]
+        );
+        const [files] = await pool.query(
+            "SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_deleted = 0 ORDER BY updated_at DESC LIMIT 20",
+            [userId]
+        );
+
+        const recent = [...folders, ...files].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 30);
+        res.json(recent);
+    } catch (error) {
+        console.error('Erro ao buscar recentes:', error);
+        res.status(500).json({ error: 'Erro ao buscar recentes' });
+    }
+});
+
+// Get Favorite Items (unified)
+app.get('/api/drive/favorites', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [folders] = await pool.query(
+            "SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_favorite = 1 AND is_deleted = 0 ORDER BY updated_at DESC",
+            [userId]
+        );
+        const [files] = await pool.query(
+            "SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_favorite = 1 AND is_deleted = 0 ORDER BY updated_at DESC",
+            [userId]
+        );
+
+        const favorites = [...folders, ...files].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        res.json(favorites);
+    } catch (error) {
+        console.error('Erro ao buscar favoritos:', error);
+        res.status(500).json({ error: 'Erro ao buscar favoritos' });
+    }
+});
+
+// Get Trash Items (unified)
+app.get('/api/drive/trash', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [folders] = await pool.query(
+            "SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_deleted = 1 ORDER BY updated_at DESC",
+            [userId]
+        );
+        const [files] = await pool.query(
+            "SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_deleted = 1 ORDER BY updated_at DESC",
+            [userId]
+        );
+
+        const trash = [...folders, ...files].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        res.json(trash);
+    } catch (error) {
+        console.error('Erro ao buscar lixeira:', error);
+        res.status(500).json({ error: 'Erro ao buscar lixeira' });
+    }
+});
+
+// Move to Trash (Soft Delete)
+app.post('/api/drive/:type/:id/trash', async (req, res) => {
+    const { type, id } = req.params;
+    const { userId } = req.body;
+    const table = type === 'folders' ? 'user_folders' : 'user_files';
+    try {
+        await pool.query(`UPDATE ${table} SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`, [id, userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao mover para lixeira (${type}):`, error);
+        res.status(500).json({ error: 'Erro ao deletar item' });
+    }
+});
+
+// Restore from Trash
+app.post('/api/drive/:type/:id/restore', async (req, res) => {
+    const { type, id } = req.params;
+    const { userId } = req.body;
+    const table = type === 'folders' ? 'user_folders' : 'user_files';
+    try {
+        await pool.query(`UPDATE ${table} SET is_deleted = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`, [id, userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao restaurar da lixeira (${type}):`, error);
+        res.status(500).json({ error: 'Erro ao restaurar item' });
+    }
+});
+
+// Get Shared With Me (folders only for now)
+app.get('/api/drive/shared', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [rows] = await pool.query(`
+            SELECT f.*, s.permission, s.id as share_id, 'folder' as item_type
+            FROM user_folders f
+            JOIN folder_shares s ON f.id = s.folder_id
+            WHERE s.user_id = ? AND f.is_deleted = 0
+            ORDER BY f.updated_at DESC
+        `, [userId]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao buscar compartilhados:', error);
+        res.status(500).json({ error: 'Erro ao buscar compartilhados' });
     }
 });
 
@@ -1274,7 +1449,7 @@ app.put('/api/admin/users/:id/role', async (req, res) => {
 // Manage Users (Admin only)
 app.get('/api/admin/users', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, username, name, email, role, department, position, avatar FROM users ORDER BY name ASC');
+        const [rows] = await pool.query('SELECT id, username, name, email, role, department, position, avatar, storage_quota FROM users ORDER BY name ASC');
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar usuários (admin):', error);
@@ -1282,6 +1457,23 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
+// Update User Storage Quota (Admin only)
+app.put('/api/admin/users/:id/quota', async (req, res) => {
+    const { id } = req.params;
+    const { quota } = req.body; // In bytes
+
+    if (quota < 1073741824 || quota > 5368709120) {
+        return res.status(400).json({ error: 'Cota inválida (deve ser entre 1GB e 5GB)' });
+    }
+
+    try {
+        await pool.query('UPDATE users SET storage_quota = ? WHERE id = ?', [quota, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao atualizar cota do usuário ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao atualizar cota' });
+    }
+});
 
 // Test LDAP Connection (Admin only)
 app.post('/api/admin/ldap/test', async (req, res) => {
@@ -1303,6 +1495,66 @@ app.post('/api/admin/ldap/test', async (req, res) => {
     }
 });
 
+
+// Rename Folder
+app.put('/api/drive/folders/:id', async (req, res) => {
+    const { id } = req.params;
+    const { userId, name } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE user_folders SET name = ? WHERE id = ? AND user_id = ?',
+            [name, id, userId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Error renaming folder ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao renomear pasta' });
+    }
+});
+
+// Rename File
+app.put('/api/drive/files/:id', async (req, res) => {
+    const { id } = req.params;
+    const { userId, name } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE user_files SET original_name = ? WHERE id = ? AND user_id = ?',
+            [name, id, userId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Error renaming file ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao renomear arquivo' });
+    }
+});
+
+// Storage Stats
+app.get('/api/drive/storage-stats/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // Calculate used space (sum of file sizes for non-deleted files)
+        const [sumRows] = await pool.query(
+            'SELECT SUM(file_size) as used FROM user_files WHERE user_id = ? AND is_deleted = 0',
+            [userId]
+        );
+        const used = sumRows[0].used || 0;
+
+        // Get user quota
+        const [userRows] = await pool.query(
+            'SELECT storage_quota FROM users WHERE id = ?',
+            [userId]
+        );
+        const quota = userRows[0].storage_quota || 1073741824; // Default to 1GB
+
+        res.json({ used, quota });
+    } catch (error) {
+        console.error('Error fetching storage stats:', error);
+        res.status(500).json({ error: 'Erro ao buscar estatísticas de armazenamento' });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
