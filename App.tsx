@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import Mural from './components/Mural';
 import Calendar from './components/Calendar';
 import Directory from './components/Directory';
+import ProjectManager from './components/ProjectManager';
 import AIAssistant from './components/AIAssistant';
 import Workflows from './components/Workflows';
 import Profile from './components/Profile';
@@ -209,6 +210,7 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard user={user} />;
       case 'mural': return <Mural user={user} />;
       case 'calendario': return <Calendar user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
+      case 'projetos': return <ProjectManager user={user} />;
       case 'diretorio': return <Directory user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
       case 'ai': return <AIAssistant />;
       case 'ti':

@@ -312,6 +312,156 @@ const initDB = async () => {
     `);
     console.log('Tabela "todos" verificada/criada.');
 
+    // Create projects table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        owner_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'active',
+        priority TEXT DEFAULT 'medium',
+        start_date DATE,
+        end_date DATE,
+        visibility TEXT DEFAULT 'public',
+        color TEXT DEFAULT '#3B82F6',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_archived BOOLEAN DEFAULT 0,
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Check if is_archived exists
+    try {
+      await connection.query('SELECT is_archived FROM projects LIMIT 1');
+    } catch (error) {
+      console.log('Adicionando coluna is_archived na tabela projects');
+      await connection.query('ALTER TABLE projects ADD COLUMN is_archived BOOLEAN DEFAULT 0');
+    }
+
+    // Check if visibility exists
+    try {
+      await connection.query('SELECT visibility FROM projects LIMIT 1');
+    } catch (error) {
+      console.log('Adicionando coluna visibility na tabela projects');
+      await connection.query("ALTER TABLE projects ADD COLUMN visibility TEXT DEFAULT 'public'");
+    }
+
+    console.log('Tabela "projects" verificada/criada.');
+
+    // Create project_attachments table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS project_attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        file_id INTEGER NOT NULL,
+        uploaded_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (file_id) REFERENCES user_files(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "project_attachments" verificada/criada.');
+
+    // Create project_members table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS project_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT DEFAULT 'member',
+        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(project_id, user_id)
+      )
+    `);
+    console.log('Tabela "project_members" verificada/criada.');
+
+    // Create project_tasks table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS project_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        assigned_to INTEGER,
+        created_by INTEGER NOT NULL,
+        status TEXT DEFAULT 'todo',
+        priority TEXT DEFAULT 'medium',
+        due_date DATE,
+        estimated_hours REAL,
+        actual_hours REAL,
+        order_index INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at DATETIME,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "project_tasks" verificada/criada.');
+
+    // Create task_comments table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "task_comments" verificada/criada.');
+
+    // Create task_attachments table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        file_id INTEGER NOT NULL,
+        uploaded_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (file_id) REFERENCES user_files(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "task_attachments" verificada/criada.');
+
+    // Create task_assignees table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_assignees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(task_id, user_id)
+      )
+    `);
+    console.log('Tabela "task_assignees" verificada/criada.');
+
+    // Create task_subtasks table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_subtasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        is_completed BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "task_subtasks" verificada/criada.');
+
     // Create system_settings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS system_settings (

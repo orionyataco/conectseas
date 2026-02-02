@@ -137,3 +137,73 @@ export interface DriveFile {
   created_at: string;
   updated_at: string;
 }
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  owner_id: number;
+  status: 'active' | 'on_hold' | 'completed' | 'archived';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  start_date?: string;
+  end_date?: string;
+  visibility: 'public' | 'private' | 'team';
+  color: string;
+  created_at: string;
+  updated_at: string;
+  owner_name?: string;
+  owner_avatar?: string;
+  member_count?: number;
+  task_count?: number;
+  completed_tasks?: number;
+  is_archived?: boolean;
+}
+
+export interface ProjectMember {
+  id: number;
+  project_id: number;
+  user_id: number;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  joined_at: string;
+  user_name?: string;
+  user_avatar?: string;
+  user_position?: string;
+}
+
+export interface ProjectTask {
+  id: number;
+  project_id: number;
+  title: string;
+  description?: string;
+  assigned_to?: number;
+  created_by: number;
+  status: 'todo' | 'in_progress' | 'review' | 'done';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string;
+  estimated_hours?: number;
+  actual_hours?: number;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  assigned_name?: string;
+  assigned_avatar?: string;
+  creator_name?: string;
+  comment_count?: number;
+  attachment_count?: number;
+  assignees?: { id: number; name: string; avatar: string }[];
+  subtasks?: { id: number; title: string; is_completed: boolean }[];
+}
+
+export interface TaskComment {
+  id: number;
+  task_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author_name: string;
+  author_avatar: string;
+  author_role: string;
+}
+

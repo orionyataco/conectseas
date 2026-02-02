@@ -13,6 +13,7 @@ import {
   editPost,
   editComment
 } from '../services/api';
+import api from '../services/api';
 import {
   Paperclip,
   Image as ImageIcon,
@@ -58,16 +59,32 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const [editCommentContent, setEditCommentContent] = React.useState('');
   const [activeTab, setActiveTab] = React.useState<'write' | 'preview'>('write');
 
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [mentionQuery, setMentionQuery] = React.useState('');
+  const [showMentionList, setShowMentionList] = React.useState(false);
+  const [mentionPosition, setMentionPosition] = React.useState({ top: 0, left: 0 });
+  const [mentionStartIndex, setMentionStartIndex] = React.useState(-1);
+
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     loadFeed();
+    fetchUsers();
     if (user) {
       loadLikedPosts();
     }
   }, [user]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      setUsers(res.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
 
   const loadFeed = async () => {
     try {
@@ -95,6 +112,57 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     } catch (error) {
       console.error('Failed to fetch comments:', error);
     }
+  };
+
+  const handlePostChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const selectionStart = e.target.selectionStart;
+    setNewPostContent(value);
+
+    // Check for mention trigger
+    const lastAtPos = value.lastIndexOf('@', selectionStart - 1);
+
+    if (lastAtPos !== -1) {
+      const textAfterAt = value.substring(lastAtPos + 1, selectionStart);
+      // Only trigger if no spaces after @ or if it's the start of the text
+      if (!textAfterAt.includes(' ') && (lastAtPos === 0 || value[lastAtPos - 1] === ' ' || value[lastAtPos - 1] === '\n')) {
+        const rect = e.target.getBoundingClientRect();
+        // Calculate rough position (approximation)
+        // For a textarea, getting exact caret coordinates is complex without a library
+        // We'll position it relatively for now
+        setMentionPosition({
+          top: 100, // Relative to container, we'll fix this in render
+          left: 20
+        });
+        setMentionQuery(textAfterAt);
+        setMentionStartIndex(lastAtPos);
+        setShowMentionList(true);
+        return;
+      }
+    }
+
+    setShowMentionList(false);
+  };
+
+  const handleMentionSelect = (selectedUser: User) => {
+    if (mentionStartIndex === -1) return;
+
+    const before = newPostContent.substring(0, mentionStartIndex);
+    const after = newPostContent.substring(textareaRef.current?.selectionStart || newPostContent.length);
+    const newValue = `${before}@${selectedUser.name} ${after}`;
+
+    setNewPostContent(newValue);
+    setShowMentionList(false);
+    setMentionStartIndex(-1);
+
+    // Focus back
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const newCursorPos = mentionStartIndex + selectedUser.name.length + 2; // @ + name + space
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,7 +368,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
       </header>
 
       {/* New Post Creator */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-visible relative z-30">
         <div className="flex border-b border-slate-100 px-4 pt-4">
           <button
             onClick={() => setActiveTab('write')}
@@ -327,13 +395,52 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                   <button onClick={() => applyFormatting('__', '__')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Sublinhado"><Underline size={16} /></button>
                   <button onClick={() => applyFormatting('~~', '~~')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Riscado"><Strikethrough size={16} /></button>
                 </div>
-                <textarea
-                  ref={textareaRef}
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Escreva um novo comunicado ou circular..."
-                  className="w-full bg-transparent border-none outline-none resize-none min-h-[120px] text-slate-700 placeholder:text-slate-400"
-                />
+                <div className="relative w-full">
+                  <textarea
+                    ref={textareaRef}
+                    value={newPostContent}
+                    onChange={handlePostChange}
+                    onKeyDown={(e) => {
+                      if (showMentionList) {
+                        e.stopPropagation(); // Stop event bubbling to prevent parent handlers (if any)
+                      }
+                    }}
+                    placeholder="Escreva um novo comunicado ou circular... Use @ para mencionar alguém"
+                    className="w-full bg-transparent border-none outline-none resize-none min-h-[120px] text-slate-700 placeholder:text-slate-400"
+                  />
+
+                  {showMentionList && (
+                    <div
+                      className="absolute z-50 bg-white rounded-xl shadow-xl border border-slate-200 w-64 max-h-48 overflow-y-auto animate-fadeIn"
+                      style={{ top: mentionPosition.top, left: mentionPosition.left }}
+                    >
+                      <div className="p-2 border-b border-slate-100 bg-slate-50">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Mencionar usuário</p>
+                      </div>
+                      <div className="p-1">
+                        {users.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase())).length === 0 ? (
+                          <div className="p-3 text-sm text-slate-400 text-center italic">Nenhum usuário encontrado</div>
+                        ) : (
+                          users
+                            .filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+                            .map(u => (
+                              <button
+                                key={u.id}
+                                onClick={() => handleMentionSelect(u)}
+                                className="w-full flex items-center gap-3 p-2 hover:bg-blue-50 rounded-lg transition-colors text-left group"
+                              >
+                                <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-8 h-8 rounded-full" alt="" />
+                                <div>
+                                  <p className="text-sm font-bold text-slate-700 group-hover:text-blue-700">{u.name}</p>
+                                  <p className="text-[10px] text-slate-400">{u.role}</p>
+                                </div>
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="min-h-[148px] text-slate-700 prose-sm max-w-none">

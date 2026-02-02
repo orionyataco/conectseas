@@ -18,6 +18,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
   const [showModal, setShowModal] = React.useState(false);
   const [editingEvent, setEditingEvent] = React.useState<Event | null>(null);
   const [sharedWith, setSharedWith] = React.useState<string[]>([]);
+  const [inviteType, setInviteType] = React.useState<'specific' | 'all'>('specific');
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -114,7 +115,9 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         visibility: formData.visibility,
         eventType: formData.eventType,
         meetingLink: formData.meetingLink || null,
-        sharedWith: formData.visibility === 'shared' ? sharedWith : []
+        sharedWith: inviteType === 'all'
+          ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
+          : sharedWith
       });
 
       resetForm();
@@ -140,7 +143,9 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         visibility: formData.visibility,
         eventType: formData.eventType,
         meetingLink: formData.meetingLink || null,
-        sharedWith: formData.visibility === 'shared' ? sharedWith : []
+        sharedWith: inviteType === 'all'
+          ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
+          : sharedWith
       });
 
       resetForm();
@@ -174,6 +179,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       eventType: 'other'
     });
     setSharedWith([]);
+    setInviteType('specific');
     setEditingEvent(null);
     setShowModal(false);
   };
@@ -197,7 +203,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       visibility: event.visibility,
       eventType: event.event_type
     });
-    if (event.visibility === 'shared' && event.shared_with) {
+    if (event.shared_with) {
       setSharedWith(event.shared_with.split(','));
     } else {
       setSharedWith([]);
@@ -516,31 +522,44 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
           </button>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-slate-800">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-              <div className="flex gap-1">
-                <button onClick={previous} className="p-1 hover:bg-slate-100 rounded text-slate-400"><ChevronLeft size={16} /></button>
-                <button onClick={next} className="p-1 hover:bg-slate-100 rounded text-slate-400"><ChevronRight size={16} /></button>
-              </div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Próximos Eventos</h3>
+            <div className="space-y-3">
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const upcomingEvents = events
+                  .filter(event => {
+                    const eventDate = parseLocalDate(event.event_date.split('T')[0]);
+                    return eventDate >= today;
+                  })
+                  .sort((a, b) => {
+                    const dateA = new Date(a.event_date).getTime();
+                    const dateB = new Date(b.event_date).getTime();
+                    return dateA - dateB;
+                  })
+                  .slice(0, 5);
+
+                if (upcomingEvents.length === 0) {
+                  return <p className="text-sm text-slate-400 italic">Nenhum evento próximo.</p>;
+                }
+
+                return upcomingEvents.map(event => (
+                  <div
+                    key={event.id}
+                    onClick={() => !event.is_holiday_api && openEditModal(event)}
+                    className={`p-3 rounded-xl border-l-4 ${getEventColor(event.event_type)} ${event.is_holiday_api ? 'cursor-default' : 'cursor-pointer hover:shadow-sm'} transition-all`}
+                  >
+                    <div className="font-bold text-sm truncate">{event.title}</div>
+                    <div className="text-xs opacity-70 flex items-center gap-1 mt-1">
+                      <CalendarIcon size={12} />
+                      {formatDate(event.event_date)}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center mb-2">
-              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                <span key={i} className="text-[10px] font-bold text-slate-400">{d}</span>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {days.map((day, i) => (
-                <div
-                  key={i}
-                  className={`aspect-square flex items-center justify-center text-xs rounded-lg cursor-pointer transition-colors ${day === null ? '' :
-                    isToday(day) ? 'bg-blue-600 text-white font-bold' :
-                      'text-slate-600 hover:bg-slate-50'
-                    }`}
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
+
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -603,8 +622,8 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingEvent ? 'Editar Evento' : 'Criar Novo Evento'}
               </h2>
@@ -613,7 +632,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 p-6 overflow-y-auto">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Título *</label>
                 <input
@@ -741,51 +760,67 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                     <EyeOff size={16} className="text-slate-500" />
                     <span className="text-sm text-slate-700">Privado</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="visibility"
-                      checked={formData.visibility === 'shared'}
-                      onChange={() => setFormData({ ...formData, visibility: 'shared' })}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    <Eye size={16} className="text-blue-500" />
-                    <span className="text-sm text-slate-700">Compartilhado</span>
-                  </label>
                 </div>
               </div>
 
-              {formData.visibility === 'shared' && (
-                <div className="border border-slate-100 rounded-xl p-3 bg-slate-50 space-y-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase">Compartilhar com:</label>
-                  <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
-                    {users.filter(u => u.id != user?.id).map(u => (
-                      <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors group">
-                        <input
-                          type="checkbox"
-                          checked={sharedWith.includes(u.id.toString())}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSharedWith([...sharedWith, u.id.toString()]);
-                            } else {
-                              setSharedWith(sharedWith.filter(id => id !== u.id.toString()));
-                            }
-                          }}
-                          className="rounded text-blue-600 focus:ring-blue-500"
-                        />
-                        <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-6 h-6 rounded-full" alt="" />
-                        <span className="text-sm text-slate-700 group-hover:text-blue-600 font-medium">{u.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {sharedWith.length === 0 && (
-                    <p className="text-[10px] text-red-500 font-medium italic">Selecione pelo menos um usuário.</p>
-                  )}
+              <div className="border-t border-slate-100 pt-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-3">Convidados</label>
+
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="inviteType"
+                      checked={inviteType === 'specific'}
+                      onChange={() => setInviteType('specific')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Selecionar Usuários</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="inviteType"
+                      checked={inviteType === 'all'}
+                      onChange={() => setInviteType('all')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Todos os Usuários</span>
+                  </label>
                 </div>
-              )}
+
+                {inviteType === 'specific' && (
+                  <div className="border border-slate-100 rounded-xl p-3 bg-slate-50 space-y-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase">Selecione os participantes:</label>
+                    <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                      {users.filter(u => u.id != user?.id).map(u => (
+                        <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors group">
+                          <input
+                            type="checkbox"
+                            checked={sharedWith.includes(u.id.toString())}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSharedWith([...sharedWith, u.id.toString()]);
+                              } else {
+                                setSharedWith(sharedWith.filter(id => id !== u.id.toString()));
+                              }
+                            }}
+                            className="rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-6 h-6 rounded-full" alt="" />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 font-medium">{u.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {sharedWith.length === 0 && (
+                      <p className="text-[10px] text-slate-400 font-medium italic">Nenhum usuário selecionado (apenas você verá este evento se for privado).</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 p-6 border-t border-slate-100 bg-white rounded-b-2xl">
               <button
                 onClick={editingEvent ? handleEditEvent : handleCreateEvent}
                 disabled={!formData.title || !formData.eventDate}

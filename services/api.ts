@@ -66,6 +66,7 @@ export const updateProfile = async (id: string, formData: FormData): Promise<Log
     }
 };
 
+
 export const getUserProfile = async (id: string) => {
     try {
         const response = await api.get(`/users/${id}`);
@@ -75,6 +76,17 @@ export const getUserProfile = async (id: string) => {
         throw error;
     }
 };
+
+export const getUsers = async () => {
+    try {
+        const response = await api.get('/users');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+    }
+};
+
 
 // Mural API
 export const getMuralFeed = async () => {
@@ -576,4 +588,240 @@ export const getStorageStats = async (userId: string) => {
     }
 };
 
+// Projects API
+export const getProjects = async (userId: string, filters?: any) => {
+    try {
+        const params = new URLSearchParams({ userId, ...filters });
+        const response = await api.get(`/projects?${params}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching projects:', error);
+        throw error;
+    }
+};
+
+export const getProjectById = async (id: number) => {
+    try {
+        const response = await api.get(`/projects/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching project:', error);
+        throw error;
+    }
+};
+
+export const createProject = async (data: any) => {
+    try {
+        const response = await api.post('/projects', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating project:', error);
+        throw error;
+    }
+};
+
+export const updateProject = async (id: number, data: any) => {
+    try {
+        const response = await api.put(`/projects/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating project:', error);
+        throw error;
+    }
+};
+
+export const deleteProject = async (id: number, userId: string) => {
+    try {
+        const response = await api.delete(`/projects/${id}?userId=${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        throw error;
+    }
+};
+
+export const duplicateProject = async (id: number, userId: string, newName?: string) => {
+    try {
+        const response = await api.post(`/projects/${id}/duplicate`, { userId, newName });
+        return response.data;
+    } catch (error) {
+        console.error('Error duplicating project:', error);
+        throw error;
+    }
+};
+
+export const archiveProject = async (id: number, is_archived: boolean) => {
+    try {
+        const response = await api.patch(`/projects/${id}/archive`, { is_archived });
+        return response.data;
+    } catch (error) {
+        console.error('Error archiving project:', error);
+        throw error;
+    }
+};
+
+export const getProjectStats = async (id: number) => {
+    try {
+        const response = await api.get(`/projects/${id}/stats`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching project stats:', error);
+        throw error;
+    }
+};
+
+// Project Members API
+export const getProjectMembers = async (projectId: number) => {
+    try {
+        const response = await api.get(`/projects/${projectId}/members`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching project members:', error);
+        throw error;
+    }
+};
+
+export const addProjectMember = async (projectId: number, userId: number, role: string) => {
+    try {
+        const response = await api.post(`/projects/${projectId}/members`, { userId, role });
+        return response.data;
+    } catch (error) {
+        console.error('Error adding project member:', error);
+        throw error;
+    }
+};
+
+export const updateMemberRole = async (projectId: number, userId: number, role: string) => {
+    try {
+        const response = await api.put(`/projects/${projectId}/members/${userId}`, { role });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating member role:', error);
+        throw error;
+    }
+};
+
+export const removeProjectMember = async (projectId: number, userId: number) => {
+    try {
+        const response = await api.delete(`/projects/${projectId}/members/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error removing project member:', error);
+        throw error;
+    }
+};
+
+// Project Tasks API
+export const getProjectTasks = async (projectId: number) => {
+    try {
+        const response = await api.get(`/projects/${projectId}/tasks`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching project tasks:', error);
+        throw error;
+    }
+};
+
+export const getTaskById = async (id: number) => {
+    try {
+        const response = await api.get(`/tasks/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching task:', error);
+        throw error;
+    }
+};
+
+export const createTask = async (projectId: number, data: any) => {
+    try {
+        const response = await api.post(`/projects/${projectId}/tasks`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating task:', error);
+        throw error;
+    }
+};
+
+export const updateTask = async (id: number, data: any) => {
+    try {
+        const response = await api.put(`/tasks/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating task:', error);
+        throw error;
+    }
+};
+
+export const updateTaskStatus = async (id: number, status: string, orderIndex: number) => {
+    try {
+        const response = await api.patch(`/tasks/${id}/status`, { status, orderIndex });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        throw error;
+    }
+};
+
+export const toggleSubtask = async (id: number, is_completed: boolean) => {
+    try {
+        const response = await api.patch(`/subtasks/${id}/toggle`, { is_completed });
+        return response.data;
+    } catch (error) {
+        console.error('Error toggling subtask:', error);
+        throw error;
+    }
+};
+
+export const deleteTask = async (id: number) => {
+    try {
+        const response = await api.delete(`/tasks/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        throw error;
+    }
+};
+
+// Task Comments API
+export const getTaskComments = async (taskId: number) => {
+    try {
+        const response = await api.get(`/tasks/${taskId}/comments`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching task comments:', error);
+        throw error;
+    }
+};
+
+export const addTaskComment = async (taskId: number, userId: string, content: string) => {
+    try {
+        const response = await api.post(`/tasks/${taskId}/comments`, { userId, content });
+        return response.data;
+    } catch (error) {
+        console.error('Error adding task comment:', error);
+        throw error;
+    }
+};
+
+export const updateTaskComment = async (id: number, content: string) => {
+    try {
+        const response = await api.put(`/task-comments/${id}`, { content });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating task comment:', error);
+        throw error;
+    }
+};
+
+export const deleteTaskComment = async (id: number) => {
+    try {
+        const response = await api.delete(`/task-comments/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting task comment:', error);
+        throw error;
+    }
+};
+
 export default api;
+

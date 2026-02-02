@@ -13,7 +13,9 @@ import {
   UserPlus,
   Box,
   Bot,
-  ShieldCheck
+  ShieldCheck,
+  Folder,
+  FolderKanban
 } from 'lucide-react';
 
 export const SYSTEMS = [
@@ -35,8 +37,10 @@ export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Início', icon: <LayoutDashboard size={20} /> },
   { id: 'mural', label: 'Mural', icon: <MessageSquare size={20} /> },
   { id: 'calendario', label: 'Calendário', icon: <Calendar size={20} /> },
-  { id: 'diretorio', label: 'Diretório', icon: <Users size={20} /> },
+  { id: 'projetos', label: 'Projetos', icon: <FolderKanban size={20} /> },
+  { id: 'diretorio', label: 'Diretório', icon: <Folder size={20} /> },
   { id: 'documentos', label: 'Solicitação', icon: <FileText size={20} /> },
   { id: 'ai', label: 'Assistente IA', icon: <Bot size={20} /> },
   { id: 'admin', label: 'Painel Admin', icon: <ShieldCheck size={20} /> },
 ];
+

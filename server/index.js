@@ -1556,6 +1556,611 @@ app.get('/api/drive/storage-stats/:userId', async (req, res) => {
     }
 });
 
+// ============= PROJECTS API =============
+
+// Get all projects (filtered by user permissions)
+app.get('/api/projects', async (req, res) => {
+    const { userId } = req.query;
+
+    try {
+        const [projects] = await pool.query(`
+            SELECT 
+                p.*,
+                u.name as owner_name,
+                u.avatar as owner_avatar,
+                (SELECT COUNT(*) FROM project_members WHERE project_id = p.id) as member_count,
+                (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.id) as task_count,
+                (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.id AND status = 'done') as completed_tasks
+            FROM projects p
+            JOIN users u ON p.owner_id = u.id
+            WHERE p.visibility = 'public'
+               OR p.owner_id = ?
+               OR EXISTS (SELECT 1 FROM project_members WHERE project_id = p.id AND user_id = ?)
+            ORDER BY p.created_at DESC
+        `, [userId, userId]);
+
+        res.json(projects);
+    } catch (error) {
+        console.error('Error fetching projects:', error);
+        res.status(500).json({ error: 'Erro ao buscar projetos' });
+    }
+});
+
+// Get single project by ID
+app.get('/api/projects/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [projects] = await pool.query(`
+            SELECT 
+                p.*,
+                u.name as owner_name,
+                u.avatar as owner_avatar
+            FROM projects p
+            JOIN users u ON p.owner_id = u.id
+            WHERE p.id = ?
+        `, [id]);
+
+        if (projects.length === 0) {
+            return res.status(404).json({ error: 'Projeto não encontrado' });
+        }
+
+        res.json(projects[0]);
+    } catch (error) {
+        console.error('Error fetching project:', error);
+        res.status(500).json({ error: 'Erro ao buscar projeto' });
+    }
+});
+
+// Create new project
+// Create new project
+app.post('/api/projects', upload.array('attachments'), async (req, res) => {
+    const { name, description, ownerId, status, priority, startDate, endDate, visibility, color, members } = req.body;
+
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO projects (name, description, owner_id, status, priority, start_date, end_date, visibility, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, description, ownerId, status || 'active', priority || 'medium', startDate || null, endDate || null, visibility || 'public', color || '#3B82F6']
+        );
+
+        const projectId = result.insertId;
+
+        // Automatically add owner as member with 'owner' role
+        await pool.query(
+            'INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)',
+            [projectId, ownerId, 'owner']
+        );
+
+        // Add selected members (if any)
+        if (members) {
+            const parsedMembers = typeof members === 'string' ? JSON.parse(members) : members;
+            if (Array.isArray(parsedMembers)) {
+                for (const memberId of parsedMembers) {
+                    // Skip if memberId is ownerId (already added)
+                    if (parseInt(memberId) === parseInt(ownerId)) continue;
+
+                    await pool.query(
+                        'INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)',
+                        [projectId, memberId, 'member']
+                    );
+                }
+            }
+        }
+
+        // Handle attachments
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                // Determine file type
+                let type = 'other';
+                if (file.mimetype.startsWith('image/')) type = 'image';
+                else if (file.mimetype === 'application/pdf') type = 'pdf';
+                // Add more types as needed
+
+                // Insert into user_files
+                const [fileResult] = await pool.query(
+                    'INSERT INTO user_files (user_id, name, type, path, size, is_public) VALUES (?, ?, ?, ?, ?, ?)',
+                    [ownerId, file.originalname, type, `/uploads/${file.filename}`, file.size, visibility === 'public' ? 1 : 0]
+                );
+
+                // Insert into project_attachments
+                await pool.query(
+                    'INSERT INTO project_attachments (project_id, file_id, uploaded_by) VALUES (?, ?, ?)',
+                    [projectId, fileResult.insertId, ownerId]
+                );
+            }
+        }
+
+        res.json({ success: true, id: projectId });
+    } catch (error) {
+        console.error('Error creating project:', error);
+        res.status(500).json({ error: 'Erro ao criar projeto' });
+    }
+});
+
+// Update project
+app.put('/api/projects/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, status, priority, startDate, endDate, visibility, color } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE projects SET name = ?, description = ?, status = ?, priority = ?, start_date = ?, end_date = ?, visibility = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [name, description, status, priority, startDate, endDate, visibility, color, id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating project:', error);
+        res.status(500).json({ error: 'Erro ao atualizar projeto' });
+    }
+});
+
+// Delete project
+app.delete('/api/projects/:id', async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.query;
+
+    try {
+        // Check if user is owner or admin
+        const [projects] = await pool.query('SELECT owner_id FROM projects WHERE id = ?', [id]);
+        if (projects.length === 0) {
+            return res.status(404).json({ error: 'Projeto não encontrado' });
+        }
+
+        const [users] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
+        if (projects[0].owner_id != userId && users[0].role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
+
+        await pool.query('DELETE FROM projects WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        res.status(500).json({ error: 'Erro ao deletar projeto' });
+    }
+});
+
+// Duplicate project
+app.post('/api/projects/:id/duplicate', async (req, res) => {
+    const { id } = req.params;
+    const { userId, newName } = req.body;
+
+    try {
+        // Get original project
+        const [projects] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
+        if (projects.length === 0) {
+            return res.status(404).json({ error: 'Projeto não encontrado' });
+        }
+        const originalProject = projects[0];
+
+        // Create new project
+        const [result] = await pool.query(
+            'INSERT INTO projects (name, description, owner_id, status, start_date, end_date, visibility, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [newName || `${originalProject.name} (Cópia)`, originalProject.description, userId, 'active', originalProject.start_date, originalProject.end_date, originalProject.visibility, originalProject.color]
+        );
+        const newProjectId = result.insertId;
+
+        // Add owner as member with 'owner' role
+        await pool.query(
+            'INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)',
+            [newProjectId, userId, 'owner']
+        );
+
+        // Copy tasks (optional, strictly duplicating structure for now)
+        // Ideally we would loop through tasks and duplicate them too, but keeping it simple for now or can expand later
+        const [tasks] = await pool.query('SELECT * FROM project_tasks WHERE project_id = ?', [id]);
+
+        for (const task of tasks) {
+            const [taskResult] = await pool.query(
+                `INSERT INTO project_tasks (project_id, title, description, created_by, status, priority, due_date, estimated_hours) 
+                 VALUES (?, ?, ?, ?, 'todo', ?, ?, ?)`,
+                [newProjectId, task.title, task.description, userId, task.priority, task.due_date, task.estimated_hours]
+            );
+
+            // Allow subtasks copy logic if needed here
+            const [subtasks] = await pool.query('SELECT * FROM task_subtasks WHERE task_id = ?', [task.id]);
+            for (const subtask of subtasks) {
+                await pool.query(
+                    'INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)',
+                    [taskResult.insertId, subtask.title]
+                );
+            }
+        }
+
+        res.json({ success: true, id: newProjectId });
+    } catch (error) {
+        console.error('Error duplicating project:', error);
+        res.status(500).json({ error: 'Erro ao duplicar projeto' });
+    }
+});
+
+// Archive project
+app.patch('/api/projects/:id/archive', async (req, res) => {
+    const { id } = req.params;
+    const { is_archived } = req.body;
+
+    try {
+        await pool.query('UPDATE projects SET is_archived = ? WHERE id = ?', [is_archived ? 1 : 0, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error archiving project:', error);
+        res.status(500).json({ error: 'Erro ao arquivar projeto' });
+    }
+});
+
+// Get project stats
+app.get('/api/projects/:id/stats', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [stats] = await pool.query(`
+            SELECT 
+                COUNT(*) as total_tasks,
+                SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed_tasks,
+                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
+                SUM(CASE WHEN status = 'todo' THEN 1 ELSE 0 END) as todo_tasks,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review_tasks
+            FROM project_tasks
+            WHERE project_id = ?
+        `, [id]);
+
+        res.json(stats[0]);
+    } catch (error) {
+        console.error('Error fetching project stats:', error);
+        res.status(500).json({ error: 'Erro ao buscar estatísticas do projeto' });
+    }
+});
+
+// ============= PROJECT MEMBERS API =============
+
+// Get project members
+app.get('/api/projects/:id/members', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [members] = await pool.query(`
+            SELECT 
+                pm.*,
+                u.name as user_name,
+                u.avatar as user_avatar,
+                u.position as user_position
+            FROM project_members pm
+            JOIN users u ON pm.user_id = u.id
+            WHERE pm.project_id = ?
+            ORDER BY pm.role DESC, u.name ASC
+        `, [id]);
+
+        res.json(members);
+    } catch (error) {
+        console.error('Error fetching project members:', error);
+        res.status(500).json({ error: 'Erro ao buscar membros do projeto' });
+    }
+});
+
+// Add project member
+app.post('/api/projects/:id/members', async (req, res) => {
+    const { id } = req.params;
+    const { userId, role } = req.body;
+
+    try {
+        await pool.query(
+            'INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)',
+            [id, userId, role || 'member']
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error adding project member:', error);
+        res.status(500).json({ error: 'Erro ao adicionar membro ao projeto' });
+    }
+});
+
+// Update member role
+app.put('/api/projects/:projectId/members/:userId', async (req, res) => {
+    const { projectId, userId } = req.params;
+    const { role } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE project_members SET role = ? WHERE project_id = ? AND user_id = ?',
+            [role, projectId, userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating member role:', error);
+        res.status(500).json({ error: 'Erro ao atualizar role do membro' });
+    }
+});
+
+// Remove project member
+app.delete('/api/projects/:projectId/members/:userId', async (req, res) => {
+    const { projectId, userId } = req.params;
+
+    try {
+        await pool.query(
+            'DELETE FROM project_members WHERE project_id = ? AND user_id = ?',
+            [projectId, userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error removing project member:', error);
+        res.status(500).json({ error: 'Erro ao remover membro do projeto' });
+    }
+});
+
+// ============= PROJECT TASKS API =============
+
+// Get all tasks for a project
+app.get('/api/projects/:id/tasks', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [tasks] = await pool.query(`
+            SELECT 
+                t.*,
+                u1.name as assigned_name,
+                u1.avatar as assigned_avatar,
+                u2.name as creator_name,
+                (SELECT COUNT(*) FROM task_comments WHERE task_id = t.id) as comment_count,
+                (SELECT COUNT(*) FROM task_attachments WHERE task_id = t.id) as attachment_count,
+                (SELECT json_group_array(json_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) 
+                 FROM task_assignees ta 
+                 JOIN users u ON ta.user_id = u.id 
+                 WHERE ta.task_id = t.id) as assignees,
+                (SELECT json_group_array(json_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) 
+                 FROM task_subtasks ts 
+                 WHERE ts.task_id = t.id) as subtasks
+            FROM project_tasks t
+            LEFT JOIN users u1 ON t.assigned_to = u1.id
+            JOIN users u2 ON t.created_by = u2.id
+            WHERE t.project_id = ?
+            ORDER BY t.order_index ASC, t.created_at DESC
+        `, [id]);
+
+        // Parse JSON fields
+        const tasksWithParsedData = tasks.map(task => ({
+            ...task,
+            assignees: JSON.parse(task.assignees || '[]'),
+            subtasks: JSON.parse(task.subtasks || '[]')
+        }));
+
+        res.json(tasksWithParsedData);
+    } catch (error) {
+        console.error('Error fetching project tasks:', error);
+        res.status(500).json({ error: 'Erro ao buscar tarefas do projeto' });
+    }
+});
+
+// Get single task by ID
+app.get('/api/tasks/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [tasks] = await pool.query(`
+            SELECT 
+                t.*,
+                u1.name as assigned_name,
+                u1.avatar as assigned_avatar,
+                u2.name as creator_name,
+                (SELECT json_group_array(json_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) 
+                 FROM task_assignees ta 
+                 JOIN users u ON ta.user_id = u.id 
+                 WHERE ta.task_id = t.id) as assignees,
+                (SELECT json_group_array(json_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) 
+                 FROM task_subtasks ts 
+                 WHERE ts.task_id = t.id) as subtasks
+            FROM project_tasks t
+            LEFT JOIN users u1 ON t.assigned_to = u1.id
+            JOIN users u2 ON t.created_by = u2.id
+            WHERE t.id = ?
+        `, [id]);
+
+        if (tasks.length === 0) {
+            return res.status(404).json({ error: 'Tarefa não encontrada' });
+        }
+
+        const task = {
+            ...tasks[0],
+            assignees: JSON.parse(tasks[0].assignees || '[]'),
+            subtasks: JSON.parse(tasks[0].subtasks || '[]')
+        };
+
+        res.json(task);
+    } catch (error) {
+        console.error('Error fetching task:', error);
+        res.status(500).json({ error: 'Erro ao buscar tarefa' });
+    }
+});
+
+// Create new task
+app.post('/api/projects/:id/tasks', async (req, res) => {
+    const { id } = req.params;
+    const { title, description, assignees, createdBy, status, priority, dueDate, subtasks } = req.body;
+
+    try {
+        const primaryAssignee = (assignees && assignees.length > 0) ? assignees[0] : null;
+
+        const [result] = await pool.query(
+            'INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, title, description, primaryAssignee, createdBy, status || 'todo', priority || 'medium', dueDate]
+        );
+
+        const taskId = result.insertId;
+
+        // Insert assignees
+        if (assignees && Array.isArray(assignees)) {
+            for (const userId of assignees) {
+                await pool.query(
+                    'INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)',
+                    [taskId, userId]
+                );
+            }
+        }
+
+        // Insert subtasks
+        if (subtasks && Array.isArray(subtasks)) {
+            for (const subtaskTitle of subtasks) {
+                await pool.query(
+                    'INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)',
+                    [taskId, subtaskTitle]
+                );
+            }
+        }
+
+        res.json({ success: true, id: taskId });
+    } catch (error) {
+        console.error('Error creating task:', error);
+        res.status(500).json({ error: 'Erro ao criar tarefa' });
+    }
+});
+
+// Update task
+app.put('/api/tasks/:id', async (req, res) => {
+    const { id } = req.params;
+    const { title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours } = req.body;
+
+    try {
+        const completedAt = status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL';
+
+        await pool.query(
+            `UPDATE project_tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ?, estimated_hours = ?, actual_hours = ?, completed_at = ${completedAt}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating task:', error);
+        res.status(500).json({ error: 'Erro ao atualizar tarefa' });
+    }
+});
+
+// Update task status (for drag & drop)
+app.patch('/api/tasks/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status, orderIndex } = req.body;
+
+    try {
+        const completedAt = status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL';
+
+        await pool.query(
+            `UPDATE project_tasks SET status = ?, order_index = ?, completed_at = ${completedAt}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [status, orderIndex, id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        res.status(500).json({ error: 'Erro ao atualizar status da tarefa' });
+    }
+});
+
+// Delete task
+app.delete('/api/tasks/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query('DELETE FROM project_tasks WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        res.status(500).json({ error: 'Erro ao deletar tarefa' });
+    }
+});
+
+// Toggle subtask completion
+app.patch('/api/subtasks/:id/toggle', async (req, res) => {
+    const { id } = req.params;
+    const { is_completed } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE task_subtasks SET is_completed = ? WHERE id = ?',
+            [is_completed ? 1 : 0, id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error toggling subtask:', error);
+        res.status(500).json({ error: 'Erro ao atualizar subtarefa' });
+    }
+});
+
+// ============= TASK COMMENTS API =============
+
+// Get comments for a task
+app.get('/api/tasks/:id/comments', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [comments] = await pool.query(`
+            SELECT 
+                tc.*,
+                u.name as author_name,
+                u.avatar as author_avatar,
+                u.role as author_role
+            FROM task_comments tc
+            JOIN users u ON tc.user_id = u.id
+            WHERE tc.task_id = ?
+            ORDER BY tc.created_at ASC
+        `, [id]);
+
+        res.json(comments);
+    } catch (error) {
+        console.error('Error fetching task comments:', error);
+        res.status(500).json({ error: 'Erro ao buscar comentários da tarefa' });
+    }
+});
+
+// Add comment to task
+app.post('/api/tasks/:id/comments', async (req, res) => {
+    const { id } = req.params;
+    const { userId, content } = req.body;
+
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO task_comments (task_id, user_id, content) VALUES (?, ?, ?)',
+            [id, userId, content]
+        );
+
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Error adding task comment:', error);
+        res.status(500).json({ error: 'Erro ao adicionar comentário' });
+    }
+});
+
+// Update task comment
+app.put('/api/task-comments/:id', async (req, res) => {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    try {
+        await pool.query(
+            'UPDATE task_comments SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [content, id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating task comment:', error);
+        res.status(500).json({ error: 'Erro ao atualizar comentário' });
+    }
+});
+
+// Delete task comment
+app.delete('/api/task-comments/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query('DELETE FROM task_comments WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting task comment:', error);
+        res.status(500).json({ error: 'Erro ao deletar comentário' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
