@@ -9,6 +9,7 @@ import eventRoutes from './routes/events.js';
 import aiRoutes from './routes/ai.js';
 import holidayRoutes from './routes/holidays.js';
 import searchRoutes from './routes/search.js';
+import tecticRoutes from './routes/tectic.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -41,6 +42,7 @@ const upload = multer({
 
 app.use(cors());
 app.use(express.json());
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -57,6 +59,7 @@ app.use('/api/todos', authMiddleware);
 app.use('/api/posts', authMiddleware);
 app.use('/api/mural/feed', authMiddleware);
 app.use('/api/drive', authMiddleware);
+app.use('/api/tectic', tecticRoutes);
 app.use('/api/holidays', holidayRoutes);
 app.use('/api/search', searchRoutes);
 
@@ -2001,7 +2004,8 @@ app.post('/api/projects/:id/tasks', async (req, res) => {
 
         // Insert subtasks
         if (subtasks && Array.isArray(subtasks)) {
-            for (const subtaskTitle of subtasks) {
+            for (const subtaskItem of subtasks) {
+                const subtaskTitle = typeof subtaskItem === 'string' ? subtaskItem : subtaskItem.title;
                 await pool.query(
                     'INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)',
                     [taskId, subtaskTitle]
@@ -2019,7 +2023,7 @@ app.post('/api/projects/:id/tasks', async (req, res) => {
 // Update task
 app.put('/api/tasks/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours } = req.body;
+    const { title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, subtasks, assignees } = req.body;
 
     try {
         const completedAt = status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL';
@@ -2028,6 +2032,29 @@ app.put('/api/tasks/:id', async (req, res) => {
             `UPDATE project_tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ?, estimated_hours = ?, actual_hours = ?, completed_at = ${completedAt}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
             [title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, id]
         );
+
+        // Update assignees
+        if (assignees && Array.isArray(assignees)) {
+            await pool.query('DELETE FROM task_assignees WHERE task_id = ?', [id]);
+            for (const userId of assignees) {
+                await pool.query(
+                    'INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)',
+                    [id, userId]
+                );
+            }
+        }
+
+        // Update subtasks
+        if (subtasks && Array.isArray(subtasks)) {
+            await pool.query('DELETE FROM task_subtasks WHERE task_id = ?', [id]);
+            for (const subtaskItem of subtasks) {
+                const subtaskTitle = typeof subtaskItem === 'string' ? subtaskItem : subtaskItem.title;
+                await pool.query(
+                    'INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)',
+                    [id, subtaskTitle]
+                );
+            }
+        }
 
         res.json({ success: true });
     } catch (error) {

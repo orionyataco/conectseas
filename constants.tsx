@@ -15,7 +15,8 @@ import {
   Bot,
   ShieldCheck,
   Folder,
-  FolderKanban
+  FolderKanban,
+  Monitor
 } from 'lucide-react';
 
 export const SYSTEMS = [
@@ -41,6 +42,7 @@ export const NAV_ITEMS = [
   { id: 'diretorio', label: 'Diretório', icon: <Folder size={20} /> },
   { id: 'documentos', label: 'Solicitação', icon: <FileText size={20} /> },
   { id: 'ai', label: 'Assistente IA', icon: <Bot size={20} /> },
+  { id: 'tectic', label: 'TEC-TIC', icon: <Monitor size={20} /> },
   { id: 'admin', label: 'Painel Admin', icon: <ShieldCheck size={20} /> },
 ];
 

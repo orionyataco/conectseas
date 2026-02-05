@@ -53,6 +53,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [view, setView] = useState<'grid' | 'list' | 'kanban'>('grid');
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [showNewTaskModal, setShowNewTaskModal] = useState(false);
     const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
     const [loading, setLoading] = useState(true);
@@ -156,7 +157,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
             formData.append('name', projectData.name);
             formData.append('description', projectData.description || '');
             formData.append('ownerId', user.id);
-            formData.append('status', 'active');
+            formData.append('status', projectData.status || 'active');
             formData.append('priority', projectData.priority);
             formData.append('startDate', projectData.startDate);
             formData.append('endDate', projectData.endDate);
@@ -178,6 +179,17 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
             setShowNewProjectModal(false);
         } catch (error) {
             console.error('Error creating project:', error);
+        }
+    };
+
+    const handleUpdateProject = async (projectData: any) => {
+        if (!editingProject) return;
+        try {
+            await updateProject(editingProject.id, projectData);
+            await loadProjects();
+            setEditingProject(null);
+        } catch (error) {
+            console.error('Error updating project:', error);
         }
     };
 
@@ -617,6 +629,17 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setActiveDropdown(null);
+                                                    setEditingProject(project);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                            >
+                                                <Edit2 size={14} />
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveDropdown(null);
                                                     handleDuplicateProject(project.id);
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
@@ -687,12 +710,17 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                 </div>
             )}
 
-            {/* New Project Modal */}
-            {showNewProjectModal && (
+            {/* New/Edit Project Modal */}
+            {(showNewProjectModal || editingProject) && (
                 <NewProjectModal
-                    onClose={() => setShowNewProjectModal(false)}
-                    onCreate={handleCreateProject}
+                    onClose={() => {
+                        setShowNewProjectModal(false);
+                        setEditingProject(null);
+                    }}
+                    onCreate={editingProject ? handleUpdateProject : handleCreateProject}
                     users={allUsers}
+                    initialData={editingProject}
+                    isEditing={!!editingProject}
                 />
             )}
         </div>
@@ -704,16 +732,34 @@ const NewProjectModal: React.FC<{
     onClose: () => void;
     onCreate: (data: any) => void;
     users: User[];
-}> = ({ onClose, onCreate, users }) => {
+    initialData?: Project | null;
+    isEditing?: boolean;
+}> = ({ onClose, onCreate, users, initialData, isEditing }) => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         priority: 'medium',
         visibility: 'public',
+        status: 'active',
         color: '#3B82F6',
         startDate: '',
         endDate: ''
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                name: initialData.name,
+                description: initialData.description || '',
+                priority: initialData.priority,
+                visibility: initialData.visibility || 'public',
+                status: initialData.status || 'active',
+                color: initialData.color || '#3B82F6',
+                startDate: initialData.start_date ? initialData.start_date.split('T')[0] : '',
+                endDate: initialData.end_date ? initialData.end_date.split('T')[0] : ''
+            });
+        }
+    }, [initialData]);
 
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -755,7 +801,7 @@ const NewProjectModal: React.FC<{
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-xl max-w-2xl w-full p-6 my-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Novo Projeto</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">{isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Nome do Projeto *</label>
@@ -793,6 +839,21 @@ const NewProjectModal: React.FC<{
                                 <option value="urgent">Urgente</option>
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="active">Ativo</option>
+                                <option value="on_hold">Pausado</option>
+                                <option value="completed">Concluído</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Visibilidade</label>
                             <select
@@ -927,8 +988,8 @@ const NewProjectModal: React.FC<{
                             type="submit"
                             className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm"
                         >
-                            <Plus size={18} />
-                            Criar Projeto
+                            {isEditing ? <Edit2 size={18} /> : <Plus size={18} />}
+                            {isEditing ? 'Salvar Alterações' : 'Criar Projeto'}
                         </button>
                     </div>
                 </form>

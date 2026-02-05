@@ -472,6 +472,100 @@ const initDB = async () => {
     `);
     console.log('Tabela "system_settings" verificada/criada.');
 
+    // --- TEC-TIC Service Desk Tables ---
+
+    // Tickets Table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tectic_tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        assigned_to INTEGER,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        category TEXT NOT NULL, -- Hardware, Software, Rede, Sistemas, Outros
+        priority TEXT DEFAULT 'Baixa', -- Baixa, Média, Alta, Crítica
+        status TEXT DEFAULT 'Aberto', -- Aberto, Em Atendimento, Pendente, Resolvido, Cancelado
+        support_level TEXT DEFAULT 'L1', -- L1, L2, L3
+        solution TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        resolved_at DATETIME,
+        resolved_by INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+    // Migration for resolved_by
+    try {
+      await connection.query('ALTER TABLE tectic_tickets ADD COLUMN resolved_by INTEGER');
+    } catch (e) { }
+    console.log('Tabela "tectic_tickets" verificada/criada.');
+
+    // Ticket Comments/History
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tectic_ticket_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        comment TEXT NOT NULL,
+        is_internal BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (ticket_id) REFERENCES tectic_tickets(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "tectic_ticket_comments" verificada/criada.');
+
+    // Knowledge Base
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tectic_knowledge (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT NOT NULL,
+        tags TEXT,
+        author_id INTEGER NOT NULL,
+        views INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "tectic_knowledge" verificada/criada.');
+
+    // TEC-Drive Files
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tectic_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL, -- Instalador, Documento, Script
+        file_size INTEGER NOT NULL,
+        mimetype TEXT,
+        uploaded_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "tectic_files" verificada/criada.');
+
+    // Mural de Avisos TI
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tectic_notices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        urgency TEXT DEFAULT 'Normal', -- Normal, Importante, Crítico
+        expires_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER NOT NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "tectic_notices" verificada/criada.');
+
     // Seed default system settings if empty
     const [existingSettings] = await connection.query('SELECT COUNT(*) as count FROM system_settings');
     if (existingSettings[0].count === 0) {

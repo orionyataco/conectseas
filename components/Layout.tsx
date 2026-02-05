@@ -23,10 +23,11 @@ interface LayoutProps {
   setTargetUserId: (id: string | null) => void;
   onLogout: () => void;
   setSearchContext: (context: { type: string; id: string | number } | null) => void;
+  onOpenTicket: () => void;
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, children }) => {
+const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, onOpenTicket, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -163,10 +164,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                 <div className="relative z-10">
                   <p className="text-xs opacity-80 mb-1 font-medium">Precisa de Ajuda?</p>
                   <p className="text-sm font-semibold mb-3">Suporte técnico disponível para você.</p>
-                  <button onClick={() => {
-                    setActiveTab('ti');
-                    setTargetUserId(null);
-                  }} className="bg-white text-blue-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                  <button onClick={onOpenTicket} className="bg-white text-blue-600 text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
                     Abrir Chamado
                   </button>
                 </div>

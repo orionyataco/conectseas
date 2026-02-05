@@ -10,6 +10,7 @@ import AIAssistant from './components/AIAssistant';
 import Workflows from './components/Workflows';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
+import ServiceDesk, { CreateTicketModal } from './components/ServiceDesk';
 import { User, UserRole } from './types';
 import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff } from 'lucide-react';
 import { checkDbConnection, login } from './services/api';
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   const { user, isAuthenticated, login: authLogin, logout: authLogout, loading: authLoading } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [searchContext, setSearchContext] = React.useState<{ type: string; id: string | number } | null>(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = React.useState(false);
 
   // Login form states
   const [username, setUsername] = React.useState('');
@@ -223,6 +225,9 @@ const App: React.FC = () => {
       case 'admin':
         if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
         return <AdminPanel />;
+      case 'tectic':
+        if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
+        return <ServiceDesk />;
       default: return <Dashboard user={user} />;
     }
   };
@@ -235,8 +240,15 @@ const App: React.FC = () => {
       setTargetUserId={setTargetUserId}
       onLogout={handleLogout}
       setSearchContext={setSearchContext}
+      onOpenTicket={() => setIsTicketModalOpen(true)}
     >
       {renderContent()}
+      {isTicketModalOpen && (
+        <CreateTicketModal
+          onClose={() => setIsTicketModalOpen(false)}
+          onCreated={() => setIsTicketModalOpen(false)}
+        />
+      )}
     </Layout>
   );
 };

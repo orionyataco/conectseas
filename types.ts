@@ -207,3 +207,63 @@ export interface TaskComment {
   author_role: string;
 }
 
+export interface TecticTicket {
+  id: number;
+  user_id: number;
+  assigned_to?: number;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  support_level: string;
+  solution?: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  requester_name?: string;
+  requester_avatar?: string;
+  requester_email?: string;
+  requester_dept?: string;
+  technician_name?: string;
+  resolved_by?: number;
+  resolver_name?: string;
+  comments?: TecticComment[];
+}
+
+export interface TecticComment {
+  id: number;
+  ticket_id: number;
+  user_id: number;
+  comment: string;
+  is_internal: boolean;
+  created_at: string;
+  user_name?: string;
+  user_avatar?: string;
+  user_role?: string;
+}
+
+export interface TecticFile {
+  id: number;
+  name: string;
+  original_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  mimetype: string;
+  uploaded_by: number;
+  created_at: string;
+  uploader_name?: string;
+}
+export interface TecticKnowledge {
+  id: number;
+  title: string;
+  content: string;
+  category: string;
+  tags?: string;
+  author_id: number;
+  author_name?: string;
+  views: number;
+  created_at: string;
+  updated_at: string;
+}

@@ -823,5 +823,102 @@ export const deleteTaskComment = async (id: number) => {
     }
 };
 
+// TEC-TIC Service Desk
+export const getTecticStats = async () => {
+    const response = await api.get('/tectic/stats');
+    return response.data;
+};
+
+export const getTecticTickets = async () => {
+    const response = await api.get('/tectic/tickets');
+    return response.data;
+};
+
+export const deleteTecticTickets = async (ids: number[]) => {
+    const response = await api.delete('/tectic/bulk', { data: { ids } });
+    return response.data;
+};
+
+
+export const getTecticDossier = async (id: number) => {
+    const response = await api.get(`/tectic/tickets/${id}`);
+    return response.data;
+};
+
+export const createTecticTicket = async (data: any) => {
+    const response = await api.post('/tectic/tickets', data);
+    return response.data;
+};
+
+export const updateTecticTicket = async (id: number, data: any) => {
+    const response = await api.put(`/tectic/tickets/${id}`, data);
+    return response.data;
+};
+
+export const addTecticComment = async (ticketId: number, comment: string, isInternal: boolean) => {
+    const response = await api.post(`/tectic/tickets/${ticketId}/comments`, { comment, is_internal: isInternal });
+    return response.data;
+};
+
+export const getTriageSuggestions = async (description: string) => {
+    const response = await api.post('/tectic/triage', { description });
+    return response.data;
+};
+
+export const getTecticDrive = async () => {
+    const response = await api.get('/tectic/drive');
+    return response.data;
+};
+
+export const uploadTecticFile = async (file: File, type: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('file_type', type);
+    const response = await api.post('/tectic/drive/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+};
+
+export const deleteTecticFile = async (id: number) => {
+    const response = await api.delete(`/tectic/drive/${id}`);
+    return response.data;
+};
+
+export const renameTecticFile = async (id: number, newName: string) => {
+    const response = await api.put(`/tectic/drive/${id}`, { original_name: newName });
+    return response.data;
+};
+
+export const getTecticNotices = async () => {
+    const response = await api.get('/tectic/notices');
+    return response.data;
+};
+
+export const createTecticNotice = async (data: any) => {
+    const response = await api.post('/tectic/notices', data);
+    return response.data;
+};
+
+export const getTecticKnowledge = async () => {
+    const response = await api.get('/tectic/knowledge');
+    return response.data;
+};
+
+export const createTecticKnowledge = async (data: any) => {
+    const response = await api.post('/tectic/knowledge', data);
+    return response.data;
+};
+
+export const updateTecticKnowledge = async (id: number, data: any) => {
+    const response = await api.put(`/tectic/knowledge/${id}`, data);
+    return response.data;
+};
+
+export const deleteTecticKnowledge = async (id: number) => {
+    const response = await api.delete(`/tectic/knowledge/${id}`);
+    return response.data;
+};
+
 export default api;
 
