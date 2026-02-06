@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -12,11 +14,8 @@ import searchRoutes from './routes/search.js';
 import tecticRoutes from './routes/tectic.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import authMiddleware from './middleware/auth.js';
 import adminMiddleware from './middleware/admin.js';
-
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

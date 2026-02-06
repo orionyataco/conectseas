@@ -113,7 +113,6 @@ const ServiceDesk: React.FC = () => {
                     <SubNavLink icon={<HardDrive size={18} />} label="TEC-Drive" active={activeSubTab === 'drive'} onClick={() => setActiveSubTab('drive')} />
                     <SubNavLink icon={<BookOpen size={18} />} label="Base" active={activeSubTab === 'base'} onClick={() => setActiveSubTab('base')} />
                     <SubNavLink icon={<Terminal size={18} />} label="Remoto" active={activeSubTab === 'remoto'} onClick={() => setActiveSubTab('remoto')} />
-                    <SubNavLink icon={<Users size={18} />} label="Equipe" active={activeSubTab === 'equipe'} onClick={() => setActiveSubTab('equipe')} />
                 </div>
 
                 <button
@@ -131,7 +130,7 @@ const ServiceDesk: React.FC = () => {
                 {activeSubTab === 'drive' && <TECDrive />}
                 {activeSubTab === 'base' && <KnowledgeBase />}
 
-                {['remoto', 'equipe'].includes(activeSubTab) && <PlaceholderTab label={activeSubTab} />}
+                {['remoto'].includes(activeSubTab) && <PlaceholderTab label={activeSubTab} />}
             </div>
 
             {isDossierOpen && selectedTicket && (

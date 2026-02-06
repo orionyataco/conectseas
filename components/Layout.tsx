@@ -138,7 +138,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
           )}
 
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
-            {NAV_ITEMS.filter(item => item.id !== 'admin' || user.role === 'ADMIN').map((item) => (
+            {NAV_ITEMS.filter(item => (item.id !== 'admin' && item.id !== 'tectic') || user.role === 'ADMIN').map((item) => (
               <button
                 key={item.id}
                 onClick={() => {

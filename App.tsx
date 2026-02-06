@@ -7,7 +7,6 @@ import Calendar from './components/Calendar';
 import Directory from './components/Directory';
 import ProjectManager from './components/ProjectManager';
 import AIAssistant from './components/AIAssistant';
-import Workflows from './components/Workflows';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import ServiceDesk, { CreateTicketModal } from './components/ServiceDesk';
@@ -215,11 +214,6 @@ const App: React.FC = () => {
       case 'projetos': return <ProjectManager user={user} />;
       case 'diretorio': return <Directory user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
       case 'ai': return <AIAssistant />;
-      case 'ti':
-      case 'urh':
-      case 'patrimonio':
-      case 'documentos':
-        return <Workflows />;
       case 'profile':
         return <Profile user={user!} targetUserId={targetUserId} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
       case 'admin':

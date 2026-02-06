@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export async function askAI(prompt) {
-    const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
     const systemInstruction = `
     Você é o Assistente Virtual da Secretaria de Assistência Social do Estado do Amapá (SEAS-AP).
@@ -16,7 +16,7 @@ export async function askAI(prompt) {
 
     try {
         const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-flash-latest',
             systemInstruction: systemInstruction
         });
 
