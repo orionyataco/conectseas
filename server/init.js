@@ -472,6 +472,63 @@ const initDB = async () => {
     `);
     console.log('Tabela "system_settings" verificada/criada.');
 
+    // Create notifications table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        link TEXT,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Tabela "notifications" verificada/criada.');
+
+    // Create sidebar_items table for configurable sidebar
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS sidebar_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        label TEXT NOT NULL,
+        icon TEXT NOT NULL,
+        path TEXT,
+        order_index INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 1,
+        required_role TEXT,
+        is_system BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "sidebar_items" verificada/criada.');
+
+    // Populate default sidebar items if table is empty
+    const [existingItems] = await connection.query('SELECT COUNT(*) as count FROM sidebar_items');
+    if (existingItems[0].count === 0) {
+      const defaultSidebarItems = [
+        { key: 'dashboard', label: 'Início', icon: 'LayoutDashboard', path: 'dashboard', order_index: 1, is_system: 1 },
+        { key: 'mural', label: 'Mural', icon: 'MessageSquare', path: 'mural', order_index: 2, is_system: 1 },
+        { key: 'calendario', label: 'Calendário', icon: 'Calendar', path: 'calendario', order_index: 3, is_system: 1 },
+        { key: 'diretorio', label: 'Diretório', icon: 'FolderOpen', path: 'diretorio', order_index: 4, is_system: 1 },
+        { key: 'projetos', label: 'Projetos', icon: 'Briefcase', path: 'projetos', order_index: 5, is_system: 1 },
+        { key: 'tectic', label: 'TEC-TIC', icon: 'Monitor', path: 'tectic', order_index: 6, required_role: 'ADMIN', is_system: 1 },
+        { key: 'assistente', label: 'Assistente IA', icon: 'Bot', path: 'assistente', order_index: 7, is_system: 1 },
+        { key: 'admin', label: 'Painel de Controle', icon: 'Shield', path: 'admin', order_index: 8, required_role: 'ADMIN', is_system: 1 }
+      ];
+
+      for (const item of defaultSidebarItems) {
+        await connection.query(
+          'INSERT INTO sidebar_items (key, label, icon, path, order_index, required_role, is_system) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [item.key, item.label, item.icon, item.path, item.order_index, item.required_role || null, item.is_system]
+        );
+      }
+      console.log('Itens padrão da sidebar inseridos.');
+    }
+
     // --- TEC-TIC Service Desk Tables ---
 
     // Tickets Table
@@ -605,6 +662,13 @@ const initDB = async () => {
           value: JSON.stringify({
             max_file_size: 10 * 1024 * 1024, // 10MB
             allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+          })
+        },
+        {
+          key: 'theme_config',
+          value: JSON.stringify({
+            primary_color: '#2563eb', // blue-600
+            theme_name: 'default'
           })
         }
       ];

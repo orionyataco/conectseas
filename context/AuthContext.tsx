@@ -21,7 +21,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('user');
         const savedToken = localStorage.getItem('token');
         if (savedUser && savedToken) {
-            setUser(JSON.parse(savedUser));
+            const parsedUser = JSON.parse(savedUser);
+            // Normalize legacy roles
+            if (parsedUser.role === 'SERVIDOR') {
+                parsedUser.role = 'USER';
+            }
+            setUser(parsedUser);
             setToken(savedToken);
         }
         setLoading(false);

@@ -11,10 +11,42 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { NAV_ITEMS } from '../constants';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, getSidebarItems, globalSearch } from '../services/api';
 import { User, UserRole } from '../types';
-import { globalSearch } from '../services/api';
+import {
+  Check,
+  CheckCheck,
+  Inbox,
+  Clock,
+  LayoutDashboard,
+  MessageSquare,
+  Calendar,
+  FolderOpen,
+  Briefcase,
+  Headphones,
+  Database,
+  Bot,
+  Settings,
+  Users,
+  Shield,
+  Monitor,
+  FileText,
+  Globe,
+  BarChart3,
+  Layout as LayoutIcon,
+  Plus
+} from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
+
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  link: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 interface LayoutProps {
   user: User;
@@ -34,12 +66,21 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   const [searchResults, setSearchResults] = React.useState({ users: [], events: [], documents: [] });
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [sidebarItems, setSidebarItems] = React.useState<any[]>([]);
+  const [sidebarLoading, setSidebarLoading] = React.useState(true);
   const searchRef = React.useRef<HTMLDivElement>(null);
+  const notificationRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchOverlay(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -50,6 +91,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setShowSearchOverlay(false);
+        setShowNotifications(false);
       }
     };
     document.addEventListener('keydown', handleEsc);
@@ -77,6 +119,89 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
     return () => clearTimeout(timer);
   }, [searchQuery, user.id, user.role]);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await getNotifications(user.id);
+      setNotifications(data);
+      setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const fetchSidebar = async () => {
+    try {
+      setSidebarLoading(true);
+      const items = await getSidebarItems();
+      setSidebarItems(items);
+    } catch (error) {
+      console.error('Error fetching sidebar items:', error);
+    } finally {
+      setSidebarLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchNotifications();
+    fetchSidebar();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user.id]);
+
+  const ICON_MAP: Record<string, any> = {
+    'LayoutDashboard': LayoutDashboard,
+    'MessageSquare': MessageSquare,
+    'Calendar': Calendar,
+    'FolderOpen': FolderOpen,
+    'Briefcase': Briefcase,
+    'Headphones': Headphones,
+    'Database': Database,
+    'Bot': Bot,
+    'Settings': Settings,
+    'Users': Users,
+    'Shield': Shield,
+    'Monitor': Monitor,
+    'FileText': FileText,
+    'Globe': Globe,
+    'BarChart3': BarChart3,
+    'Layers': LayoutIcon,
+    'Plus': Plus,
+    'Search': Search
+  };
+
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.is_read) {
+      await markNotificationAsRead(notif.id);
+      fetchNotifications();
+    }
+    setShowNotifications(false);
+    if (notif.link) {
+      setActiveTab(notif.link);
+      setTargetUserId(null);
+    }
+  };
+
+  const handleReadAll = async () => {
+    try {
+      await markAllNotificationsAsRead(user.id);
+      fetchNotifications();
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+
+    if (diffInMin < 1) return 'Agora mesmo';
+    if (diffInMin < 60) return `${diffInMin}m atrás`;
+    const diffInHours = Math.floor(diffInMin / 60);
+    if (diffInHours < 24) return `${diffInHours}h atrás`;
+    return date.toLocaleDateString('pt-BR');
+  };
 
   const handleSelectSearchResult = (item: any) => {
     setShowSearchOverlay(false);
@@ -138,23 +263,43 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
           )}
 
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
-            {NAV_ITEMS.filter(item => (item.id !== 'admin' && item.id !== 'tectic') || user.role === 'ADMIN').map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setTargetUserId(null);
-                }}
-                title={isCollapsed ? item.label : ''}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.id
-                  ? 'bg-blue-50 text-blue-600 font-medium'
-                  : 'text-slate-600 hover:bg-slate-50'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-              >
-                {item.icon}
-                {!isCollapsed && <span>{item.label}</span>}
-              </button>
-            ))}
+            {sidebarLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 size={24} className="animate-spin text-slate-300" />
+              </div>
+            ) : (
+              sidebarItems
+                .filter(item => {
+                  if (!item.is_active) return false;
+                  if (!item.required_role) return true;
+
+                  const userRole = user.role === 'SERVIDOR' ? UserRole.USER : user.role;
+
+                  if (item.required_role === 'ADMIN') return userRole === UserRole.ADMIN;
+                  if (item.required_role === 'USER') return userRole === UserRole.USER || userRole === UserRole.ADMIN;
+                  return true;
+                })
+                .map((item) => {
+                  const IconComponent = ICON_MAP[item.icon] || Globe;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.path);
+                        setTargetUserId(null);
+                      }}
+                      title={isCollapsed ? item.label : ''}
+                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.path
+                        ? 'bg-blue-50 text-blue-600 font-medium'
+                        : 'text-slate-600 hover:bg-slate-50'
+                        } ${isCollapsed ? 'justify-center' : ''}`}
+                    >
+                      <IconComponent size={20} />
+                      {!isCollapsed && <span>{item.label}</span>}
+                    </button>
+                  );
+                })
+            )}
           </nav>
 
 
@@ -262,11 +407,90 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            <button
+              onClick={() => setActiveTab('rocket-chat')}
+              className={`p-2 hover:bg-slate-100 rounded-full flex items-center gap-2 border border-slate-200 px-4 transition-colors ${activeTab === 'rocket-chat' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-slate-500'}`}
+            >
+              <MessageSquare size={20} className={activeTab === 'rocket-chat' ? 'text-blue-600' : 'text-blue-500'} />
+              <span className="hidden sm:inline text-xs font-semibold text-slate-700">Rocket.Chat</span>
             </button>
 
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-blue-600' : 'text-slate-500'}`}
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                      <Bell size={16} className="text-blue-600" />
+                      Notificações
+                    </h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleReadAll}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1"
+                      >
+                        <CheckCheck size={12} />
+                        Ler tudo
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      <div className="divide-y divide-slate-50">
+                        {notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors relative group ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                          >
+                            {!notif.is_read && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
+                            )}
+                            <div className="flex gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'mural_mention' ? 'bg-purple-100 text-purple-600' :
+                                notif.type === 'drive_share' ? 'bg-blue-100 text-blue-600' :
+                                  notif.type === 'calendar_invite' ? 'bg-emerald-100 text-emerald-600' :
+                                    'bg-orange-100 text-orange-600'
+                                }`}>
+                                <Inbox size={14} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-800 truncate">{notif.title}</p>
+                                <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
+                                <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
+                                  <Clock size={10} />
+                                  {formatTime(notif.created_at)}
+                                </div>
+                              </div>
+                              {!notif.is_read && (
+                                <div className="w-2 h-2 bg-blue-600 rounded-full mt-1"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Bell size={24} className="text-slate-300" />
+                        </div>
+                        <p className="text-sm text-slate-500 font-medium">Nenhuma notificação por aqui.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

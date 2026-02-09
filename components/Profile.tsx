@@ -159,7 +159,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                 </div>
 
                 <div className="px-8 pb-8">
-                    <div className="relative -mt-16 mb-6 flex flex-col md:flex-row items-end md:items-end gap-6">
+                    <div className="relative -mt-20 mb-6 flex flex-col md:flex-row items-end md:items-end gap-6">
                         {/* Avatar */}
                         <div className="relative group">
                             <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg overflow-hidden bg-white">
@@ -177,10 +177,12 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             )}
                         </div>
 
-                        <div className="flex-1 pb-2 text-center md:text-left">
-                            <h1 className="text-2xl font-bold text-slate-800">{user.name}</h1>
-                            <p className="text-slate-500 font-medium">{user.role} - {user.position}</p>
-                            <p className="text-slate-400 text-sm">{user.department}</p>
+                        <div className="flex-1 pb-2 text-center md:text-left flex flex-col">
+                            <h1 className="text-2xl font-bold text-slate-800 md:text-white md:mb-6 md:-translate-y-4">{user.name}</h1>
+                            <div className="md:translate-y-2">
+                                <p className="text-slate-500 font-medium">{user.role} - {user.position}</p>
+                                <p className="text-slate-400 text-sm">{user.department}</p>
+                            </div>
                         </div>
                         {fetching && (
                             <div className="pb-2">
@@ -247,7 +249,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
                                         />
                                     ) : (
-                                        <p className="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <p className="text-slate-600 leading-relaxed">
                                             {user.bio}
                                         </p>
                                     )}
@@ -270,9 +272,9 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 ) : (
-                                    <div className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500">
+                                    <p className="text-slate-800">
                                         {user.email}
-                                    </div>
+                                    </p>
                                 )}
                             </div>
 

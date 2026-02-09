@@ -920,5 +920,62 @@ export const deleteTecticKnowledge = async (id: number) => {
     return response.data;
 };
 
+// Notifications API
+export const getNotifications = async (userId: string) => {
+    try {
+        const response = await api.get(`/notifications?userId=${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+    }
+};
+
+export const markNotificationAsRead = async (id: number) => {
+    try {
+        const response = await api.put(`/notifications/${id}/read`);
+        return response.data;
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        throw error;
+    }
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+    try {
+        const response = await api.put('/notifications/read-all', { userId });
+        return response.data;
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        throw error;
+    }
+};
+
+// Sidebar Configuration API
+export const getSidebarItems = async () => {
+    const response = await api.get('/sidebar-items');
+    return response.data;
+};
+
+export const createSidebarItem = async (data: any) => {
+    const response = await api.post('/admin/sidebar-items', data);
+    return response.data;
+};
+
+export const updateSidebarItem = async (id: number, data: any) => {
+    const response = await api.put(`/admin/sidebar-items/${id}`, data);
+    return response.data;
+};
+
+export const deleteSidebarItem = async (id: number) => {
+    const response = await api.delete(`/admin/sidebar-items/${id}`);
+    return response.data;
+};
+
+export const reorderSidebarItems = async (items: { id: number, order_index: number }[]) => {
+    const response = await api.put('/admin/sidebar-items/reorder', { items });
+    return response.data;
+};
+
 export default api;
 

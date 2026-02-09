@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import { sendNotification } from '../services/notificationService.js';
 
 export const getEvents = async (req, res) => {
     const { userId, userRole } = req.query;
@@ -58,6 +59,15 @@ export const createEvent = async (req, res) => {
                     'INSERT INTO event_shares (event_id, user_id) VALUES (?, ?)',
                     [eventId, sharedUserId]
                 );
+
+                // Notify user
+                await sendNotification(
+                    sharedUserId,
+                    'calendar_invite',
+                    'Convite de Calendário',
+                    `Você foi convidado para o evento: ${title}`,
+                    'calendario'
+                );
             }
         }
 
@@ -94,6 +104,15 @@ export const updateEvent = async (req, res) => {
                 await pool.query(
                     'INSERT INTO event_shares (event_id, user_id) VALUES (?, ?)',
                     [id, sharedUserId]
+                );
+
+                // Notify user
+                await sendNotification(
+                    sharedUserId,
+                    'calendar_invite',
+                    'Convite de Calendário',
+                    `Você foi convidado para o evento: ${title}`,
+                    'calendario'
                 );
             }
         }

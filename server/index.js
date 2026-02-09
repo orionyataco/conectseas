@@ -14,6 +14,7 @@ import searchRoutes from './routes/search.js';
 import tecticRoutes from './routes/tectic.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { sendNotification, processMentions } from './services/notificationService.js';
 import authMiddleware from './middleware/auth.js';
 import adminMiddleware from './middleware/admin.js';
 
@@ -69,7 +70,7 @@ app.use('/api/admin', [authMiddleware, adminMiddleware]);
 app.get('/api/public/settings/:key', async (req, res) => {
     const { key } = req.params;
     // Only allow specific keys to be public
-    const publicKeys = ['login_ui'];
+    const publicKeys = ['login_ui', 'theme_config'];
     if (!publicKeys.includes(key)) {
         return res.status(403).json({ error: 'Acesso negado' });
     }
@@ -81,6 +82,54 @@ app.get('/api/public/settings/:key', async (req, res) => {
     } catch (error) {
         console.error(`Erro ao buscar configuração pública ${key}:`, error);
         res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// Notifications Routes
+app.get('/api/notifications', authMiddleware, async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
+            [userId]
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ error: 'Erro ao buscar notificações' });
+    }
+});
+
+// Sidebar Items Route (Common)
+app.get('/api/sidebar-items', authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM sidebar_items ORDER BY order_index ASC');
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao buscar itens da sidebar:', error);
+        res.status(500).json({ error: 'Erro ao buscar itens da sidebar' });
+    }
+});
+
+app.put('/api/notifications/:id/read', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        res.status(500).json({ error: 'Erro ao ler notificação' });
+    }
+});
+
+app.put('/api/notifications/read-all', authMiddleware, async (req, res) => {
+    const { userId } = req.body;
+    try {
+        await pool.query('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        res.status(500).json({ error: 'Erro ao ler notificações' });
     }
 });
 
@@ -679,6 +728,11 @@ app.post('/api/posts', upload.array('files', 10), async (req, res) => {
             }
         }
 
+        // Process mentions
+        const [author] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
+        const authorName = author[0]?.name || 'Alguém';
+        await processMentions(content, userId, authorName);
+
         res.json({ success: true, postId });
     } catch (error) {
         console.error('Erro ao criar post:', error);
@@ -813,6 +867,12 @@ app.post('/api/posts/:id/comments', async (req, res) => {
             'INSERT INTO post_comments (post_id, user_id, content) VALUES (?, ?, ?)',
             [id, userId, content]
         );
+
+        // Process mentions
+        const [author] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
+        const authorName = author[0]?.name || 'Alguém';
+        await processMentions(content, userId, authorName);
+
         res.json({ success: true });
     } catch (error) {
         console.error('Erro ao adicionar comentário:', error);
@@ -1300,6 +1360,18 @@ app.post('/api/drive/folders/:id/share', async (req, res) => {
             'INSERT INTO folder_shares (folder_id, user_id, permission) VALUES (?, ?, ?) ON CONFLICT(folder_id, user_id) DO UPDATE SET permission = EXCLUDED.permission',
             [id, targetUserId, permission]
         );
+
+        // Notify user
+        const [folder] = await pool.query('SELECT name FROM user_folders WHERE id = ?', [id]);
+        const folderName = folder[0]?.name || 'uma pasta';
+        await sendNotification(
+            targetUserId,
+            'drive_share',
+            'Nova pasta compartilhada',
+            `Uma pasta foi compartilhada com você: ${folderName}`,
+            'diretorio'
+        );
+
         res.json({ success: true });
     } catch (error) {
         console.error('Erro ao compartilhar:', error);
@@ -1407,6 +1479,68 @@ app.post('/api/admin/settings/upload/:key', upload.single('file'), async (req, r
     } catch (error) {
         console.error(`Erro ao fazer upload para configuração ${key}:`, error);
         res.status(500).json({ error: 'Erro ao salvar arquivo' });
+    }
+});
+
+// Sidebar Configuration Routes
+
+
+app.post('/api/admin/sidebar-items', async (req, res) => {
+    const { key, label, icon, path, order_index, required_role, is_active } = req.body;
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO sidebar_items (key, label, icon, path, order_index, required_role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [key, label, icon, path, order_index || 0, required_role || null, is_active === undefined ? 1 : is_active]
+        );
+        res.json({ id: result.insertId, success: true });
+    } catch (error) {
+        console.error('Erro ao criar item da sidebar:', error);
+        res.status(500).json({ error: 'Erro ao criar item da sidebar' });
+    }
+});
+
+app.put('/api/admin/sidebar-items/:id', async (req, res) => {
+    const { id } = req.params;
+    const { label, icon, path, order_index, required_role, is_active } = req.body;
+    try {
+        await pool.query(
+            'UPDATE sidebar_items SET label = ?, icon = ?, path = ?, order_index = ?, required_role = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [label, icon, path, order_index, required_role || null, is_active, id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao atualizar item da sidebar:', error);
+        res.status(500).json({ error: 'Erro ao atualizar item da sidebar' });
+    }
+});
+
+app.delete('/api/admin/sidebar-items/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Prevent deleting system items
+        const [item] = await pool.query('SELECT is_system FROM sidebar_items WHERE id = ?', [id]);
+        if (item[0]?.is_system) {
+            return res.status(403).json({ error: 'Não é possível excluir itens do sistema' });
+        }
+
+        await pool.query('DELETE FROM sidebar_items WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao excluir item da sidebar:', error);
+        res.status(500).json({ error: 'Erro ao excluir item da sidebar' });
+    }
+});
+
+app.put('/api/admin/sidebar-items/reorder', async (req, res) => {
+    const { items } = req.body; // Array of { id, order_index }
+    try {
+        for (const item of items) {
+            await pool.query('UPDATE sidebar_items SET order_index = ? WHERE id = ?', [item.order_index, item.id]);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao reordenar itens da sidebar:', error);
+        res.status(500).json({ error: 'Erro ao reordenar itens da sidebar' });
     }
 });
 
@@ -1850,6 +1984,17 @@ app.post('/api/projects/:id/members', async (req, res) => {
             [id, userId, role || 'member']
         );
 
+        // Notify user
+        const [project] = await pool.query('SELECT name FROM projects WHERE id = ?', [id]);
+        const projectName = project[0]?.name || 'um projeto';
+        await sendNotification(
+            userId,
+            'project_invite',
+            'Convite de Projeto',
+            `Você foi adicionado ao projeto: ${projectName}`,
+            'projetos'
+        );
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error adding project member:', error);
@@ -1991,13 +2136,27 @@ app.post('/api/projects/:id/tasks', async (req, res) => {
 
         const taskId = result.insertId;
 
-        // Insert assignees
+        // Insert assignees and notify them
         if (assignees && Array.isArray(assignees)) {
+            const [task] = await pool.query('SELECT title FROM project_tasks WHERE id = ?', [taskId]);
+            const taskTitle = task[0]?.title || 'uma tarefa';
+
             for (const userId of assignees) {
                 await pool.query(
                     'INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)',
                     [taskId, userId]
                 );
+
+                // Notify assigned user
+                if (userId !== createdBy) {
+                    await sendNotification(
+                        userId,
+                        'project_task_assignment',
+                        'Nova tarefa atribuída',
+                        `Você foi atribuído à tarefa: ${taskTitle}`,
+                        'projetos'
+                    );
+                }
             }
         }
 
@@ -2032,14 +2191,30 @@ app.put('/api/tasks/:id', async (req, res) => {
             [title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, id]
         );
 
-        // Update assignees
+        // Update assignees and notify new ones
         if (assignees && Array.isArray(assignees)) {
+            // Get previous assignees
+            const [prevAssignees] = await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [id]);
+            const prevIds = prevAssignees.map(a => a.user_id);
+
             await pool.query('DELETE FROM task_assignees WHERE task_id = ?', [id]);
+
             for (const userId of assignees) {
                 await pool.query(
                     'INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)',
                     [id, userId]
                 );
+
+                // Notify only newly assigned users
+                if (!prevIds.includes(userId)) {
+                    await sendNotification(
+                        userId,
+                        'project_task_assignment',
+                        'Nova tarefa atribuída',
+                        `Você foi atribuído à tarefa: ${title}`,
+                        'projetos'
+                    );
+                }
             }
         }
 

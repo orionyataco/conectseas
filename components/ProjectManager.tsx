@@ -687,18 +687,36 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${project.status === 'active' ? 'bg-green-100 text-green-700' :
-                                project.status === 'on_hold' ? 'bg-yellow-100 text-yellow-700' :
-                                    project.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                                        'bg-gray-100 text-gray-700'
-                                }`}>
-                                {project.status === 'active' ? 'Ativo' :
-                                    project.status === 'on_hold' ? 'Pausado' :
-                                        project.status === 'completed' ? 'Concluído' : 'Arquivado'}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(project.priority)}`}>
-                                {project.priority}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                {project.owner_avatar ? (
+                                    <img
+                                        src={project.owner_avatar}
+                                        alt={project.owner_name}
+                                        className="w-6 h-6 rounded-full border border-slate-200"
+                                    />
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
+                                        {project.owner_name?.charAt(0) || 'U'}
+                                    </div>
+                                )}
+                                <span className="text-xs text-slate-600">
+                                    Criado por <span className="font-medium text-slate-900">{project.owner_name || 'Desconhecido'}</span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${project.status === 'active' ? 'bg-green-100 text-green-700' :
+                                    project.status === 'on_hold' ? 'bg-yellow-100 text-yellow-700' :
+                                        project.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-gray-100 text-gray-700'
+                                    }`}>
+                                    {project.status === 'active' ? 'Ativo' :
+                                        project.status === 'on_hold' ? 'Pausado' :
+                                            project.status === 'completed' ? 'Concluído' : 'Arquivado'}
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(project.priority)}`}>
+                                    {project.priority}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 ))}

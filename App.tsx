@@ -10,6 +10,7 @@ import AIAssistant from './components/AIAssistant';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import ServiceDesk, { CreateTicketModal } from './components/ServiceDesk';
+import RocketChat from './components/RocketChat';
 import { User, UserRole } from './types';
 import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff } from 'lucide-react';
 import { checkDbConnection, login } from './services/api';
@@ -22,6 +23,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [searchContext, setSearchContext] = React.useState<{ type: string; id: string | number } | null>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = React.useState(false);
+
 
   // Login form states
   const [username, setUsername] = React.useState('');
@@ -36,22 +38,79 @@ const App: React.FC = () => {
       .catch(() => setDbStatus({ connected: false, message: 'Erro ao conectar ao banco de dados' }));
   }, []);
 
-  // Fetch dynamic login screen settings
+  // Fetch dynamic login screen settings and theme
   const [loginSettings, setLoginSettings] = React.useState({
     title: 'Login Administrativo',
     subtitle: 'Entre com as credenciais locais ou de rede.',
     welcome_text: 'Gestão Administrativa Integrada',
     background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
-    description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
+    description_text: ''
   });
+  const [themeConfig, setThemeConfig] = React.useState({
+    primary_color: '#2563eb'
+  });
+
+  const generateShades = (hex: string) => {
+    const hexToRgb = (h: string) => {
+      const r = parseInt(h.slice(1, 3), 16);
+      const g = parseInt(h.slice(3, 5), 16);
+      const b = parseInt(h.slice(5, 7), 16);
+      return [r, g, b];
+    };
+
+    const rgbToHex = (arr: number[]) => {
+      return "#" + arr.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+    };
+
+    const mix = (rgb: number[], target: number[], weight: number) => {
+      return rgb.map((c, i) => c * (1 - weight) + target[i] * weight);
+    };
+
+    const rgb = hexToRgb(hex);
+    const white = [255, 255, 255];
+    const black = [0, 0, 0];
+
+    return {
+      50: rgbToHex(mix(rgb, white, 0.95)),
+      100: rgbToHex(mix(rgb, white, 0.9)),
+      200: rgbToHex(mix(rgb, white, 0.7)),
+      300: rgbToHex(mix(rgb, white, 0.5)),
+      400: rgbToHex(mix(rgb, white, 0.3)),
+      500: hex,
+      600: rgbToHex(mix(rgb, black, 0.1)),
+      700: rgbToHex(mix(rgb, black, 0.25)),
+      800: rgbToHex(mix(rgb, black, 0.45)),
+      900: rgbToHex(mix(rgb, black, 0.65)),
+      950: rgbToHex(mix(rgb, black, 0.85)),
+    };
+  };
+
+  const applyTheme = (color: string) => {
+    const shades = generateShades(color);
+    const root = document.documentElement;
+    Object.entries(shades).forEach(([sh, hex]) => {
+      root.style.setProperty(`--color-primary-${sh}`, hex as string);
+    });
+  };
 
   React.useEffect(() => {
     import('./services/api').then(({ getPublicSetting }) => {
+      // Load Login UI
       getPublicSetting('login_ui')
         .then(data => {
           if (data) setLoginSettings(data);
         })
         .catch(err => console.error('Erro ao carregar configurações de login:', err));
+
+      // Load Theme
+      getPublicSetting('theme_config')
+        .then(data => {
+          if (data && data.primary_color) {
+            setThemeConfig(data);
+            applyTheme(data.primary_color);
+          }
+        })
+        .catch(err => console.error('Erro ao carregar tema:', err));
     });
   }, []);
 
@@ -181,7 +240,8 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-blue-900 overflow-hidden">
               <img
                 src={loginSettings.background_url}
-                className="w-full h-full object-cover opacity-40 mix-blend-overlay transition-opacity duration-700"
+                className="w-full h-full object-cover mix-blend-overlay transition-opacity duration-700"
+                style={{ opacity: (loginSettings.overlay_opacity || 70) / 100 }}
                 alt="Workspace"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent"></div>
@@ -213,15 +273,17 @@ const App: React.FC = () => {
       case 'calendario': return <Calendar user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
       case 'projetos': return <ProjectManager user={user} />;
       case 'diretorio': return <Directory user={user} searchContext={searchContext} onClearContext={() => setSearchContext(null)} />;
+      case 'assistente':
       case 'ai': return <AIAssistant />;
       case 'profile':
         return <Profile user={user!} targetUserId={targetUserId} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
       case 'admin':
-        if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
+        if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
         return <AdminPanel />;
       case 'tectic':
-        if (user?.role !== 'ADMIN') return <Dashboard user={user} />;
+        if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
         return <ServiceDesk />;
+      case 'rocket-chat': return <RocketChat />;
       default: return <Dashboard user={user} />;
     }
   };
