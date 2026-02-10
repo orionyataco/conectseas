@@ -500,6 +500,7 @@ const initDB = async () => {
         is_active BOOLEAN DEFAULT 1,
         required_role TEXT,
         is_system BOOLEAN DEFAULT 0,
+        open_in_iframe BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -515,7 +516,7 @@ const initDB = async () => {
         { key: 'calendario', label: 'Calendário', icon: 'Calendar', path: 'calendario', order_index: 3, is_system: 1 },
         { key: 'diretorio', label: 'Diretório', icon: 'FolderOpen', path: 'diretorio', order_index: 4, is_system: 1 },
         { key: 'projetos', label: 'Projetos', icon: 'Briefcase', path: 'projetos', order_index: 5, is_system: 1 },
-        { key: 'tectic', label: 'TEC-TIC', icon: 'Monitor', path: 'tectic', order_index: 6, required_role: 'ADMIN', is_system: 1 },
+        { key: 'tectic', label: 'ServiceDesk', icon: 'Monitor', path: 'tectic', order_index: 6, required_role: 'ADMIN', is_system: 1 },
         { key: 'assistente', label: 'Assistente IA', icon: 'Bot', path: 'assistente', order_index: 7, is_system: 1 },
         { key: 'admin', label: 'Painel de Controle', icon: 'Shield', path: 'admin', order_index: 8, required_role: 'ADMIN', is_system: 1 }
       ];
@@ -529,7 +530,13 @@ const initDB = async () => {
       console.log('Itens padrão da sidebar inseridos.');
     }
 
-    // --- TEC-TIC Service Desk Tables ---
+    // Migration for sidebar_items
+    try {
+      await connection.query('ALTER TABLE sidebar_items ADD COLUMN open_in_iframe BOOLEAN DEFAULT 0');
+      console.log('Coluna "open_in_iframe" vinculada à tabela sidebar_items.');
+    } catch (e) { }
+
+    // --- ServiceDesk Tables ---
 
     // Tickets Table
     await connection.query(`
@@ -623,64 +630,55 @@ const initDB = async () => {
     `);
     console.log('Tabela "tectic_notices" verificada/criada.');
 
-    // Seed default system settings if empty
-    const [existingSettings] = await connection.query('SELECT COUNT(*) as count FROM system_settings');
-    if (existingSettings[0].count === 0) {
-      const defaultSettings = [
-        {
-          key: 'ldap_config',
-          value: JSON.stringify({
-            enabled: false,
-            host: '',
-            port: 389,
-            baseDn: '',
-            bindDn: '',
-            bindPassword: ''
-          })
-        },
-        {
-          key: 'login_ui',
-          value: JSON.stringify({
-            title: 'Login Administrativo',
-            subtitle: 'Entre com as credenciais locais ou de rede.',
-            logo_url: '',
-            background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
-            welcome_text: 'Gestão Administrativa Integrada',
-            description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
-          })
-        },
-        {
-          key: 'security_policy',
-          value: JSON.stringify({
-            min_password_length: 8,
-            require_special_chars: true,
-            session_timeout: 1440 // in minutes (24h)
-          })
-        },
-        {
-          key: 'upload_config',
-          value: JSON.stringify({
-            max_file_size: 10 * 1024 * 1024, // 10MB
-            allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-          })
-        },
-        {
-          key: 'theme_config',
-          value: JSON.stringify({
-            primary_color: '#2563eb', // blue-600
-            theme_name: 'default'
-          })
-        }
-      ];
-
-      for (const setting of defaultSettings) {
-        await connection.query(`
-          INSERT INTO system_settings (key, value)
-          VALUES (?, ?)
-        `, [setting.key, setting.value]);
+    // Seed default settings
+    const defaultSettings = [
+      {
+        key: 'ldap_config',
+        value: JSON.stringify({ enabled: false, url: '', bindDN: '', bindCredentials: '', searchBase: '' })
+      },
+      {
+        key: 'visual_identity',
+        value: JSON.stringify({ app_name: 'CONECTSEAS', app_description: 'Governo do Amapá', app_logo: null })
+      },
+      {
+        key: 'login_ui',
+        value: JSON.stringify({
+          title: 'Login Administrativo',
+          subtitle: 'Entre com as credenciais locais ou de rede.',
+          logo_url: '',
+          background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
+          welcome_text: 'Gestão Administrativa Integrada',
+          description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
+        })
+      },
+      {
+        key: 'security_policy',
+        value: JSON.stringify({
+          min_password_length: 8,
+          require_special_chars: true,
+          session_timeout: 1440 // in minutes (24h)
+        })
+      },
+      {
+        key: 'upload_config',
+        value: JSON.stringify({
+          max_file_size: 10 * 1024 * 1024, // 10MB
+          allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        })
+      },
+      {
+        key: 'theme_config',
+        value: JSON.stringify({
+          primary_color: '#2563eb', // blue-600
+          theme_name: 'default'
+        })
       }
-      console.log('Configurações de sistema padrão inseridas.');
+    ];
+
+    for (const setting of defaultSettings) {
+      await connection.query('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', [setting.key, setting.value]);
     }
+    console.log('Configurações de sistema verificadas/atualizadas.');
 
     // Seed default system shortcuts if empty
     const [existingSystems] = await connection.query('SELECT COUNT(*) as count FROM system_shortcuts');

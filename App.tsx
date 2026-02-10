@@ -10,10 +10,10 @@ import AIAssistant from './components/AIAssistant';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import ServiceDesk, { CreateTicketModal } from './components/ServiceDesk';
-import RocketChat from './components/RocketChat';
+import IframeViewer from './components/IframeViewer';
 import { User, UserRole } from './types';
-import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff } from 'lucide-react';
-import { checkDbConnection, login } from './services/api';
+import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff, LayoutDashboard, Globe, Monitor } from 'lucide-react';
+import { checkDbConnection, login, getSidebarItems, getVisualIdentity } from './services/api';
 import { useAuth } from './context/AuthContext';
 
 const App: React.FC = () => {
@@ -23,6 +23,21 @@ const App: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [searchContext, setSearchContext] = React.useState<{ type: string; id: string | number } | null>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = React.useState(false);
+  const [sidebarItems, setSidebarItems] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      getSidebarItems().then(setSidebarItems);
+    }
+  }, [isAuthenticated]);
+
+  const ICON_MAP: Record<string, any> = {
+    'LayoutDashboard': LayoutDashboard,
+    'Monitor': Monitor,
+    'Globe': Globe,
+    'Shield': ShieldCheck,
+    'Database': Database
+  };
 
 
   // Login form states
@@ -49,6 +64,24 @@ const App: React.FC = () => {
   const [themeConfig, setThemeConfig] = React.useState({
     primary_color: '#2563eb'
   });
+
+  const [visualIdentity, setVisualIdentity] = React.useState({
+    app_name: 'CONECTSEAS',
+    app_description: 'Governo do Amapá',
+    app_logo: null
+  });
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const visual = await getVisualIdentity();
+        if (visual) setVisualIdentity(visual);
+      } catch (error) {
+        console.error('Erro ao carregar identidade visual:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const generateShades = (hex: string) => {
     const hexToRgb = (h: string) => {
@@ -283,8 +316,21 @@ const App: React.FC = () => {
       case 'tectic':
         if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
         return <ServiceDesk />;
-      case 'rocket-chat': return <RocketChat />;
-      default: return <Dashboard user={user} />;
+      default:
+        // Check for specific sidebar items that open in iframe
+        const item = sidebarItems.find(i => i.path === activeTab);
+        if (item && item.open_in_iframe) {
+          const Icon = ICON_MAP[item.icon] || Globe;
+          return (
+            <IframeViewer
+              url={item.path.startsWith('http') ? item.path : `/${item.path}`}
+              title={item.label}
+              icon={<Icon size={20} />}
+              subtitle="Sistema Integrado"
+            />
+          );
+        }
+        return <Dashboard user={user} />;
     }
   };
 
@@ -297,6 +343,8 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       setSearchContext={setSearchContext}
       onOpenTicket={() => setIsTicketModalOpen(true)}
+      sidebarItems={sidebarItems}
+      visualIdentity={visualIdentity}
     >
       {renderContent()}
       {isTicketModalOpen && (

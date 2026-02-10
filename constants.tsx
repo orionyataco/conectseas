@@ -36,7 +36,7 @@ export const NAV_ITEMS = [
   { id: 'projetos', label: 'Projetos', icon: <FolderKanban size={20} /> },
   { id: 'diretorio', label: 'Diretório', icon: <Folder size={20} /> },
   { id: 'ai', label: 'Assistente IA', icon: <Bot size={20} /> },
-  { id: 'tectic', label: 'TEC-TIC', icon: <Monitor size={20} /> },
+  { id: 'tectic', label: 'ServiceDesk', icon: <Monitor size={20} /> },
   { id: 'admin', label: 'Painel Admin', icon: <ShieldCheck size={20} /> },
 ];
 

@@ -607,7 +607,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-slate-800">{post.author_name}</h4>
-                        {post.is_urgent && (
+                        {!!post.is_urgent && (
                           <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Urgente</span>
                         )}
                       </div>

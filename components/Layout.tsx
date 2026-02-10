@@ -56,10 +56,16 @@ interface LayoutProps {
   onLogout: () => void;
   setSearchContext: (context: { type: string; id: string | number } | null) => void;
   onOpenTicket: () => void;
+  sidebarItems?: any[];
+  visualIdentity?: {
+    app_name: string;
+    app_description: string;
+    app_logo: string | null;
+  };
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, onOpenTicket, children }) => {
+const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, onOpenTicket, sidebarItems: propSidebarItems, visualIdentity, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -144,10 +150,15 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
   React.useEffect(() => {
     fetchNotifications();
-    fetchSidebar();
+    if (propSidebarItems && propSidebarItems.length > 0) {
+      setSidebarItems(propSidebarItems);
+      setSidebarLoading(false);
+    } else {
+      fetchSidebar();
+    }
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [user.id]);
+  }, [user.id, propSidebarItems]);
 
   const ICON_MAP: Record<string, any> = {
     'LayoutDashboard': LayoutDashboard,
@@ -237,13 +248,21 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
         <div className="h-full flex flex-col">
           <div className={`p-4 border-b border-slate-100 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-3`}>
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 min-w-[40px] bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                C
+              <div className="w-10 h-10 min-w-[40px] bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+                {visualIdentity?.app_logo ? (
+                  <img src={`/uploads/${visualIdentity.app_logo}`} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  visualIdentity?.app_name?.charAt(0) || 'C'
+                )}
               </div>
               {!isCollapsed && (
-                <div className="whitespace-nowrap">
-                  <h1 className="font-bold text-slate-800 leading-none text-lg">CONECTSEAS</h1>
-                  <p className="text-xs text-slate-500 mt-1">Governo do Amapá</p>
+                <div className="whitespace-nowrap overflow-hidden">
+                  <h1 className="font-bold text-slate-800 leading-none text-lg truncate max-w-[150px]" title={visualIdentity?.app_name || 'CONECTSEAS'}>
+                    {visualIdentity?.app_name || 'CONECTSEAS'}
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-1 truncate max-w-[150px]" title={visualIdentity?.app_description || 'Governo do Amapá'}>
+                    {visualIdentity?.app_description || 'Governo do Amapá'}
+                  </p>
                 </div>
               )}
             </div>
@@ -367,7 +386,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
               <input
                 type="text"
-                placeholder="Buscar processos, circulares ou pessoas..."
+                placeholder="Buscar usuários, eventos..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -407,13 +426,6 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setActiveTab('rocket-chat')}
-              className={`p-2 hover:bg-slate-100 rounded-full flex items-center gap-2 border border-slate-200 px-4 transition-colors ${activeTab === 'rocket-chat' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-slate-500'}`}
-            >
-              <MessageSquare size={20} className={activeTab === 'rocket-chat' ? 'text-blue-600' : 'text-blue-500'} />
-              <span className="hidden sm:inline text-xs font-semibold text-slate-700">Rocket.Chat</span>
-            </button>
 
             <div className="relative" ref={notificationRef}>
               <button

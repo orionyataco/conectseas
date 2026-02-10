@@ -70,7 +70,7 @@ app.use('/api/admin', [authMiddleware, adminMiddleware]);
 app.get('/api/public/settings/:key', async (req, res) => {
     const { key } = req.params;
     // Only allow specific keys to be public
-    const publicKeys = ['login_ui', 'theme_config'];
+    const publicKeys = ['login_ui', 'theme_config', 'visual_identity'];
     if (!publicKeys.includes(key)) {
         return res.status(403).json({ error: 'Acesso negado' });
     }
@@ -82,6 +82,34 @@ app.get('/api/public/settings/:key', async (req, res) => {
     } catch (error) {
         console.error(`Erro ao buscar configuração pública ${key}:`, error);
         res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// Admin Visual Identity Settings (Auth + Admin required)
+app.put('/api/admin/settings/visual-identity', [authMiddleware, adminMiddleware, upload.single('logo')], async (req, res) => {
+    const { app_name, app_description } = req.body;
+    let logo_filename = req.body.app_logo; // Keep existing if no new upload
+
+    if (req.file) {
+        logo_filename = req.file.filename;
+    }
+
+    try {
+        const visualIdentity = {
+            app_name: app_name || 'CONECTSEAS',
+            app_description: app_description || 'Governo do Amapá',
+            app_logo: logo_filename
+        };
+
+        await pool.query(
+            'INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP',
+            ['visual_identity', JSON.stringify(visualIdentity)]
+        );
+
+        res.json({ success: true, settings: visualIdentity });
+    } catch (error) {
+        console.error('Erro ao atualizar identidade visual:', error);
+        res.status(500).json({ error: 'Erro ao atualizar identidade visual' });
     }
 });
 
@@ -1486,11 +1514,11 @@ app.post('/api/admin/settings/upload/:key', upload.single('file'), async (req, r
 
 
 app.post('/api/admin/sidebar-items', async (req, res) => {
-    const { key, label, icon, path, order_index, required_role, is_active } = req.body;
+    const { key, label, icon, path, order_index, required_role, is_active, open_in_iframe } = req.body;
     try {
         const [result] = await pool.query(
-            'INSERT INTO sidebar_items (key, label, icon, path, order_index, required_role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [key, label, icon, path, order_index || 0, required_role || null, is_active === undefined ? 1 : is_active]
+            'INSERT INTO sidebar_items (key, label, icon, path, order_index, required_role, is_active, open_in_iframe) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [key, label, icon, path, order_index || 0, required_role || null, is_active === undefined ? 1 : is_active, open_in_iframe ? 1 : 0]
         );
         res.json({ id: result.insertId, success: true });
     } catch (error) {
@@ -1501,11 +1529,11 @@ app.post('/api/admin/sidebar-items', async (req, res) => {
 
 app.put('/api/admin/sidebar-items/:id', async (req, res) => {
     const { id } = req.params;
-    const { label, icon, path, order_index, required_role, is_active } = req.body;
+    const { label, icon, path, order_index, required_role, is_active, open_in_iframe } = req.body;
     try {
         await pool.query(
-            'UPDATE sidebar_items SET label = ?, icon = ?, path = ?, order_index = ?, required_role = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [label, icon, path, order_index, required_role || null, is_active, id]
+            'UPDATE sidebar_items SET label = ?, icon = ?, path = ?, order_index = ?, required_role = ?, is_active = ?, open_in_iframe = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [label, icon, path, order_index, required_role || null, is_active, open_in_iframe ? 1 : 0, id]
         );
         res.json({ success: true });
     } catch (error) {

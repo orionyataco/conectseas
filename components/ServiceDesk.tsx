@@ -102,7 +102,7 @@ const ServiceDesk: React.FC = () => {
                         <Monitor size={28} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">TEC-TIC</h1>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">ServiceDesk</h1>
                         <p className="text-sm text-slate-500 font-medium">Suporte Especializado de TI</p>
                     </div>
                 </div>
@@ -1122,7 +1122,7 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
                     </div>
                     <div>
                         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Novo Chamado Técnico</h2>
-                        <p className="text-sm text-slate-500 font-medium">Abertura de ticket no TEC-TIC</p>
+                        <p className="text-sm text-slate-500 font-medium">Abertura de ticket no ServiceDesk</p>
                     </div>
                 </div>
 

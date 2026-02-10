@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, Printer, RefreshCcw, Plus, X, Edit2, Trash2, Calendar as CalendarIcon, Clock, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Calendar as CalendarIcon, Clock, Eye, EyeOff } from 'lucide-react';
 import { Event, User } from '../types';
 import api from '../services/api';
 
@@ -498,15 +498,6 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
           <p className="text-slate-500">Gestão de agenda, eventos públicos e feriados do Estado do Amapá.</p>
         </header>
         <div className="flex gap-2">
-          <button
-            onClick={fetchEvents}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            <RefreshCcw size={18} /> Sincronizar
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">
-            <Printer size={18} /> Imprimir
-          </button>
         </div>
       </div>
 

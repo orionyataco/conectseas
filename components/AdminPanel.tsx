@@ -48,7 +48,9 @@ import {
     createSidebarItem,
     updateSidebarItem,
     deleteSidebarItem,
-    reorderSidebarItems
+    reorderSidebarItems,
+    getVisualIdentity,
+    updateVisualIdentity
 } from '../services/api';
 import { UserRole } from '../types';
 
@@ -98,6 +100,11 @@ const AdminPanel: React.FC = () => {
             require_special_chars: true,
             session_timeout: 1440
         },
+        visual_identity: {
+            app_name: 'CONECTSEAS',
+            app_description: 'Governo do Amapá',
+            app_logo: null
+        },
         upload_config: {
             max_file_size: 10485760,
             allowed_types: []
@@ -114,11 +121,12 @@ const AdminPanel: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [settingsData, statsData, usersData, sidebarData] = await Promise.all([
+            const [settingsData, statsData, usersData, sidebarData, visualIdentityData] = await Promise.all([
                 getAdminSettings(),
                 getAdminStats(),
                 getAdminUsers(),
-                getSidebarItems()
+                getSidebarItems(),
+                getVisualIdentity().catch(() => null) // Handle 404/error gracefully
             ]);
 
             // Deep merge received settings with defaults to avoid crashes
@@ -129,7 +137,8 @@ const AdminPanel: React.FC = () => {
                 login_ui: { ...prev.login_ui, ...(settingsData.login_ui || {}) },
                 security_policy: { ...prev.security_policy, ...(settingsData.security_policy || {}) },
                 upload_config: { ...prev.upload_config, ...(settingsData.upload_config || {}) },
-                theme_config: { ...prev.theme_config, ...(settingsData.theme_config || {}) }
+                theme_config: { ...prev.theme_config, ...(settingsData.theme_config || {}) },
+                visual_identity: { ...prev.visual_identity, ...(visualIdentityData || {}) }
             }));
 
             setStats(statsData);
@@ -608,73 +617,186 @@ const AdminPanel: React.FC = () => {
         </div>
     );
 
-    const renderVisual = () => (
-        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Globe className="text-blue-600" size={20} />
-                Identidade Visual e Temas
-            </h3>
+    const handleSaveVisualIdentity = async () => {
+        setSaving(true);
+        setError('');
+        setSuccess('');
+        try {
+            const formData = new FormData();
+            formData.append('app_name', settings.visual_identity.app_name);
+            formData.append('app_description', settings.visual_identity.app_description);
+            if (settings.visual_identity.app_logo) {
+                formData.append('app_logo', settings.visual_identity.app_logo);
+            }
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="space-y-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Cor Primária do Sistema</label>
-                        <p className="text-xs text-slate-500 mb-4">Escolha a cor que representará sua instituição em todo o portal.</p>
-                        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            const logoFile = (document.getElementById('brand-logo-upload') as HTMLInputElement)?.files?.[0];
+            if (logoFile) {
+                formData.append('logo', logoFile);
+            }
+
+            const response = await updateVisualIdentity(formData);
+            if (response.success) {
+                setSettings({
+                    ...settings,
+                    visual_identity: response.settings
+                });
+                setSuccess('Identidade visual atualizada com sucesso!');
+                setTimeout(() => setSuccess(''), 3000);
+            }
+        } catch (err: any) {
+            console.error('Error saving visual identity:', err);
+            setError('Erro ao salvar identidade visual.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const renderVisual = () => (
+        <div className="space-y-6">
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Globe className="text-blue-600" size={20} />
+                    Identidade da Marca
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">Nome do Sistema</label>
                             <input
-                                type="color"
-                                value={settings.theme_config.primary_color}
-                                onChange={(e) => {
-                                    const newColor = e.target.value;
-                                    setSettings({ ...settings, theme_config: { ...settings.theme_config, primary_color: newColor } });
-                                }}
-                                className="w-16 h-16 rounded-xl cursor-pointer border-none bg-transparent"
+                                type="text"
+                                value={settings.visual_identity.app_name}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    visual_identity: { ...settings.visual_identity, app_name: e.target.value }
+                                })}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                                placeholder="Ex: CONECTSEAS"
                             />
-                            <div className="flex-1">
-                                <p className="text-sm font-mono font-bold text-slate-700UpperCase">{settings.theme_config.primary_color}</p>
-                                <p className="text-[10px] text-slate-400">Esta cor será convertida em uma paleta completa automaticamente.</p>
-                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">Descrição / Subtítulo</label>
+                            <input
+                                type="text"
+                                value={settings.visual_identity.app_description}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    visual_identity: { ...settings.visual_identity, app_description: e.target.value }
+                                })}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Ex: Governo do Amapá"
+                            />
                         </div>
                     </div>
 
-                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex gap-2 items-start">
-                        <Monitor className="text-blue-600 shrink-0 mt-0.5" size={16} />
-                        <p className="text-[11px] text-blue-700 leading-relaxed">
-                            <strong>Dica:</strong> Cores com contraste médio a alto (como azul, verde floresta, vinho) funcionam melhor em interfaces administrativas.
-                        </p>
+                    <div className="space-y-4">
+                        <label className="text-sm font-bold text-slate-700 block">Logo da Marca</label>
+                        <div className="flex items-start gap-4">
+                            <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                                {settings.visual_identity.app_logo ? (
+                                    <img
+                                        src={`/uploads/${settings.visual_identity.app_logo}`}
+                                        alt="Logo"
+                                        className="w-full h-full object-contain p-2"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                                        {settings.visual_identity.app_name?.charAt(0) || 'C'}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                <input
+                                    type="file"
+                                    id="brand-logo-upload"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        // Trigger preview logic if needed, but for now we'll just let the user save
+                                        setSuccess('Nova logo selecionada. Clique em salvar para aplicar.');
+                                    }}
+                                />
+                                <label
+                                    htmlFor="brand-logo-upload"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-slate-600 font-bold text-xs"
+                                >
+                                    <Upload size={14} />
+                                    Alterar Logo
+                                </label>
+                                <p className="text-[10px] text-slate-400">Recomendado: 512x512 pixels. PNG ou SVG transparente.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <label className="text-sm font-bold text-slate-700">Pré-visualização</label>
-                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 space-y-4">
-                        <div className="flex gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-blue-600 shadow-sm"></div>
-                            <div className="h-8 flex-1 bg-white rounded-lg border border-slate-200 flex items-center px-3">
-                                <div className="w-20 h-2 bg-slate-100 rounded-full"></div>
-                            </div>
-                        </div>
-                        <div className="h-10 w-full bg-blue-600 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100">
-                            Botão de Exemplo
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="h-2 bg-blue-200 rounded-full"></div>
-                            <div className="h-2 bg-blue-400 rounded-full"></div>
-                            <div className="h-2 bg-blue-600 rounded-full"></div>
-                        </div>
-                    </div>
+                <div className="flex justify-end pt-4 border-t border-slate-100">
+                    <button
+                        onClick={handleSaveVisualIdentity}
+                        disabled={saving}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-xl shadow-blue-100 disabled:opacity-50"
+                    >
+                        {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                        Salvar Marca
+                    </button>
                 </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-                <button
-                    onClick={() => handleSave('theme_config', settings.theme_config)}
-                    disabled={saving}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-xl shadow-blue-100 disabled:opacity-50"
-                >
-                    {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-                    Salvar Identidade Visual
-                </button>
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Paintbrush className="text-purple-600" size={20} />
+                    Personalização de Cores (Tema)
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">Cor Primária do Sistema</label>
+                            <p className="text-xs text-slate-500 mb-4">Escolha a cor que representará sua instituição em todo o portal.</p>
+                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                <input
+                                    type="color"
+                                    value={settings.theme_config.primary_color}
+                                    onChange={(e) => {
+                                        const newColor = e.target.value;
+                                        setSettings({ ...settings, theme_config: { ...settings.theme_config, primary_color: newColor } });
+                                    }}
+                                    className="w-16 h-16 rounded-xl cursor-pointer border-none bg-transparent"
+                                />
+                                <div className="flex-1">
+                                    <p className="text-sm font-mono font-bold text-slate-700 uppercase">{settings.theme_config.primary_color}</p>
+                                    <p className="text-[10px] text-slate-400">Esta cor será convertida em uma paleta completa automaticamente.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <label className="text-sm font-bold text-slate-700">Pré-visualização do Tema</label>
+                        <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 space-y-4" style={{ '--preview-primary': settings.theme_config.primary_color } as any}>
+                            <div className="flex gap-2">
+                                <div className="w-8 h-8 rounded-lg shadow-sm" style={{ backgroundColor: settings.theme_config.primary_color }}></div>
+                                <div className="h-8 flex-1 bg-white rounded-lg border border-slate-200 flex items-center px-3">
+                                    <div className="w-20 h-2 bg-slate-100 rounded-full"></div>
+                                </div>
+                            </div>
+                            <div className="h-10 w-full rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100" style={{ backgroundColor: settings.theme_config.primary_color }}>
+                                Botão de Exemplo
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-slate-100">
+                    <button
+                        onClick={() => handleSave('theme_config', settings.theme_config)}
+                        disabled={saving}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-xl shadow-blue-100 disabled:opacity-50"
+                    >
+                        {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                        Salvar Cores
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -1023,7 +1145,7 @@ const AdminPanel: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-100">
+                <div className="overflow-x-auto rounded-xl border border-slate-100">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                             <tr>
@@ -1064,7 +1186,12 @@ const AdminPanel: React.FC = () => {
                                                     <IconComponent size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-800 text-sm">{item.label}</p>
+                                                    <p className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                                        {item.label}
+                                                        {item.open_in_iframe ? (
+                                                            <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-tighter">Iframe</span>
+                                                        ) : null}
+                                                    </p>
                                                     <p className="text-[10px] text-slate-400 font-medium font-mono">{item.key}</p>
                                                 </div>
                                             </div>
@@ -1096,18 +1223,26 @@ const AdminPanel: React.FC = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
-                                                    onClick={() => {
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setEditingItem(item);
                                                         setShowSidebarModal(true);
                                                     }}
                                                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    title="Editar"
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
                                                 {!item.is_system && (
                                                     <button
-                                                        onClick={() => handleDeleteSidebarItem(item.id)}
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteSidebarItem(item.id);
+                                                        }}
                                                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        title="Excluir"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -1236,7 +1371,8 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
         icon: initialData?.icon || 'LayoutDashboard',
         path: initialData?.path || '',
         required_role: initialData?.required_role || '',
-        is_active: initialData ? !!initialData.is_active : true
+        is_active: initialData ? !!initialData.is_active : true,
+        open_in_iframe: initialData ? !!initialData.open_in_iframe : false
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -1330,7 +1466,6 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                                 <option value={UserRole.USER}>Apenas Usuários</option>
                             </select>
                         </div>
-
                         <div className="space-y-1">
                             <label className="text-[10px] font-extrabold text-slate-500 uppercase">Status</label>
                             <div className="flex items-center h-[42px]">
@@ -1345,6 +1480,27 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                                     <span className="ml-3 text-sm font-medium text-slate-600">Ativo</span>
                                 </label>
                             </div>
+                        </div>
+
+                        <div className="space-y-1 col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                                    <Monitor size={16} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-blue-900">Abrir sistema em Iframe</span>
+                                    <span className="text-[10px] text-blue-600 font-medium">Mantém a barra lateral do ConnectSEAS visível</span>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.open_in_iframe}
+                                    onChange={e => setFormData({ ...formData, open_in_iframe: e.target.checked })}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
                         </div>
                     </div>
 
@@ -1363,9 +1519,9 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                             {initialData ? 'Salvar Alterações' : 'Criar Botão'}
                         </button>
                     </div>
-                </form>
-            </div>
-        </div>
+                </form >
+            </div >
+        </div >
     );
 };
 

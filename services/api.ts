@@ -823,7 +823,7 @@ export const deleteTaskComment = async (id: number) => {
     }
 };
 
-// TEC-TIC Service Desk
+// ServiceDesk
 export const getTecticStats = async () => {
     const response = await api.get('/tectic/stats');
     return response.data;
@@ -974,6 +974,21 @@ export const deleteSidebarItem = async (id: number) => {
 
 export const reorderSidebarItems = async (items: { id: number, order_index: number }[]) => {
     const response = await api.put('/admin/sidebar-items/reorder', { items });
+    return response.data;
+};
+
+// Settings
+export const getVisualIdentity = async () => {
+    const response = await api.get('/public/settings/visual_identity');
+    return response.data;
+};
+
+export const updateVisualIdentity = async (formData: FormData) => {
+    const response = await api.put('/admin/settings/visual-identity', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
     return response.data;
 };
 
