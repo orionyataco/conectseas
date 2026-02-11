@@ -24,7 +24,7 @@ const pool = {
     const command = sql.trim().split(' ')[0].toUpperCase();
 
     try {
-      if (command === 'SELECT') {
+      if (command === 'SELECT' || command === 'PRAGMA') {
         const rows = await db.all(sql, params);
         return [rows, []];
       } else {
@@ -36,7 +36,9 @@ const pool = {
         }, []];
       }
     } catch (error) {
-      console.error('SQL Error:', error.message, 'Query:', sql);
+      if (!error.message.includes('duplicate column name')) {
+        console.error('SQL Error:', error.message, 'Query:', sql);
+      }
       throw error;
     }
   },

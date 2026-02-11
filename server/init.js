@@ -532,9 +532,15 @@ const initDB = async () => {
 
     // Migration for sidebar_items
     try {
-      await connection.query('ALTER TABLE sidebar_items ADD COLUMN open_in_iframe BOOLEAN DEFAULT 0');
-      console.log('Coluna "open_in_iframe" vinculada à tabela sidebar_items.');
-    } catch (e) { }
+      const [tableInfo] = await connection.query("PRAGMA table_info(sidebar_items)");
+      const hasColumn = tableInfo.some(col => col.name === 'open_in_iframe');
+      if (!hasColumn) {
+        await connection.query('ALTER TABLE sidebar_items ADD COLUMN open_in_iframe BOOLEAN DEFAULT 0');
+        console.log('Coluna "open_in_iframe" vinculada à tabela sidebar_items.');
+      }
+    } catch (e) {
+      console.error('Erro ao migrar sidebar_items:', e);
+    }
 
     // --- ServiceDesk Tables ---
 
