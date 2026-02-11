@@ -83,6 +83,12 @@ const App: React.FC = () => {
     fetchSettings();
   }, []);
 
+  React.useEffect(() => {
+    if (visualIdentity.app_name) {
+      document.title = `${visualIdentity.app_name} - Governo do Amapá`;
+    }
+  }, [visualIdentity]);
+
   const generateShades = (hex: string) => {
     const hexToRgb = (h: string) => {
       const r = parseInt(h.slice(1, 3), 16);
@@ -194,7 +200,7 @@ const App: React.FC = () => {
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Usuário ou Matrícula</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">Login</label>
                 <input
                   type="text"
                   required
@@ -207,7 +213,6 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
                   <label className="text-sm font-bold text-slate-700">Senha</label>
-                  <a href="#" className="text-xs font-bold text-blue-600 hover:underline">Esqueceu a senha?</a>
                 </div>
 
                 {loginError && (
@@ -257,7 +262,7 @@ const App: React.FC = () => {
             </form>
 
             <div className="mt-12 flex flex-col gap-3 text-center md:text-left">
-              <p className="text-xs text-slate-400">Problemas com LDAP? <a href="#" className="text-blue-600 font-bold hover:underline">Contate o suporte TI</a></p>
+              <p className="text-xs text-slate-400">Problemas com acesso? <a href="#" className="text-blue-600 font-bold hover:underline">Contate o suporte TI</a></p>
               <p className="text-xs text-slate-300">© {new Date().getFullYear()} Governo do Estado do Amapá. Todos os direitos reservados.</p>
               {dbStatus && (
                 <div className={`flex items-center gap-2 text-xs font-bold ${dbStatus.connected ? 'text-green-600' : 'text-red-500'}`}>
