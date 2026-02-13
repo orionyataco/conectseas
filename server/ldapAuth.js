@@ -3,6 +3,11 @@ import ldap from 'ldapjs';
 
 export async function authenticateLDAP(username, password, ldapConfig) {
     return new Promise((resolve, reject) => {
+        // Validate inputs
+        if (!username || !password) {
+            return resolve({ success: false, reason: 'Username and password required' });
+        }
+
         if (!ldapConfig.enabled || !ldapConfig.host || !ldapConfig.baseDn) {
             return resolve({ success: false, reason: 'LDAP not configured' });
         }
@@ -43,8 +48,11 @@ export async function authenticateLDAP(username, password, ldapConfig) {
             }
 
             // Step 2: Search for user
+            // Sanitize username for LDAP filter
+            const sanitizedUsername = username.replace(/[\\(\\)\\*\\\\]/g, '\\$&');
+
             const searchOptions = {
-                filter: `(|(sAMAccountName=${username})(cn=${username})(uid=${username}))`,
+                filter: `(|(sAMAccountName=${sanitizedUsername})(cn=${sanitizedUsername})(uid=${sanitizedUsername}))`,
                 scope: 'sub',
                 attributes: ['cn', 'mail', 'sAMAccountName', 'displayName', 'department', 'title', 'dn']
             };

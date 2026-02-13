@@ -218,6 +218,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
 
     const handleDeleteProject = async (projectId: number) => {
         if (!confirm('Tem certeza que deseja excluir este projeto? Todas as tarefas também serão excluídas.')) return;
+
         try {
             await deleteProject(projectId, user.id);
             setProjects(projects.filter(p => p.id !== projectId));

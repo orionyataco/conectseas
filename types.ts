@@ -18,6 +18,10 @@ export interface User {
   mobile_phone?: string;
   registration_number?: string;
   appointment_date?: string;
+  vacation_status?: boolean;
+  vacation_message?: string;
+  vacation_start_date?: string;
+  vacation_end_date?: string;
 }
 
 

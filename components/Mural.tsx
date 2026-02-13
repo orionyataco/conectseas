@@ -260,6 +260,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const handleDeletePost = async (e: React.MouseEvent, postId: number) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!user || !confirm('Deseja realmente excluir esta postagem?')) return;
 
     try {

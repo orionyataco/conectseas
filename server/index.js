@@ -44,6 +44,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Routes
 app.use('/api/events', eventRoutes);
@@ -305,7 +307,7 @@ app.get('/api/users', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const [rows] = await pool.query('SELECT id, name, email, avatar, role, position, department, nickname, bio, birth_date, mobile_phone, registration_number, appointment_date FROM users WHERE id = ?', [id]);
+        const [rows] = await pool.query('SELECT id, name, email, avatar, role, position, department, nickname, bio, birth_date, mobile_phone, registration_number, appointment_date, vacation_status, vacation_message, vacation_start_date, vacation_end_date FROM users WHERE id = ?', [id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
         res.json(rows[0]);
     } catch (error) {
@@ -388,6 +390,63 @@ app.put('/api/users/:id', upload.single('avatar'), async (req, res) => {
     } catch (error) {
         console.error('Erro ao atualizar perfil:', error);
         res.status(500).json({ success: false, message: 'Erro ao atualizar perfil' });
+    }
+});
+
+// Update User Vacation Status
+app.put('/api/users/:id/vacation-status', async (req, res) => {
+    const { id } = req.params;
+    const { vacationStatus, vacationMessage, vacationStartDate, vacationEndDate, publishToMural } = req.body;
+
+    try {
+        // Update vacation fields
+        await pool.query(
+            'UPDATE users SET vacation_status = ?, vacation_message = ?, vacation_start_date = ?, vacation_end_date = ? WHERE id = ?',
+            [vacationStatus ? 1 : 0, vacationMessage || null, vacationStartDate || null, vacationEndDate || null, id]
+        );
+
+        // If publishToMural is true and vacationStatus is true, create a post
+        if (publishToMural && vacationStatus && vacationMessage) {
+            const [userRows] = await pool.query('SELECT name FROM users WHERE id = ?', [id]);
+            if (userRows.length > 0) {
+                const postContent = `🏖️ ${userRows[0].name} está de férias!\n\n${vacationMessage}`;
+                await pool.query(
+                    'INSERT INTO posts (user_id, content, is_urgent) VALUES (?, ?, ?)',
+                    [id, postContent, 0]
+                );
+                console.log(`Post de férias criado para usuário ${id}`);
+            }
+        }
+
+        // Return updated user
+        const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+        const user = rows[0];
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id.toString(),
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                department: user.department,
+                position: user.position,
+                avatar: user.avatar,
+                nickname: user.nickname,
+                bio: user.bio,
+                birth_date: user.birth_date,
+                mobile_phone: user.mobile_phone,
+                registration_number: user.registration_number,
+                appointment_date: user.appointment_date,
+                vacation_status: user.vacation_status,
+                vacation_message: user.vacation_message,
+                vacation_start_date: user.vacation_start_date,
+                vacation_end_date: user.vacation_end_date
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar status de férias:', error);
+        res.status(500).json({ success: false, message: 'Erro ao atualizar status de férias' });
     }
 });
 
@@ -2388,6 +2447,12 @@ app.delete('/api/task-comments/:id', async (req, res) => {
         console.error('Error deleting task comment:', error);
         res.status(500).json({ error: 'Erro ao deletar comentário' });
     }
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 app.listen(PORT, () => {

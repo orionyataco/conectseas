@@ -1,7 +1,7 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pool from './db.js';
+import pool, { isMySQL } from './db.js';
 import bcrypt from 'bcryptjs';
 
 const initDB = async () => {
@@ -9,14 +9,20 @@ const initDB = async () => {
     const connection = await pool.getConnection();
     console.log('Conectado ao SQLite para inicialização.');
 
-    // Enable foreign keys
-    // await connection.query('PRAGMA foreign_keys = ON');
+    // Enable foreign keys (SQLite only)
+    if (!isMySQL) {
+      await connection.query('PRAGMA foreign_keys = ON');
+    }
+
+    const AUTO_INC = isMySQL ? 'AUTO_INCREMENT' : 'AUTOINCREMENT';
+    const KEY_TYPE = isMySQL ? 'VARCHAR(255)' : 'TEXT'; // For Unique/Primary keys
+    const JSON_TYPE = isMySQL ? 'JSON' : 'TEXT';
 
     // Create users table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
+        username ${KEY_TYPE} NOT NULL UNIQUE,
         password TEXT NOT NULL,
         name TEXT NOT NULL,
         email TEXT,
@@ -43,7 +49,11 @@ const initDB = async () => {
       { name: 'mobile_phone', type: 'TEXT' },
       { name: 'registration_number', type: 'TEXT' },
       { name: 'appointment_date', type: 'DATE' },
-      { name: 'storage_quota', type: 'INTEGER DEFAULT 1073741824' }
+      { name: 'storage_quota', type: 'INTEGER DEFAULT 1073741824' },
+      { name: 'vacation_status', type: 'BOOLEAN DEFAULT 0' },
+      { name: 'vacation_message', type: 'TEXT' },
+      { name: 'vacation_start_date', type: 'DATE' },
+      { name: 'vacation_end_date', type: 'DATE' }
     ];
 
     for (const col of columnsToAdd) {
@@ -52,7 +62,8 @@ const initDB = async () => {
         console.log(`Coluna "${col.name}" adicionada à tabela users.`);
       } catch (error) {
         // Ignore error if column already exists
-        if (!error.message.includes('duplicate column name')) {
+        const msg = error.message.toLowerCase();
+        if (!msg.includes('duplicate column name') && !msg.includes('duplicate column')) {
           // console.warn(`Nota: Coluna ${col.name} já existe ou erro ao adicionar:`, error.message);
         }
       }
@@ -63,7 +74,7 @@ const initDB = async () => {
     // Create warnings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS warnings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         urgency TEXT DEFAULT 'low',
@@ -77,7 +88,7 @@ const initDB = async () => {
     // Create posts table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         is_urgent BOOLEAN DEFAULT 0,
@@ -91,7 +102,7 @@ const initDB = async () => {
     // Create post_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_attachments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         post_id INTEGER NOT NULL,
         filename TEXT NOT NULL,
         original_name TEXT NOT NULL,
@@ -107,7 +118,7 @@ const initDB = async () => {
     // Create post_likes table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_likes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -124,7 +135,7 @@ const initDB = async () => {
     // Create post_comments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
@@ -139,7 +150,7 @@ const initDB = async () => {
     // Create calendar_events table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS calendar_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -160,7 +171,7 @@ const initDB = async () => {
     // Create event_shares table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS event_shares (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         event_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -174,7 +185,7 @@ const initDB = async () => {
     // Create user_folders table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_folders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         parent_id INTEGER DEFAULT NULL,
         name TEXT NOT NULL,
@@ -203,7 +214,7 @@ const initDB = async () => {
     // Create user_files table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_files (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         folder_id INTEGER DEFAULT NULL,
         filename TEXT NOT NULL,
@@ -235,7 +246,7 @@ const initDB = async () => {
     // Create folder_shares table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS folder_shares (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         folder_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         permission TEXT DEFAULT 'READ', -- 'READ' or 'WRITE'
@@ -250,7 +261,7 @@ const initDB = async () => {
     // Create user_notes table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         content TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -266,7 +277,7 @@ const initDB = async () => {
     // Create user_shortcuts table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_shortcuts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
@@ -285,8 +296,8 @@ const initDB = async () => {
     // Create system_shortcuts table (Shared systems)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS system_shortcuts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
+        name ${KEY_TYPE} NOT NULL UNIQUE,
         description TEXT,
         url TEXT NOT NULL,
         icon_name TEXT DEFAULT 'Box',
@@ -302,7 +313,7 @@ const initDB = async () => {
     // Create todos table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         text TEXT NOT NULL,
         completed BOOLEAN DEFAULT 0,
@@ -315,7 +326,7 @@ const initDB = async () => {
     // Create projects table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         name TEXT NOT NULL,
         description TEXT,
         owner_id INTEGER NOT NULL,
@@ -353,7 +364,7 @@ const initDB = async () => {
     // Create project_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_attachments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         project_id INTEGER NOT NULL,
         file_id INTEGER NOT NULL,
         uploaded_by INTEGER NOT NULL,
@@ -368,7 +379,7 @@ const initDB = async () => {
     // Create project_members table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         project_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         role TEXT DEFAULT 'member',
@@ -383,7 +394,7 @@ const initDB = async () => {
     // Create project_tasks table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         project_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -408,7 +419,7 @@ const initDB = async () => {
     // Create task_comments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         task_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
@@ -423,7 +434,7 @@ const initDB = async () => {
     // Create task_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_attachments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         task_id INTEGER NOT NULL,
         file_id INTEGER NOT NULL,
         uploaded_by INTEGER NOT NULL,
@@ -438,7 +449,7 @@ const initDB = async () => {
     // Create task_assignees table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_assignees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         task_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -452,7 +463,7 @@ const initDB = async () => {
     // Create task_subtasks table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_subtasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         task_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         is_completed BOOLEAN DEFAULT 0,
@@ -465,8 +476,8 @@ const initDB = async () => {
     // Create system_settings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS system_settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
+        key ${KEY_TYPE} PRIMARY KEY,
+        value ${JSON_TYPE} NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -475,7 +486,7 @@ const initDB = async () => {
     // Create notifications table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         type TEXT NOT NULL,
         title TEXT NOT NULL,
@@ -491,8 +502,8 @@ const initDB = async () => {
     // Create sidebar_items table for configurable sidebar
     await connection.query(`
       CREATE TABLE IF NOT EXISTS sidebar_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT UNIQUE NOT NULL,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
+        key ${KEY_TYPE} UNIQUE NOT NULL,
         label TEXT NOT NULL,
         icon TEXT NOT NULL,
         path TEXT,
@@ -547,7 +558,7 @@ const initDB = async () => {
     // Tickets Table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         user_id INTEGER NOT NULL,
         assigned_to INTEGER,
         title TEXT NOT NULL,
@@ -575,7 +586,7 @@ const initDB = async () => {
     // Ticket Comments/History
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_ticket_comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         ticket_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         comment TEXT NOT NULL,
@@ -590,7 +601,7 @@ const initDB = async () => {
     // Knowledge Base
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_knowledge (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         category TEXT NOT NULL,
@@ -607,7 +618,7 @@ const initDB = async () => {
     // TEC-Drive Files
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_files (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         name TEXT NOT NULL,
         original_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
@@ -624,7 +635,7 @@ const initDB = async () => {
     // Mural de Avisos TI
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_notices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY ${AUTO_INC},
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         urgency TEXT DEFAULT 'Normal', -- Normal, Importante, Crítico

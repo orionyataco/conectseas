@@ -112,7 +112,7 @@ const ServiceDesk: React.FC = () => {
                     <SubNavLink icon={<Ticket size={18} />} label="Chamados" active={activeSubTab === 'chamados'} onClick={() => setActiveSubTab('chamados')} />
                     <SubNavLink icon={<HardDrive size={18} />} label="TEC-Drive" active={activeSubTab === 'drive'} onClick={() => setActiveSubTab('drive')} />
                     <SubNavLink icon={<BookOpen size={18} />} label="Base" active={activeSubTab === 'base'} onClick={() => setActiveSubTab('base')} />
-                    <SubNavLink icon={<Terminal size={18} />} label="Remoto" active={activeSubTab === 'remoto'} onClick={() => setActiveSubTab('remoto')} />
+
                 </div>
 
                 <button
@@ -130,7 +130,7 @@ const ServiceDesk: React.FC = () => {
                 {activeSubTab === 'drive' && <TECDrive />}
                 {activeSubTab === 'base' && <KnowledgeBase />}
 
-                {['remoto'].includes(activeSubTab) && <PlaceholderTab label={activeSubTab} />}
+
             </div>
 
             {isDossierOpen && selectedTicket && (
@@ -1513,12 +1513,6 @@ const TECDrive: React.FC = () => {
     );
 };
 
-const PlaceholderTab: React.FC<{ label: string }> = ({ label }) => (
-    <div className="flex flex-col items-center justify-center py-32 text-slate-300">
-        <Monitor size={80} className="opacity-10 mb-8" />
-        <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-2">{label}</h3>
-        <p className="font-bold text-slate-400">Funcionalidade em desenvolvimento pela equipe core.</p>
-    </div>
-);
+
 
 export default ServiceDesk;
