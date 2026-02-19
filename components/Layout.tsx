@@ -1,16 +1,6 @@
 import React from 'react';
-import {
-  Bell,
-  Search,
-  LogOut,
-  User as UserIcon,
-  Menu,
-  X,
-  HelpCircle,
-  Loader2,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
+import { Bell, Search, LogOut, User as UserIcon, Menu, X, HelpCircle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, getSidebarItems, globalSearch } from '../services/api';
 import { User, UserRole } from '../types';
 import {
@@ -66,6 +56,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, onOpenTicket, sidebarItems: propSidebarItems, visualIdentity, children }) => {
+  const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -79,6 +70,43 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   const [sidebarLoading, setSidebarLoading] = React.useState(true);
   const searchRef = React.useRef<HTMLDivElement>(null);
   const notificationRef = React.useRef<HTMLDivElement>(null);
+
+  // React Query for Notifications
+  const { data: notificationsData } = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: () => getNotifications(user!.id),
+    enabled: !!user?.id,
+    refetchInterval: 30000
+  });
+
+  // React Query for Sidebar
+  const { data: sidebarData, isLoading: isSidebarQueryLoading } = useQuery({
+    queryKey: ['sidebarItems'],
+    queryFn: getSidebarItems,
+    enabled: !!user
+  });
+
+  React.useEffect(() => {
+    if (notificationsData && Array.isArray(notificationsData)) {
+      setNotifications(notificationsData);
+      setUnreadCount(notificationsData.filter((n: Notification) => !n.is_read).length);
+    } else if (notificationsData) {
+      console.warn('notificationsData is not an array:', notificationsData);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, [notificationsData]);
+
+  React.useEffect(() => {
+    if (sidebarData && Array.isArray(sidebarData)) {
+      setSidebarItems(sidebarData);
+      setSidebarLoading(false);
+    } else if (sidebarData) {
+      console.warn('sidebarData is not an array:', sidebarData);
+      setSidebarItems([]);
+      setSidebarLoading(false);
+    }
+  }, [sidebarData]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -124,41 +152,14 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, user.id, user.role]);
-
-  const fetchNotifications = async () => {
-    try {
-      const data = await getNotifications(user.id);
-      setNotifications(data);
-      setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
-
-  const fetchSidebar = async () => {
-    try {
-      setSidebarLoading(true);
-      const items = await getSidebarItems();
-      setSidebarItems(items);
-    } catch (error) {
-      console.error('Error fetching sidebar items:', error);
-    } finally {
-      setSidebarLoading(false);
-    }
-  };
+  }, [searchQuery, user?.id, user?.role]);
 
   React.useEffect(() => {
-    fetchNotifications();
     if (propSidebarItems && propSidebarItems.length > 0) {
       setSidebarItems(propSidebarItems);
       setSidebarLoading(false);
-    } else {
-      fetchSidebar();
     }
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [user.id, propSidebarItems]);
+  }, [propSidebarItems]);
 
   const ICON_MAP: Record<string, any> = {
     'LayoutDashboard': LayoutDashboard,
@@ -184,7 +185,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   const handleNotificationClick = async (notif: Notification) => {
     if (!notif.is_read) {
       await markNotificationAsRead(notif.id);
-      fetchNotifications();
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
     }
     setShowNotifications(false);
     if (notif.link) {
@@ -196,7 +197,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   const handleReadAll = async () => {
     try {
       await markAllNotificationsAsRead(user.id);
-      fetchNotifications();
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
     } catch (err) {
       console.error('Error marking all as read:', err);
     }

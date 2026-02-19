@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
     LayoutDashboard,
     Ticket,
@@ -75,7 +76,12 @@ const ServiceDesk: React.FC = () => {
         setLoading(true);
         try {
             const data = await getTecticTickets();
-            setTickets(data);
+            if (Array.isArray(data)) {
+                setTickets(data);
+            } else {
+                console.warn('getTecticTickets did not return an array:', data);
+                setTickets([]);
+            }
         } catch (err) {
             console.error('Erro ao carregar chamados:', err);
         } finally {
@@ -214,8 +220,9 @@ const KnowledgeBase = () => {
             }
             setIsModalOpen(false);
             loadArticles();
+            toast.success(editingArticle ? 'Artigo atualizado com sucesso!' : 'Artigo criado com sucesso!');
         } catch (err) {
-            alert('Erro ao salvar artigo');
+            toast.error('Erro ao salvar artigo');
         }
     };
 
@@ -224,8 +231,9 @@ const KnowledgeBase = () => {
             try {
                 await deleteTecticKnowledge(id);
                 loadArticles();
+                toast.success('Artigo excluído com sucesso!');
             } catch (err) {
-                alert('Erro ao excluir artigo');
+                toast.error('Erro ao excluir artigo');
             }
         }
     };
@@ -701,9 +709,10 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
             await deleteTecticTickets(selectedTickets);
             setSelectedTickets([]);
             onRefresh();
+            toast.success(`${selectedTickets.length} chamado(s) deletado(s)`);
         } catch (error) {
             console.error('Error deleting tickets:', error);
-            alert('Erro ao deletar chamados');
+            toast.error('Erro ao deletar chamados');
         } finally {
             setIsDeleting(false);
         }
@@ -1279,8 +1288,9 @@ const TECDrive: React.FC = () => {
             try {
                 await deleteTecticFile(id);
                 loadFiles();
+                toast.success('Arquivo excluído');
             } catch (err) {
-                alert('Erro ao excluir arquivo');
+                toast.error('Erro ao excluir arquivo');
             }
         }
     };
@@ -1291,8 +1301,9 @@ const TECDrive: React.FC = () => {
             try {
                 await renameTecticFile(id, newName);
                 loadFiles();
+                toast.success('Arquivo renomeado');
             } catch (err) {
-                alert('Erro ao renomear arquivo');
+                toast.error('Erro ao renomear arquivo');
             }
         }
     };

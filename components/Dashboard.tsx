@@ -1,4 +1,6 @@
 import React, { useRef } from 'react';
+import toast from 'react-hot-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User, UserRole, Warning } from '../types';
 import { getNote, saveNote, getShortcuts, createShortcut, updateShortcut, deleteShortcut, getActiveWarning, createWarning, updateWarning, deleteWarning, getSystemShortcuts, createSystemShortcut, updateSystemShortcut, deleteSystemShortcut, getTodos, createTodo, updateTodo, deleteTodo, toggleShortcutFavorite, toggleSystemShortcutFavorite } from '../services/api';
 import { Info, ChevronRight, PenLine, X, Link, Globe, File, Box, Plus, Settings, AlertTriangle, Megaphone, ShieldAlert, CheckCircle, Trash2, Edit2, LayoutDashboard, MessageSquare, Users, Calendar, FileText, HelpCircle, ExternalLink, Laptop, UserPlus, Bot, Check, Circle, PlusCircle, Star } from 'lucide-react';
@@ -7,20 +9,31 @@ interface DashboardProps {
   user: User | null;
 }
 
+const availableIcons = [
+  { name: 'Globe', icon: <Globe className="w-6 h-6 text-indigo-500" /> },
+  { name: 'FileText', icon: <FileText className="w-6 h-6 text-indigo-500" /> },
+  { name: 'Box', icon: <Box className="w-6 h-6 text-indigo-500" /> },
+  { name: 'Users', icon: <Users className="w-6 h-6 text-indigo-500" /> },
+  { name: 'MessageSquare', icon: <MessageSquare className="w-6 h-6 text-indigo-500" /> },
+  { name: 'ExternalLink', icon: <ExternalLink className="w-6 h-6 text-indigo-500" /> },
+  { name: 'Plus', icon: <Plus className="w-6 h-6 text-indigo-500" /> },
+];
+
 const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+  const queryClient = useQueryClient();
   const [note, setNote] = React.useState('');
   const [shortcuts, setShortcuts] = React.useState<any[]>([]);
   const [systemShortcuts, setSystemShortcuts] = React.useState<any[]>([]);
+  const [todos, setTodos] = React.useState<any[]>([]);
+  const [warning, setWarning] = React.useState<Warning | null>(null);
   const [showModal, setShowModal] = React.useState(false);
   const [isEditingSystem, setIsEditingSystem] = React.useState(false);
   const [editingShortcutId, setEditingShortcutId] = React.useState<number | null>(null);
 
   // Todo States
-  const [todos, setTodos] = React.useState<any[]>([]);
   const [newTodoText, setNewTodoText] = React.useState('');
 
   // Warning States
-  const [warning, setWarning] = React.useState<Warning | null>(null);
   const [showWarningModal, setShowWarningModal] = React.useState(false);
   const [editingWarningId, setEditingWarningId] = React.useState<number | null>(null);
   const [newWarning, setNewWarning] = React.useState({
@@ -41,23 +54,52 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   // Autosave timer ref
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Warning query
+  const { data: warningData } = useQuery({
+    queryKey: ['warning'],
+    queryFn: getActiveWarning
+  });
+
   React.useEffect(() => {
-    fetchWarning();
-    if (user?.id) {
-      loadUserData();
+    if (warningData && Array.isArray(warningData)) {
+      setWarning(warningData[0] || null);
+    } else if (warningData) {
+      setWarning(warningData);
     }
-  }, [user]);
+  }, [warningData]);
 
-  const loadUserData = async () => {
-    if (!user) return;
-    try {
-      // Load Note
-      const noteData = await getNote(user.id);
-      setNote(noteData.content || '');
+  // User data queries
+  const { data: noteData } = useQuery({
+    queryKey: ['note', user?.id],
+    queryFn: () => getNote(user!.id),
+    enabled: !!user?.id
+  });
 
-      // Load System Shortcuts
-      const sysData = await getSystemShortcuts();
-      const formattedSys = sysData.map((s: any) => {
+  const { data: sysShortcutsData } = useQuery({
+    queryKey: ['systemShortcuts'],
+    queryFn: getSystemShortcuts,
+    enabled: !!user
+  });
+
+  const { data: customShortcutsData } = useQuery({
+    queryKey: ['customShortcuts', user?.id],
+    queryFn: () => getShortcuts(user!.id),
+    enabled: !!user?.id
+  });
+
+  const { data: todosData } = useQuery({
+    queryKey: ['todos', user?.id],
+    queryFn: () => getTodos(user!.id),
+    enabled: !!user?.id
+  });
+
+  React.useEffect(() => {
+    if (noteData) setNote(noteData.content || '');
+  }, [noteData]);
+
+  React.useEffect(() => {
+    if (sysShortcutsData && Array.isArray(sysShortcutsData)) {
+      const formattedSys = sysShortcutsData.map((s: any) => {
         const iconObj = availableIcons.find(i => i.name === s.icon_name) || availableIcons[0];
         return {
           id: s.id,
@@ -72,12 +114,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         };
       });
       setSystemShortcuts(formattedSys);
+    } else if (sysShortcutsData) {
+      console.warn('sysShortcutsData is not an array:', sysShortcutsData);
+      setSystemShortcuts([]);
+    }
+  }, [sysShortcutsData]);
 
-      // Load Custom Shortcuts
-      const customShortcuts = await getShortcuts(user.id);
-
-      // Transform custom shortcuts to match UI structure
-      const formattedCustom = customShortcuts.map((s: any) => {
+  React.useEffect(() => {
+    if (customShortcutsData && Array.isArray(customShortcutsData)) {
+      const formattedCustom = customShortcutsData.map((s: any) => {
         const iconObj = availableIcons.find(i => i.name === s.icon_name) || availableIcons[0];
         return {
           id: s.id,
@@ -91,25 +136,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           isFavorite: !!s.is_favorite
         };
       });
-
       setShortcuts(formattedCustom);
+    } else if (customShortcutsData) {
+      console.warn('customShortcutsData is not an array:', customShortcutsData);
+      setShortcuts([]);
+    }
+  }, [customShortcutsData]);
 
-      // Load Todos
-      const todosData = await getTodos(user.id);
+  React.useEffect(() => {
+    if (todosData && Array.isArray(todosData)) {
       setTodos(todosData);
-    } catch (error) {
-      console.error('Failed to load user data:', error);
+    } else if (todosData) {
+      console.warn('todosData is not an array:', todosData);
+      setTodos([]);
     }
-  };
-
-  const fetchWarning = async () => {
-    try {
-      const data = await getActiveWarning();
-      setWarning(data || null);
-    } catch (error) {
-      console.error('Failed to fetch warning:', error);
-    }
-  };
+  }, [todosData]);
 
   const handleSaveWarning = async () => {
     try {
@@ -120,10 +161,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       }
       setShowWarningModal(false);
       setEditingWarningId(null);
-      fetchWarning();
+      queryClient.invalidateQueries({ queryKey: ['warning'] });
       setNewWarning({ title: '', message: '', urgency: 'low', targetAudience: 'all' });
+      toast.success('Aviso salvo com sucesso!');
     } catch (error) {
       console.error('Failed to save warning:', error);
+      toast.error('Erro ao salvar aviso.');
     }
   };
 
@@ -140,13 +183,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
-  const handleDeleteWarning = async () => {
+  const handleDeleteWarning = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (warning && confirm('Tem certeza que deseja excluir este aviso?')) {
       try {
         await deleteWarning(warning.id);
         setWarning(null);
+        queryClient.invalidateQueries({ queryKey: ['warning'] });
+        toast.success('Aviso removido.');
       } catch (error) {
         console.error('Failed to delete warning:', error);
+        toast.error('Erro ao excluir aviso.');
       }
     }
   };
@@ -170,16 +218,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       }
     }, 1000);
   };
-
-  const availableIcons = [
-    { name: 'Globe', icon: <Globe className="w-6 h-6 text-indigo-500" /> },
-    { name: 'FileText', icon: <FileText className="w-6 h-6 text-indigo-500" /> },
-    { name: 'Box', icon: <Box className="w-6 h-6 text-indigo-500" /> },
-    { name: 'Users', icon: <Users className="w-6 h-6 text-indigo-500" /> },
-    { name: 'MessageSquare', icon: <MessageSquare className="w-6 h-6 text-indigo-500" /> },
-    { name: 'ExternalLink', icon: <ExternalLink className="w-6 h-6 text-indigo-500" /> },
-    { name: 'Plus', icon: <Plus className="w-6 h-6 text-indigo-500" /> },
-  ];
 
   const handleAddShortcut = async () => {
     if (!newShortcut.name || !newShortcut.url || !user) return;
@@ -213,11 +251,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       setEditingShortcutId(null);
       setIsEditingSystem(false);
       setNewShortcut({ name: '', desc: '', url: '', iconName: 'Globe', color: 'bg-indigo-50' });
-      await loadUserData();
-      alert('Atalho salvo com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
+      queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
+      toast.success('Atalho salvo com sucesso!');
     } catch (error) {
       console.error('Failed to save shortcut:', error);
-      alert('Erro ao salvar atalho. Tente novamente.');
+      toast.error('Erro ao salvar atalho. Tente novamente.');
     }
   };
 
@@ -236,16 +275,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     setShowModal(true);
   };
 
-  const handleDeleteShortcut = async (e: React.MouseEvent, id: number) => {
+  const handleDeleteShortcut = async (e: React.MouseEvent, shortcut: any) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user || !confirm('Excluir este atalho?')) return;
 
     try {
-      await deleteShortcut(id, user.id);
-      loadUserData();
+      if (shortcut.isSystem || shortcut.is_system) {
+        await deleteSystemShortcut(shortcut.id);
+        queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
+      } else {
+        await deleteShortcut(shortcut.id, user.id);
+        queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
+      }
+      toast.success('Atalho removido.');
     } catch (error) {
       console.error('Failed to delete shortcut:', error);
+      toast.error('Erro ao excluir atalho.');
     }
   };
 
@@ -260,7 +306,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       } else {
         await toggleShortcutFavorite(sys.id, user.id, !sys.isFavorite);
       }
-      await loadUserData();
+      queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
+      queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
     }
@@ -273,28 +320,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     try {
       await createTodo(user.id, newTodoText.trim());
       setNewTodoText('');
-      const todosData = await getTodos(user.id);
-      setTodos(todosData);
+      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
+      toast.success('Tarefa adicionada.');
     } catch (error) {
       console.error('Failed to add todo:', error);
+      toast.error('Erro ao adicionar tarefa.');
     }
   };
 
   const handleToggleTodo = async (id: number, completed: boolean) => {
+    if (!user) return;
     try {
       await updateTodo(id, !completed);
-      setTodos(todos.map(t => t.id === id ? { ...t, completed: !completed } : t));
+      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
     } catch (error) {
       console.error('Failed to toggle todo:', error);
     }
   };
 
   const handleDeleteTodo = async (id: number) => {
+    if (!user) return;
     try {
       await deleteTodo(id);
-      setTodos(todos.filter(t => t.id !== id));
+      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
+      toast.success('Tarefa removida.');
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      toast.error('Erro ao excluir tarefa.');
     }
   };
 
@@ -332,7 +384,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     <div className="space-y-8 animate-fadeIn relative">
       <header className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Olá, {user?.name.split(' ')[0] || 'Servidor'}</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Olá, {user?.name?.split(' ')[0] || 'Servidor'}</h1>
           <p className="text-slate-500">Acesse seus sistemas e ferramentas administrativas com facilidade.</p>
         </div>
         {user?.role === UserRole.ADMIN && (
@@ -377,7 +429,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <Edit2 size={16} />
               </button>
               <button
-                onClick={handleDeleteWarning}
+                onClick={(e) => handleDeleteWarning(e)}
                 className="p-2 bg-white/50 hover:bg-white rounded-lg text-slate-600 hover:text-red-600 transition-colors"
                 title="Excluir Aviso"
               >
@@ -512,6 +564,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     >
                       <Edit2 size={12} />
                     </button>
+                    <button
+                      onClick={(e) => handleDeleteShortcut(e, { ...sys, isSystem: true })}
+                      className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Remover Sistema"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 )}
                 {!sys.isSystem && (
@@ -558,7 +617,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     <Edit2 size={12} />
                   </button>
                   <button
-                    onClick={(e) => handleDeleteShortcut(e, sys.id)}
+                    onClick={(e) => handleDeleteShortcut(e, sys)}
                     className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                     title="Remover Atalho"
                   >

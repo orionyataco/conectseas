@@ -142,8 +142,8 @@ const AdminPanel: React.FC = () => {
             }));
 
             setStats(statsData);
-            setUsersList(usersData);
-            setSidebarItems(sidebarData);
+            setUsersList(Array.isArray(usersData) ? usersData : []);
+            setSidebarItems(Array.isArray(sidebarData) ? sidebarData : []);
         } catch (err) {
             setError('Erro ao carregar dados do painel admin.');
         } finally {

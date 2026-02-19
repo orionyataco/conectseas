@@ -12,6 +12,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+                window.location.href = '/';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export interface LoginCredentials {
     username: string;
     password?: string;
@@ -97,7 +111,7 @@ export const getMuralFeed = async () => {
 
 export const createPost = async (formData: FormData) => {
     try {
-        const response = await api.post('/posts', formData, {
+        const response = await api.post('/mural/posts', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
@@ -109,7 +123,7 @@ export const createPost = async (formData: FormData) => {
 
 export const deletePost = async (postId: number, userId: string, userRole: string = '') => {
     try {
-        const response = await api.delete(`/posts/${postId}?userId=${userId}&userRole=${userRole}`);
+        const response = await api.delete(`/mural/posts/${postId}?userId=${userId}&userRole=${userRole}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting post:', error);
@@ -119,7 +133,7 @@ export const deletePost = async (postId: number, userId: string, userRole: strin
 
 export const toggleLike = async (postId: number, userId: string) => {
     try {
-        const response = await api.post(`/posts/${postId}/like`, { userId });
+        const response = await api.post(`/mural/posts/${postId}/like`, { userId });
         return response.data;
     } catch (error) {
         console.error('Error toggling like:', error);
@@ -129,7 +143,7 @@ export const toggleLike = async (postId: number, userId: string) => {
 
 export const getLikedPosts = async (userId: string) => {
     try {
-        const response = await api.get(`/posts/liked/${userId}`);
+        const response = await api.get(`/mural/posts/liked/${userId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching liked posts:', error);
@@ -139,7 +153,7 @@ export const getLikedPosts = async (userId: string) => {
 
 export const getComments = async (postId: number) => {
     try {
-        const response = await api.get(`/posts/${postId}/comments`);
+        const response = await api.get(`/mural/posts/${postId}/comments`);
         return response.data;
     } catch (error) {
         console.error('Error fetching comments:', error);
@@ -149,7 +163,7 @@ export const getComments = async (postId: number) => {
 
 export const addComment = async (postId: number, userId: string, content: string) => {
     try {
-        const response = await api.post(`/posts/${postId}/comments`, { userId, content });
+        const response = await api.post(`/mural/posts/${postId}/comments`, { userId, content });
         return response.data;
     } catch (error) {
         console.error('Error adding comment:', error);
@@ -159,7 +173,7 @@ export const addComment = async (postId: number, userId: string, content: string
 
 export const deleteComment = async (commentId: number, userId: string, userRole: string = '') => {
     try {
-        const response = await api.delete(`/comments/${commentId}?userId=${userId}&userRole=${userRole}`);
+        const response = await api.delete(`/mural/comments/${commentId}?userId=${userId}&userRole=${userRole}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting comment:', error);
@@ -169,7 +183,7 @@ export const deleteComment = async (commentId: number, userId: string, userRole:
 
 export const editPost = async (postId: number, userId: string, content: string) => {
     try {
-        const response = await api.put(`/posts/${postId}`, { userId, content });
+        const response = await api.put(`/mural/posts/${postId}`, { userId, content });
         return response.data;
     } catch (error) {
         console.error('Error editing post:', error);
@@ -180,7 +194,7 @@ export const editPost = async (postId: number, userId: string, content: string) 
 
 export const editComment = async (commentId: number, userId: string, content: string) => {
     try {
-        const response = await api.put(`/comments/${commentId}`, { userId, content });
+        const response = await api.put(`/mural/comments/${commentId}`, { userId, content });
         return response.data;
     } catch (error) {
         console.error('Error editing comment:', error);
@@ -193,7 +207,7 @@ export const editComment = async (commentId: number, userId: string, content: st
 // Warnings
 export const getActiveWarning = async () => {
     try {
-        const response = await api.get('/warnings');
+        const response = await api.get('/dashboard/warnings');
         return response.data;
     } catch (error) {
         console.error('Error fetching warning:', error);
@@ -203,7 +217,7 @@ export const getActiveWarning = async () => {
 
 export const createWarning = async (data: any) => {
     try {
-        const response = await api.post('/warnings', data);
+        const response = await api.post('/dashboard/warnings', data);
         return response.data;
     } catch (error) {
         console.error('Error creating warning:', error);
@@ -213,7 +227,7 @@ export const createWarning = async (data: any) => {
 
 export const updateWarning = async (id: number, data: any) => {
     try {
-        const response = await api.put(`/warnings/${id}`, data);
+        const response = await api.put(`/dashboard/warnings/${id}`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating warning:', error);
@@ -223,7 +237,7 @@ export const updateWarning = async (id: number, data: any) => {
 
 export const deleteWarning = async (id: number) => {
     try {
-        const response = await api.delete(`/warnings/${id}`);
+        const response = await api.delete(`/dashboard/warnings/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting warning:', error);
@@ -234,7 +248,7 @@ export const deleteWarning = async (id: number) => {
 // Notes
 export const getNote = async (userId: string) => {
     try {
-        const response = await api.get(`/notes/${userId}`);
+        const response = await api.get(`/dashboard/notes/${userId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching note:', error);
@@ -244,7 +258,7 @@ export const getNote = async (userId: string) => {
 
 export const saveNote = async (userId: string, content: string) => {
     try {
-        const response = await api.post('/notes', { userId, content });
+        const response = await api.post('/dashboard/notes', { userId, content });
         return response.data;
     } catch (error) {
         console.error('Error saving note:', error);
@@ -255,7 +269,7 @@ export const saveNote = async (userId: string, content: string) => {
 // Shortcuts
 export const getShortcuts = async (userId: string) => {
     try {
-        const response = await api.get(`/shortcuts/${userId}`);
+        const response = await api.get(`/dashboard/shortcuts/${userId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching shortcuts:', error);
@@ -265,7 +279,7 @@ export const getShortcuts = async (userId: string) => {
 
 export const createShortcut = async (data: any) => {
     try {
-        const response = await api.post('/shortcuts', data);
+        const response = await api.post('/dashboard/shortcuts', data);
         return response.data;
     } catch (error) {
         console.error('Error creating shortcut:', error);
@@ -275,7 +289,7 @@ export const createShortcut = async (data: any) => {
 
 export const updateShortcut = async (id: number, data: any) => {
     try {
-        const response = await api.put(`/shortcuts/${id}`, data);
+        const response = await api.put(`/dashboard/shortcuts/${id}`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating shortcut:', error);
@@ -285,7 +299,7 @@ export const updateShortcut = async (id: number, data: any) => {
 
 export const deleteShortcut = async (id: number, userId: string) => {
     try {
-        const response = await api.delete(`/shortcuts/${id}?userId=${userId}`);
+        const response = await api.delete(`/dashboard/shortcuts/${id}?userId=${userId}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting shortcut:', error);
@@ -295,7 +309,7 @@ export const deleteShortcut = async (id: number, userId: string) => {
 
 export const toggleShortcutFavorite = async (id: number, userId: string, isFavorite: boolean) => {
     try {
-        const response = await api.patch(`/shortcuts/${id}/favorite`, { userId, isFavorite });
+        const response = await api.patch(`/dashboard/shortcuts/${id}/favorite`, { userId, isFavorite });
         return response.data;
     } catch (error) {
         console.error('Error toggling shortcut favorite:', error);
@@ -306,7 +320,7 @@ export const toggleShortcutFavorite = async (id: number, userId: string, isFavor
 // System Shortcuts (Shared)
 export const getSystemShortcuts = async () => {
     try {
-        const response = await api.get('/system-shortcuts');
+        const response = await api.get('/dashboard/system-shortcuts');
         return response.data;
     } catch (error) {
         console.error('Error fetching system shortcuts:', error);
@@ -316,7 +330,7 @@ export const getSystemShortcuts = async () => {
 
 export const createSystemShortcut = async (data: any) => {
     try {
-        const response = await api.post('/system-shortcuts', data);
+        const response = await api.post('/dashboard/system-shortcuts', data);
         return response.data;
     } catch (error) {
         console.error('Error creating system shortcut:', error);
@@ -326,7 +340,7 @@ export const createSystemShortcut = async (data: any) => {
 
 export const updateSystemShortcut = async (id: number, data: any) => {
     try {
-        const response = await api.put(`/system-shortcuts/${id}`, data);
+        const response = await api.put(`/dashboard/system-shortcuts/${id}`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating system shortcut:', error);
@@ -334,9 +348,9 @@ export const updateSystemShortcut = async (id: number, data: any) => {
     }
 };
 
-export const deleteSystemShortcut = async (id: number, userRole: string) => {
+export const deleteSystemShortcut = async (id: number) => {
     try {
-        const response = await api.delete(`/system-shortcuts/${id}?userRole=${userRole}`);
+        const response = await api.delete(`/dashboard/system-shortcuts/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting system shortcut:', error);
@@ -346,7 +360,7 @@ export const deleteSystemShortcut = async (id: number, userRole: string) => {
 
 export const toggleSystemShortcutFavorite = async (id: number, userRole: string, isFavorite: boolean) => {
     try {
-        const response = await api.patch(`/system-shortcuts/${id}/favorite`, { userRole, isFavorite });
+        const response = await api.patch(`/dashboard/system-shortcuts/${id}/favorite`, { userRole, isFavorite });
         return response.data;
     } catch (error) {
         console.error('Error toggling system shortcut favorite:', error);
@@ -357,7 +371,7 @@ export const toggleSystemShortcutFavorite = async (id: number, userRole: string,
 // Todos
 export const getTodos = async (userId: number) => {
     try {
-        const response = await api.get(`/todos/${userId}`);
+        const response = await api.get(`/dashboard/todos/${userId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching todos:', error);
@@ -365,9 +379,9 @@ export const getTodos = async (userId: number) => {
     }
 };
 
-export const createTodo = async (userId: number, text: string) => {
+export const createTodo = async (userId: number, title: string) => {
     try {
-        const response = await api.post('/todos', { userId, text });
+        const response = await api.post('/dashboard/todos', { userId, title });
         return response.data;
     } catch (error) {
         console.error('Error creating todo:', error);
@@ -377,7 +391,7 @@ export const createTodo = async (userId: number, text: string) => {
 
 export const updateTodo = async (id: number, completed: boolean) => {
     try {
-        const response = await api.patch(`/todos/${id}`, { completed });
+        const response = await api.patch(`/dashboard/todos/${id}`, { completed });
         return response.data;
     } catch (error) {
         console.error('Error updating todo:', error);
@@ -387,7 +401,7 @@ export const updateTodo = async (id: number, completed: boolean) => {
 
 export const deleteTodo = async (id: number) => {
     try {
-        const response = await api.delete(`/todos/${id}`);
+        const response = await api.delete(`/dashboard/todos/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting todo:', error);

@@ -1,5 +1,6 @@
-
 import React from 'react';
+import toast from 'react-hot-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Post, Comment, User, Event } from '../types';
 import {
   getMuralFeed,
@@ -11,7 +12,8 @@ import {
   addComment,
   deleteComment,
   editPost,
-  editComment
+  editComment,
+  getUsers
 } from '../services/api';
 import api from '../services/api';
 import {
@@ -41,6 +43,7 @@ interface MuralProps {
 }
 
 const Mural: React.FC<MuralProps> = ({ user }) => {
+  const queryClient = useQueryClient();
   const [posts, setPosts] = React.useState<Post[]>([]);
   const [newPostContent, setNewPostContent] = React.useState('');
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
@@ -69,40 +72,95 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Queries
+  const { data: feedData } = useQuery({
+    queryKey: ['muralFeed'],
+    queryFn: getMuralFeed
+  });
+
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers
+  });
+
+  const { data: likedPostsData } = useQuery({
+    queryKey: ['likedPosts', user?.id],
+    queryFn: () => getLikedPosts(user!.id),
+    enabled: !!user?.id
+  });
+
   React.useEffect(() => {
-    loadFeed();
-    fetchUsers();
-    if (user) {
-      loadLikedPosts();
+    if (feedData && Array.isArray(feedData)) {
+      setPosts(feedData);
+    } else if (feedData) {
+      console.warn('feedData is not an array:', feedData);
+      setPosts([]);
     }
-  }, [user]);
+  }, [feedData]);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get('/users');
-      setUsers(res.data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
+  React.useEffect(() => {
+    if (usersData && Array.isArray(usersData)) {
+      setUsers(usersData);
+    } else if (usersData) {
+      console.warn('usersData is not an array:', usersData);
+      setUsers([]);
     }
-  };
+  }, [usersData]);
 
-  const loadFeed = async () => {
-    try {
-      const data = await getMuralFeed();
-      setPosts(data);
-    } catch (error) {
-      console.error('Failed to fetch posts:', error);
+  React.useEffect(() => {
+    if (likedPostsData && Array.isArray(likedPostsData)) {
+      setLikedPosts(likedPostsData);
+    } else if (likedPostsData) {
+      console.warn('likedPostsData is not an array:', likedPostsData);
+      setLikedPosts([]);
     }
-  };
+  }, [likedPostsData]);
 
-  const loadLikedPosts = async () => {
-    if (!user) return;
-    try {
-      const data = await getLikedPosts(user.id);
-      setLikedPosts(data);
-    } catch (error) {
-      // Silent error
+  // Mutations
+  const createPostMutation = useMutation({
+    mutationFn: createPost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
+      toast.success('Postagem criada!');
+    },
+    onError: () => toast.error('Erro ao criar postagem')
+  });
+
+  const editPostMutation = useMutation({
+    mutationFn: ({ postId, content }: { postId: number, content: string }) => editPost(postId, user!.id, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
+      toast.success('Postagem atualizada');
     }
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: (postId: number) => deletePost(postId, user!.id, user!.role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
+      toast.success('Postagem removida');
+    }
+  });
+
+  const toggleLikeMutation = useMutation({
+    mutationFn: (postId: number) => toggleLike(postId, user!.id),
+    onSuccess: (data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
+      queryClient.invalidateQueries({ queryKey: ['likedPosts', user?.id] });
+    }
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: ({ postId, comment }: { postId: number, comment: string }) => addComment(postId, user!.id, comment),
+    onSuccess: (data, { postId }) => {
+      queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
+      loadComments(postId);
+      toast.success('Comentário enviado');
+    }
+  });
+
+  const loadFeed = () => {
+    queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
   };
 
   const loadComments = async (postId: number) => {
@@ -170,7 +228,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
       const newFiles = Array.from(e.target.files);
       const totalFiles = [...selectedFiles, ...newFiles];
       if (totalFiles.length > 5) {
-        alert('Você pode anexar no máximo 5 arquivos.');
+        toast.error('Você pode anexar no máximo 5 arquivos.');
         setSelectedFiles(totalFiles.slice(0, 5));
       } else {
         setSelectedFiles(totalFiles);
@@ -230,7 +288,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     formData.append('isUrgent', isUrgent.toString());
 
     selectedFiles.forEach(file => {
-      formData.append('files', file);
+      formData.append('attachments', file);
     });
 
     try {

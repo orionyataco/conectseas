@@ -21,13 +21,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('user');
         const savedToken = localStorage.getItem('token');
         if (savedUser && savedToken) {
-            const parsedUser = JSON.parse(savedUser);
-            // Normalize legacy roles
-            if (parsedUser.role === 'SERVIDOR') {
-                parsedUser.role = 'USER';
+            try {
+                const parsedUser = JSON.parse(savedUser);
+                // Validate required fields
+                if (parsedUser && parsedUser.id && parsedUser.name) {
+                    // Normalize legacy roles
+                    if (parsedUser.role === 'SERVIDOR') {
+                        parsedUser.role = 'USER';
+                    }
+                    setUser(parsedUser);
+                    setToken(savedToken);
+                } else {
+                    // Malformed user object in storage
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                }
+            } catch (e) {
+                console.error('Error parsing saved user:', e);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
             }
-            setUser(parsedUser);
-            setToken(savedToken);
         }
         setLoading(false);
     }, []);

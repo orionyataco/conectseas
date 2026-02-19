@@ -15,6 +15,7 @@ import { User, UserRole } from './types';
 import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff, LayoutDashboard, Globe, Monitor } from 'lucide-react';
 import { checkDbConnection, login, getSidebarItems, getVisualIdentity } from './services/api';
 import { useAuth } from './context/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
@@ -352,6 +353,7 @@ const App: React.FC = () => {
       visualIdentity={visualIdentity}
     >
       {renderContent()}
+      <Toaster position="top-right" />
       {isTicketModalOpen && (
         <CreateTicketModal
           onClose={() => setIsTicketModalOpen(false)}
