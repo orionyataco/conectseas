@@ -66,6 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
   const [sidebarItems, setSidebarItems] = React.useState<any[]>([]);
   const [sidebarLoading, setSidebarLoading] = React.useState(true);
   const searchRef = React.useRef<HTMLDivElement>(null);
@@ -153,6 +154,24 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
     return () => clearTimeout(timer);
   }, [searchQuery, user?.id, user?.role]);
+
+  // Handle responsiveness (sidebar state)
+  React.useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   React.useEffect(() => {
     if (propSidebarItems && propSidebarItems.length > 0) {
@@ -242,7 +261,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   return (
     <div className="min-h-screen flex bg-slate-50">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transition-all duration-300 flex flex-col
+      <aside className={`fixed inset-y-0 left-0 z-[60] bg-white border-r border-slate-200 transition-all duration-300 flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static
         ${isCollapsed ? 'w-20' : 'w-64'}
       `}>
@@ -267,11 +286,19 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                 </div>
               )}
             </div>
-            {!isCollapsed && (
-              <button onClick={() => setIsCollapsed(true)} className="hidden lg:block p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
-                <ChevronLeft size={20} />
+            <div className="flex items-center gap-1">
+              {!isCollapsed && (
+                <button onClick={() => setIsCollapsed(true)} className="hidden lg:block p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="lg:hidden p-2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={24} />
               </button>
-            )}
+            </div>
           </div>
 
           {isCollapsed && (
@@ -307,6 +334,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                       onClick={() => {
                         setActiveTab(item.path);
                         setTargetUserId(null);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
                       }}
                       title={isCollapsed ? item.label : ''}
                       className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.path
@@ -375,19 +403,39 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
         </div>
       </aside>
 
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-all duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+        <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4 flex-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500">
-              <Menu size={20} />
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+              <Menu size={24} />
             </button>
-            <div className="max-w-md w-full relative hidden md:block" ref={searchRef}>
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
+            <div className={`max-w-md w-full relative ${isMobileSearchOpen ? 'flex fixed inset-y-0 left-0 right-0 bg-white z-50 p-4 items-center animate-in slide-in-from-top duration-300' : 'hidden md:block'}`} ref={searchRef}>
+              {isMobileSearchOpen && (
+                <button
+                  onClick={() => {
+                    setIsMobileSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="mr-3 p-2 text-slate-400 hover:text-slate-600 lg:hidden"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+              )}
+              <Search className={`absolute left-3 md:left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
               <input
                 type="text"
                 placeholder="Buscar usuários, eventos..."
+                autoFocus={isMobileSearchOpen}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -412,6 +460,17 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                     <Search size={16} />
                   </button>
                 )}
+                {isMobileSearchOpen && (
+                  <button
+                    onClick={() => {
+                      setIsMobileSearchOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className="p-1 text-slate-400 hover:text-red-500 lg:hidden"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
 
               {showSearchOverlay && searchQuery.length >= 2 && (
@@ -419,14 +478,26 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                   results={searchResults}
                   isLoading={isSearching}
                   searchQuery={searchQuery}
-                  onClose={() => setShowSearchOverlay(false)}
-                  onSelect={handleSelectSearchResult}
+                  onClose={() => {
+                    setShowSearchOverlay(false);
+                    if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                  }}
+                  onSelect={(item) => {
+                    handleSelectSearchResult(item);
+                    if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                  }}
                 />
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button
+              onClick={() => setIsMobileSearchOpen(true)}
+              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+            >
+              <Search size={20} />
+            </button>
 
             <div className="relative" ref={notificationRef}>
               <button
@@ -508,7 +579,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>

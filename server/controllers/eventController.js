@@ -127,6 +127,7 @@ export const updateEvent = async (req, res) => {
 export const deleteEvent = async (req, res) => {
     const { id } = req.params;
     const { userId, userRole } = req.query;
+    console.log(`[CALENDAR] Attempting to delete event ID: ${id} by User: ${userId} (${userRole})`);
 
     try {
         const [events] = await pool.query('SELECT user_id FROM calendar_events WHERE id = ?', [id]);

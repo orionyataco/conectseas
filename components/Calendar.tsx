@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Calendar as CalendarIcon, Clock, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Event, User } from '../types';
 import api from '../services/api';
 
@@ -101,10 +102,17 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
   };
 
   const handleCreateEvent = async () => {
-    if (!user || !formData.title || !formData.eventDate) return;
+    if (!user) {
+      toast.error('Erro de sessão. Faça login novamente.');
+      return;
+    }
+    if (!formData.title || !formData.eventDate) {
+      toast.error('Preencha o título e a data do evento.');
+      return;
+    }
 
     try {
-      await api.post('/events', {
+      const payload = {
         userId: user.id,
         title: formData.title,
         description: formData.description,
@@ -118,20 +126,31 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         sharedWith: inviteType === 'all'
           ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
           : sharedWith
-      });
+      };
 
+      await api.post('/events', payload);
+
+      setShowModal(false);
       resetForm();
       fetchEvents();
+      toast.success('Evento criado com sucesso!');
     } catch (error) {
       console.error('Failed to create event:', error);
+      toast.error('Erro ao criar evento.');
     }
   };
 
   const handleEditEvent = async () => {
-    if (!user || !editingEvent) return;
+    if (!user || !editingEvent) {
+      return;
+    }
+    if (!formData.title || !formData.eventDate) {
+      toast.error('Preencha o título e a data do evento.');
+      return;
+    }
 
     try {
-      await api.put(`/events/${editingEvent.id}`, {
+      const payload = {
         userId: user.id,
         userRole: user.role,
         title: formData.title,
@@ -146,12 +165,17 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         sharedWith: inviteType === 'all'
           ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
           : sharedWith
-      });
+      };
 
+      await api.put(`/events/${editingEvent.id}`, payload);
+
+      setShowModal(false);
       resetForm();
       fetchEvents();
+      toast.success('Evento atualizado com sucesso!');
     } catch (error) {
       console.error('Failed to edit event:', error);
+      toast.error('Erro ao salvar alterações.');
     }
   };
 
@@ -161,16 +185,21 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
     try {
       await api.delete(`/events/${eventId}?userId=${user.id}&userRole=${user.role}`);
       fetchEvents();
+      resetForm();
+      setShowModal(false);
+      toast.success('Evento excluído.');
     } catch (error) {
       console.error('Failed to delete event:', error);
+      toast.error('Erro ao excluir evento.');
     }
   };
 
   const resetForm = () => {
+    const today = new Date().toISOString().split('T')[0];
     setFormData({
       title: '',
       description: '',
-      eventDate: '',
+      eventDate: today,
       eventEndDate: '',
       eventTime: '',
       eventEndTime: '',
@@ -814,8 +843,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
             <div className="flex gap-3 p-6 border-t border-slate-100 bg-white rounded-b-2xl">
               <button
                 onClick={editingEvent ? handleEditEvent : handleCreateEvent}
-                disabled={!formData.title || !formData.eventDate}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
               >
                 {editingEvent ? 'Salvar Alterações' : 'Criar Evento'}
               </button>

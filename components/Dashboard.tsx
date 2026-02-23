@@ -220,7 +220,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   const handleAddShortcut = async () => {
-    if (!newShortcut.name || !newShortcut.url || !user) return;
+    if (!newShortcut.name || !newShortcut.url || !user) {
+      return;
+    }
 
     try {
       const payload = {
@@ -235,14 +237,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       if (isEditingSystem) {
         if (editingShortcutId) {
+          console.log('Updating system shortcut:', editingShortcutId);
           await updateSystemShortcut(editingShortcutId, payload);
         } else {
+          console.log('Creating new system shortcut');
           await createSystemShortcut(payload);
         }
       } else {
         if (editingShortcutId) {
+          console.log('Updating custom shortcut:', editingShortcutId);
           await updateShortcut(editingShortcutId, payload);
         } else {
+          console.log('Creating new custom shortcut');
           await createShortcut(payload);
         }
       }
@@ -256,7 +262,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       toast.success('Atalho salvo com sucesso!');
     } catch (error) {
       console.error('Failed to save shortcut:', error);
-      toast.error('Erro ao salvar atalho. Tente novamente.');
+      toast.error('Erro ao salvar atalho. Verifique o console para mais detalhes.');
     }
   };
 
@@ -281,7 +287,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user || !confirm('Excluir este atalho?')) return;
 
     try {
-      if (shortcut.isSystem || shortcut.is_system) {
+      const isSystem = shortcut.isSystem || shortcut.is_system;
+      if (isSystem) {
         await deleteSystemShortcut(shortcut.id);
         queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
       } else {

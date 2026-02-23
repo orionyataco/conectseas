@@ -25,7 +25,9 @@ import {
     Monitor,
     LayoutGrid,
     List,
-    Trash2
+    Trash2,
+    Volume2,
+    VolumeX
 } from 'lucide-react';
 import { TecticTicket, TecticComment, TecticFile, TecticKnowledge, User } from '../types';
 import {
@@ -57,11 +59,33 @@ const ServiceDesk: React.FC = () => {
     const [selectedTicket, setSelectedTicket] = useState<TecticTicket | null>(null);
     const [isDossierOpen, setIsDossierOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
+        const saved = localStorage.getItem('tectic_sound_enabled');
+        return saved === null ? true : saved === 'true';
+    });
+    const [lastSeenTicketId, setLastSeenTicketId] = useState<number | null>(null);
+
+    const playAlert = () => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(e => console.warn('Erro ao reproduzir áudio:', e));
+    };
 
     useEffect(() => {
         loadStats();
         loadTickets();
+
+        const interval = setInterval(() => {
+            loadTickets(true);
+            loadStats();
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem('tectic_sound_enabled', String(isSoundEnabled));
+    }, [isSoundEnabled]);
 
     const loadStats = async () => {
         try {
@@ -72,11 +96,24 @@ const ServiceDesk: React.FC = () => {
         }
     };
 
-    const loadTickets = async () => {
-        setLoading(true);
+    const loadTickets = async (isPoll = false) => {
+        if (!isPoll) setLoading(true);
         try {
             const data = await getTecticTickets();
             if (Array.isArray(data)) {
+                if (isPoll && data.length > 0 && lastSeenTicketId !== null) {
+                    const newest = data[0].id;
+                    if (newest > lastSeenTicketId) {
+                        if (isSoundEnabled) playAlert();
+                        toast.success('Novo chamado recebido!', { icon: '🔔' });
+                    }
+                }
+
+                if (data.length > 0) {
+                    const currentMax = Math.max(...data.map(t => t.id));
+                    setLastSeenTicketId(prev => (prev === null || currentMax > prev) ? currentMax : prev);
+                }
+
                 setTickets(data);
             } else {
                 console.warn('getTecticTickets did not return an array:', data);
@@ -85,7 +122,7 @@ const ServiceDesk: React.FC = () => {
         } catch (err) {
             console.error('Erro ao carregar chamados:', err);
         } finally {
-            setLoading(false);
+            if (!isPoll) setLoading(false);
         }
     };
 
@@ -113,21 +150,30 @@ const ServiceDesk: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto no-scrollbar scroll-smooth w-full md:w-auto">
                     <SubNavLink icon={<LayoutDashboard size={18} />} label="Painel" active={activeSubTab === 'painel'} onClick={() => setActiveSubTab('painel')} />
                     <SubNavLink icon={<Ticket size={18} />} label="Chamados" active={activeSubTab === 'chamados'} onClick={() => setActiveSubTab('chamados')} />
                     <SubNavLink icon={<HardDrive size={18} />} label="TEC-Drive" active={activeSubTab === 'drive'} onClick={() => setActiveSubTab('drive')} />
                     <SubNavLink icon={<BookOpen size={18} />} label="Base" active={activeSubTab === 'base'} onClick={() => setActiveSubTab('base')} />
-
                 </div>
 
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all shadow-md active:scale-95"
-                >
-                    <Plus size={20} />
-                    Novo Chamado
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+                        className={`p-2.5 rounded-xl transition-all ${isSoundEnabled ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'} hover:scale-105 active:scale-95`}
+                        title={isSoundEnabled ? 'Desativar som de alerta' : 'Ativar som de alerta'}
+                    >
+                        {isSoundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                    </button>
+
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all shadow-md active:scale-95"
+                    >
+                        <Plus size={20} />
+                        Novo Chamado
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 lg:p-10">
@@ -257,7 +303,7 @@ const KnowledgeBase = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {loading ? (
                     Array(6).fill(0).map((_, i) => (
                         <div key={i} className="h-48 bg-slate-100 rounded-[2rem] animate-pulse" />
@@ -319,8 +365,8 @@ const KnowledgeBase = () => {
 
             {/* View Article Modal */}
             {selectedArticle && (
-                <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-4xl max-h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200 text-slate-800">
+                <div className="fixed inset-0 z-[75] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-4xl h-full md:max-h-[85vh] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200 text-slate-800">
                         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
@@ -360,8 +406,8 @@ const KnowledgeBase = () => {
 
             {/* Create/Edit Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
                         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                             <h3 className="text-2xl font-black text-slate-800 tracking-tight">
                                 {editingArticle ? 'Editar Artigo' : 'Novo Artigo'}
@@ -436,7 +482,7 @@ const KnowledgeBase = () => {
 const SubNavLink: React.FC<{ icon: any, label: string, active: boolean, onClick: () => void }> = ({ icon, label, active, onClick }) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all font-bold text-sm ${active ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'
+        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all font-bold text-sm whitespace-nowrap ${active ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'
             }`}
     >
         {icon}
@@ -495,7 +541,7 @@ const DashboardPanel: React.FC<{ stats: any }> = ({ stats }) => {
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <StatCard label="Total de Chamados" value={stats?.cards?.total || 0} icon={<Ticket className="text-blue-500" />} trend="+12%" color="bg-blue-50" />
                 <StatCard label="Chamados Ativos" value={stats?.cards?.active || 0} icon={<Clock className="text-orange-500" />} trend="-5%" color="bg-orange-50" />
                 <StatCard label="Resolvidos Hoje" value={stats?.cards?.resolved || 0} icon={<CheckCircle2 className="text-green-500" />} trend="+3%" color="bg-green-50" />
@@ -719,9 +765,9 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
     };
 
     return (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-700">
-            <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-6">
+        <div className="bg-white md:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-700">
+            <div className="p-4 md:p-8 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+                <div className="flex items-center justify-between w-full xl:w-auto gap-6">
                     <div>
                         <h3 className="text-xl font-bold text-slate-900 tracking-tight">Gestão de Chamados</h3>
                         <p className="text-sm text-slate-500 font-medium">Fila de atendimento em tempo real</p>
@@ -733,13 +779,13 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                             className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 hover:bg-red-100 transition-all animate-in zoom-in-95 duration-200"
                         >
                             <Trash2 size={16} />
-                            Deletar ({selectedTickets.length})
+                            <span className="hidden sm:inline">Deletar </span>({selectedTickets.length})
                         </button>
                     )}
                 </div>
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-72">
+                <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+                    <div className="relative w-full md:w-72">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
@@ -750,7 +796,7 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                     <select
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
-                        className="bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 p-3 pr-10 focus:ring-2 focus:ring-blue-500"
+                        className="w-full md:w-auto bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 p-3 pr-10 focus:ring-2 focus:ring-blue-500"
                     >
                         <option>Todos</option>
                         <option>Aberto</option>
@@ -761,7 +807,58 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                {/* Mobile/Card View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                    {loading ? (
+                        Array(3).fill(0).map((_, i) => (
+                            <div key={i} className="p-4 animate-pulse space-y-3">
+                                <div className="h-4 bg-slate-100 rounded w-1/4"></div>
+                                <div className="h-4 bg-slate-100 rounded w-full"></div>
+                                <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+                            </div>
+                        ))
+                    ) : filteredTickets.length > 0 ? filteredTickets.map((ticket) => (
+                        <div key={ticket.id} className="p-4 hover:bg-blue-50/30 transition-colors">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        checked={selectedTickets.includes(ticket.id)}
+                                        onChange={() => toggleSelectTicket(ticket.id)}
+                                    />
+                                    <span className="text-sm font-black text-blue-600">#{ticket.id}</span>
+                                </div>
+                                <StatusBadge status={ticket.status} />
+                            </div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-10 h-10 rounded-full border border-slate-200" alt="" />
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800">{ticket.requester_name}</p>
+                                    <p className="text-xs text-slate-500 uppercase tracking-wide">{ticket.requester_dept || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div className="mb-4">
+                                <p className="text-sm font-bold text-slate-700">{ticket.title}</p>
+                                <p className="text-xs text-slate-400">{ticket.category} • <PriorityBadge priority={ticket.priority} /></p>
+                            </div>
+                            <button
+                                onClick={() => onView(ticket.id)}
+                                className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-blue-300 text-blue-600 py-3 rounded-xl text-xs font-bold transition-all"
+                            >
+                                Ver Dossiê
+                                <ArrowUpRight size={14} />
+                            </button>
+                        </div>
+                    )) : (
+                        <div className="p-10 text-center text-slate-400 font-bold">
+                            Nenhum chamado encontrado
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop/Table View */}
+                <table className="hidden md:table w-full text-left">
                     <thead>
                         <tr className="bg-slate-50/50">
                             <th className="px-8 py-5">
@@ -918,10 +1015,10 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl flex overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-6xl h-full md:h-[90vh] md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-slate-200">
                 {/* Left: Info */}
-                <div className="w-1/3 bg-slate-50 p-10 border-r border-slate-200 flex flex-col gap-8 overflow-y-auto">
+                <div className="w-full md:w-1/3 bg-slate-50 p-6 md:p-10 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col gap-6 md:gap-8 overflow-y-auto">
                     <div>
                         <button onClick={onClose} className="text-slate-400 hover:text-slate-600 mb-6 font-bold flex items-center gap-2">
                             Sair do Dossiê
@@ -1123,19 +1220,19 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in zoom-in-95 duration-300">
-            <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-slate-300">
-                <div className="p-10 border-b border-slate-100 flex items-center gap-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in zoom-in-95 duration-300">
+            <div className="bg-white w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-slate-300">
+                <div className="p-6 md:p-10 border-b border-slate-100 flex items-center gap-4">
                     <div className="p-3 bg-blue-600 rounded-2xl text-white">
                         <Ticket size={24} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Novo Chamado Técnico</h2>
-                        <p className="text-sm text-slate-500 font-medium">Abertura de ticket no ServiceDesk</p>
+                        <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Novo Chamado Técnico</h2>
+                        <p className="text-xs md:text-sm text-slate-500 font-medium">Abertura de ticket no ServiceDesk</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-10 space-y-6">
+                <form onSubmit={handleSubmit} className="p-6 md:p-10 space-y-6 overflow-y-auto">
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700 ml-1">Assunto / Título</label>
                         <input
@@ -1432,7 +1529,7 @@ const TECDrive: React.FC = () => {
                         </div>
                     ) : filteredFiles.length > 0 ? (
                         viewMode === 'grid' ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
                                 {filteredFiles.map((file) => (
                                     <div key={file.id} className="group bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all flex flex-col items-center text-center relative overflow-hidden">
                                         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
