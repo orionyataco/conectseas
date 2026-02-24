@@ -104,7 +104,12 @@ router.get('/posts/:id/comments', async (req, res) => {
             SELECT c.*, u.name as author_name, u.position as author_role, u.avatar as author_avatar
             FROM post_comments c JOIN users u ON c.user_id = u.id WHERE c.post_id = ? ORDER BY c.created_at ASC
         `, [id]);
-        res.json(comments);
+
+        const formattedComments = comments.map(c => ({
+            ...c,
+            created_at: c.created_at ? new Date(c.created_at + ' UTC').toISOString() : new Date().toISOString()
+        }));
+        res.json(formattedComments);
     } catch (error) {
         console.error('Erro ao buscar comentários:', error);
         res.status(500).json({ error: 'Erro ao buscar comentários' });
@@ -174,7 +179,17 @@ router.get('/feed', async (req, res) => {
             FROM calendar_events e JOIN users u ON e.user_id = u.id LEFT JOIN event_shares es ON e.id = es.event_id
             WHERE e.visibility = 'public' OR e.user_id = ? OR es.user_id = ?
         `, [userId, userId]);
-        const feed = [...posts, ...events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const formattedPosts = posts.map(p => ({
+            ...p,
+            created_at: p.created_at ? new Date(p.created_at + ' UTC').toISOString() : new Date().toISOString()
+        }));
+        const formattedEvents = events.map(e => ({
+            ...e,
+            created_at: e.created_at ? new Date(e.created_at + ' UTC').toISOString() : new Date().toISOString()
+        }));
+
+        const feed = [...formattedPosts, ...formattedEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         res.json(feed);
     } catch (error) {
         console.error('Erro ao buscar feed:', error);

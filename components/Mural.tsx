@@ -20,6 +20,7 @@ import {
   Paperclip,
   Image as ImageIcon,
   Send,
+  Smile,
   ThumbsUp,
   MessageCircle,
   MoreHorizontal,
@@ -38,6 +39,8 @@ import {
   Strikethrough
 } from 'lucide-react';
 
+import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+
 interface MuralProps {
   user: User | null;
 }
@@ -49,6 +52,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [isUrgent, setIsUrgent] = React.useState(false);
   const [likedPosts, setLikedPosts] = React.useState<number[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
 
   // Comments state
   const [expandedComments, setExpandedComments] = React.useState<number[]>([]);
@@ -71,6 +75,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const emojiPickerRef = React.useRef<HTMLDivElement>(null);
 
   // Queries
   const { data: feedData } = useQuery({
@@ -115,6 +120,17 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
       setLikedPosts([]);
     }
   }, [likedPostsData]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Mutations
   const createPostMutation = useMutation({
@@ -234,6 +250,27 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
         setSelectedFiles(totalFiles);
       }
     }
+  };
+
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = newPostContent;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+
+    const newValue = before + emojiData.emoji + after;
+    setNewPostContent(newValue);
+
+    // Focus back and set cursor
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + emojiData.emoji.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
   };
 
   const applyFormatting = (prefix: string, suffix: string, isEditing: boolean = false) => {
@@ -453,6 +490,26 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                   <button onClick={() => applyFormatting('*', '*')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Itálico"><Italic size={16} /></button>
                   <button onClick={() => applyFormatting('__', '__')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Sublinhado"><Underline size={16} /></button>
                   <button onClick={() => applyFormatting('~~', '~~')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Riscado"><Strikethrough size={16} /></button>
+                  <div className="relative" ref={emojiPickerRef}>
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-1.5 rounded transition-colors ${showEmojiPicker ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`}
+                      title="Emojis"
+                    >
+                      <Smile size={16} />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute top-full left-0 mt-2 z-[60]">
+                        <EmojiPicker
+                          onEmojiClick={onEmojiClick}
+                          autoFocusSearch={false}
+                          theme={Theme.LIGHT}
+                          width={300}
+                          height={400}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="relative w-full">
                   <textarea
