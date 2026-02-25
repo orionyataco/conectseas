@@ -17,49 +17,109 @@ export const initSocket = (server) => {
 
         socket.on('authenticate', async (userId) => {
             if (userId) {
-                connectedUsers.set(userId, socket.id);
-                socket.userId = userId;
-                console.log(`User ${userId} authenticated on socket ${socket.id}`);
+                const numericUserId = Number(userId);
+                connectedUsers.set(numericUserId, socket.id);
+                socket.userId = numericUserId;
+
+                // Join a room for this user to support multiple tabs/connections
+                socket.join(`user_${numericUserId}`);
+
+                console.log(`User ${numericUserId} authenticated on socket ${socket.id} and joined room user_${numericUserId}`);
 
                 // Update last_seen
-                await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?', [userId]);
+                await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?', [numericUserId]);
 
                 // Broadcast online status
-                io.emit('user_online', userId);
+                io.emit('user_online', numericUserId);
             }
         });
 
         socket.on('send_message', async (data) => {
             const { sender_id, receiver_id, message } = data;
+            const numericSenderId = Number(sender_id);
+            const numericReceiverId = Number(receiver_id);
 
             try {
                 // Save to database
                 const [result] = await pool.query(
                     'INSERT INTO messenger_messages (sender_id, receiver_id, message) VALUES (?, ?, ?)',
-                    [sender_id, receiver_id, message]
+                    [numericSenderId, numericReceiverId, message]
                 );
 
                 const newMessage = {
                     id: result.insertId,
-                    sender_id: sender_id,
-                    receiver_id: receiver_id,
+                    sender_id: numericSenderId,
+                    receiver_id: numericReceiverId,
                     message,
                     created_at: new Date().toISOString(),
                     is_read: 0
                 };
 
-                // Send to receiver if online
-                const receiverSocketId = connectedUsers.get(receiver_id);
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit('receive_message', newMessage);
-                }
+                // Send to all receiver's connections (rooms support multi-tab)
+                io.to(`user_${numericReceiverId}`).emit('receive_message', newMessage);
 
-                // Send back to sender for confirmation
-                socket.emit('message_sent', newMessage);
+                // Send back to all sender's connections for confirmation/sync across tabs
+                io.to(`user_${numericSenderId}`).emit('message_sent', newMessage);
 
             } catch (error) {
                 console.error('Error saving message:', error);
                 socket.emit('error', 'Erro ao enviar mensagem');
+            }
+        });
+
+        socket.on('edit_message', async (data) => {
+            const { message_id, new_message, sender_id, receiver_id } = data;
+            const numericSenderId = Number(sender_id);
+            const numericReceiverId = Number(receiver_id);
+            try {
+                // Ensure only the sender can edit
+                const [result] = await pool.query(
+                    'UPDATE messenger_messages SET message = ?, is_edited = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND sender_id = ?',
+                    [new_message, message_id, numericSenderId]
+                );
+
+                if (result.affectedRows > 0) {
+                    const editedMessageResponse = {
+                        id: message_id,
+                        sender_id: numericSenderId,
+                        receiver_id: numericReceiverId,
+                        message: new_message,
+                        is_edited: 1
+                    };
+
+                    io.to(`user_${numericReceiverId}`).emit('message_edited', editedMessageResponse);
+                    io.to(`user_${numericSenderId}`).emit('message_edited', editedMessageResponse);
+                }
+            } catch (error) {
+                console.error('Error editing message:', error);
+                socket.emit('error', 'Erro ao editar mensagem');
+            }
+        });
+
+        socket.on('delete_message', async (data) => {
+            const { message_id, sender_id, receiver_id } = data;
+            const numericSenderId = Number(sender_id);
+            const numericReceiverId = Number(receiver_id);
+            try {
+                const [result] = await pool.query(
+                    'UPDATE messenger_messages SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND sender_id = ?',
+                    [message_id, numericSenderId]
+                );
+
+                if (result.affectedRows > 0) {
+                    const deletedMessageResponse = {
+                        id: message_id,
+                        sender_id: numericSenderId,
+                        receiver_id: numericReceiverId,
+                        is_deleted: 1
+                    };
+
+                    io.to(`user_${numericReceiverId}`).emit('message_deleted', deletedMessageResponse);
+                    io.to(`user_${numericSenderId}`).emit('message_deleted', deletedMessageResponse);
+                }
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                socket.emit('error', 'Erro ao apagar mensagem');
             }
         });
 

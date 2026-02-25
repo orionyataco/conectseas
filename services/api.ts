@@ -1002,5 +1002,25 @@ export const updateVisualIdentity = async (formData: FormData) => {
     return response.data;
 };
 
+export const getMessengerUsers = async (userId: string) => {
+    const response = await api.get(`/messenger/users?userId=${userId}`);
+    return response.data;
+};
+
+export const getMessageHistory = async (userId: string, contactId: string) => {
+    const response = await api.get(`/messenger/history?userId=${userId}&contactId=${contactId}`);
+    return response.data;
+};
+
+export const getUnreadCount = async (userId: string) => {
+    const response = await api.get(`/messenger/unread-count?userId=${userId}`);
+    return response.data;
+};
+
+export const updateLastSeen = async (userId: string) => {
+    const response = await api.post('/messenger/heartbeat', { userId });
+    return response.data;
+};
+
 export default api;
 

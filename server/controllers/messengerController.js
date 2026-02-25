@@ -34,12 +34,18 @@ export const getMessengerUsers = async (req, res) => {
 export const getMessageHistory = async (req, res) => {
     try {
         const { userId, contactId } = req.query;
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
+
         const [messages] = await pool.query(
             `SELECT * FROM messenger_messages 
-             WHERE (sender_id = ? AND receiver_id = ?) 
-                OR (sender_id = ? AND receiver_id = ?) 
+             WHERE ((sender_id = ? AND receiver_id = ?) 
+                OR (sender_id = ? AND receiver_id = ?))
+               AND is_deleted = 0
+               AND created_at >= ?
              ORDER BY created_at ASC`,
-            [userId, contactId, contactId, userId]
+            [userId, contactId, contactId, userId, thirtyDaysAgoIso]
         );
 
         // Mark messages as read

@@ -1295,7 +1295,7 @@ const AdminPanel: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-extrabold text-slate-800">Painel de Controle do Administrador</h2>
-                    <p className="text-slate-500">Configure o ecossistema CONECTSEAS para toda a instituição.</p>
+                    <p className="text-slate-500">Configure o ecossistema para toda a instituição.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button

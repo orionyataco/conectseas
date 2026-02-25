@@ -72,9 +72,7 @@ router.post('/settings/upload/:key', upload.single('file'), async (req, res) => 
     }
 
     try {
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const filePath = `${protocol}://${host}/uploads/${req.file.filename}`;
+        const filePath = `/uploads/${req.file.filename}`;
 
         const [rows] = await pool.query('SELECT value FROM system_settings WHERE key = ?', [key]);
         if (rows.length === 0) return res.status(404).json({ error: 'Configuração não encontrada' });

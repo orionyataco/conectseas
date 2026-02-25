@@ -53,7 +53,8 @@ const initDB = async () => {
       { name: 'vacation_status', type: 'BOOLEAN DEFAULT 0' },
       { name: 'vacation_message', type: 'TEXT' },
       { name: 'vacation_start_date', type: 'DATE' },
-      { name: 'vacation_end_date', type: 'DATE' }
+      { name: 'vacation_end_date', type: 'DATE' },
+      { name: 'last_seen', type: 'DATETIME' }
     ];
 
     for (const col of columnsToAdd) {
@@ -613,6 +614,15 @@ const initDB = async () => {
         FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Migration for tectic_knowledge
+    try {
+      await connection.query('ALTER TABLE tectic_knowledge ADD COLUMN tags TEXT');
+      console.log('Coluna "tags" adicionada à tabela tectic_knowledge.');
+    } catch (e) {
+      // Ignore if column already exists
+    }
+
     console.log('Tabela "tectic_knowledge" verificada/criada.');
 
     // TEC-Drive Files
@@ -751,6 +761,37 @@ const initDB = async () => {
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashed, u.id]);
       }
     }
+
+    // Create messenger_messages table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS messenger_messages (
+        id INTEGER PRIMARY KEY ${AUTO_INC},
+        sender_id INTEGER NOT NULL,
+        receiver_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT 0,
+        is_edited BOOLEAN DEFAULT 0,
+        is_deleted BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Migration for messenger_messages
+    try {
+      await connection.query('ALTER TABLE messenger_messages ADD COLUMN is_edited BOOLEAN DEFAULT 0');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE messenger_messages ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE messenger_messages ADD COLUMN updated_at DATETIME');
+      await connection.query('UPDATE messenger_messages SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
+    } catch (e) { }
+
+    console.log('Tabela "messenger_messages" verificada/criada.');
 
     connection.release();
   } catch (error) {

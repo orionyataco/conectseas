@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Smile, Loader2, Minus, Maximize2 } from 'lucide-react';
+import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2 } from 'lucide-react';
 import { useMessenger } from './MessengerContext';
 import { getMessageHistory } from '../../services/api';
 import { User } from '../../types';
@@ -17,6 +17,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
     const { socket, clearUserUnread } = useMessenger();
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -37,27 +38,78 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
         });
 
         const handleReceiveMessage = (msg: any) => {
-            if (msg.sender_id === contact.id || msg.receiver_id === contact.id) {
-                // Check if message already exists (to avoid duplicates from optimistic update)
+            const msgSenderId = Number(msg.sender_id);
+            const msgReceiverId = Number(msg.receiver_id);
+            const contactId = Number(contact.id);
+            const userId = Number(user.id);
+
+            if (msgSenderId === contactId || msgReceiverId === contactId) {
                 setMessages(prev => {
+                    // 1. Check if message with this exact server ID already exists
                     if (prev.find(m => m.id === msg.id)) return prev;
+
+                    // 2. If it's our own message, find the optimistic one and replace it
+                    if (msgSenderId === userId) {
+                        const optimisticIdx = prev.findLastIndex(m =>
+                            Number(m.sender_id) === userId &&
+                            m.message === msg.message &&
+                            (typeof m.id === 'number' && m.id > 1000000000000) // Rough check for tempId (Date.now())
+                        );
+
+                        if (optimisticIdx !== -1) {
+                            const newMessages = [...prev];
+                            newMessages[optimisticIdx] = msg;
+                            return newMessages;
+                        }
+                    }
+
                     return [...prev, msg];
                 });
                 setTimeout(scrollToBottom, 100);
             }
         };
 
+        const handleMessageSent = (msg: any) => {
+            // Already handled by receive_message if server emits to both, 
+            // but we can use this for extra confirmation if needed.
+            // For now, receive_message is enough if server emits to sender room too.
+        };
+
         const handleUserTyping = ({ sender_id }: { sender_id: number }) => {
-            if (sender_id === contact.id) {
+            if (Number(sender_id) === Number(contact.id)) {
                 setIsTyping(true);
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
             }
         };
 
+        const handleMessageEdited = (msg: any) => {
+            const msgSenderId = Number(msg.sender_id);
+            const msgReceiverId = Number(msg.receiver_id);
+            const contactId = Number(contact.id);
+            const userId = Number(user.id);
+
+            if (msgSenderId === contactId || msgReceiverId === contactId) {
+                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, message: msg.message, is_edited: 1 } : m));
+            }
+        };
+
+        const handleMessageDeleted = (msg: any) => {
+            const msgSenderId = Number(msg.sender_id);
+            const msgReceiverId = Number(msg.receiver_id);
+            const contactId = Number(contact.id);
+
+            if (msgSenderId === contactId || msgReceiverId === contactId) {
+                setMessages(prev => prev.filter(m => m.id !== msg.id));
+            }
+        };
+
         if (socket) {
             socket.on('receive_message', handleReceiveMessage);
+            socket.on('message_sent', handleReceiveMessage); // Reuse same logic
             socket.on('user_typing', handleUserTyping);
+            socket.on('message_edited', handleMessageEdited);
+            socket.on('message_deleted', handleMessageDeleted);
         }
 
         const handleClickOutside = (event: MouseEvent) => {
@@ -72,6 +124,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
             if (socket) {
                 socket.off('receive_message', handleReceiveMessage);
                 socket.off('user_typing', handleUserTyping);
+                socket.off('message_edited', handleMessageEdited);
+                socket.off('message_deleted', handleMessageDeleted);
             }
             document.removeEventListener('mousedown', handleClickOutside);
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -88,20 +142,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
         e.preventDefault();
         if (!newMessage.trim() || !socket) return;
 
-        const tempId = Date.now();
-        const messageData = {
-            id: tempId,
-            sender_id: user.id,
-            receiver_id: contact.id,
-            message: newMessage.trim(),
-            created_at: new Date().toISOString()
-        };
+        if (editingMessageId) {
+            socket.emit('edit_message', {
+                message_id: editingMessageId,
+                new_message: newMessage.trim(),
+                sender_id: user.id,
+                receiver_id: contact.id
+            });
+            setEditingMessageId(null);
+        } else {
+            const tempId = Date.now();
+            const messageData = {
+                id: tempId,
+                sender_id: user.id,
+                receiver_id: contact.id,
+                message: newMessage.trim(),
+                created_at: new Date().toISOString(),
+                is_edited: 0
+            };
 
-        socket.emit('send_message', messageData);
-        setMessages(prev => [...prev, messageData]);
+            socket.emit('send_message', messageData);
+            setMessages(prev => [...prev, messageData]);
+        }
+
         setNewMessage('');
         setShowEmojiPicker(false);
         setTimeout(scrollToBottom, 50);
+    };
+
+    const startEditing = (msg: any) => {
+        setEditingMessageId(msg.id);
+        setNewMessage(msg.message);
+    };
+
+    const deleteMessage = (msgId: number) => {
+        if (!socket) return;
+        socket.emit('delete_message', {
+            message_id: msgId,
+            sender_id: user.id,
+            receiver_id: contact.id
+        });
+        if (editingMessageId === msgId) {
+            setEditingMessageId(null);
+            setNewMessage('');
+        }
     };
 
     const handleKeyDown = () => {
@@ -186,17 +270,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                     messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
+                            className={`flex group ${Number(msg.sender_id) === Number(user.id) ? 'justify-end' : 'justify-start'}`}
                         >
+                            {Number(msg.sender_id) === Number(user.id) && (
+                                <div className="flex flex-col gap-1 items-end justify-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => startEditing(msg)} className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Editar">
+                                        <Pencil size={12} />
+                                    </button>
+                                    <button onClick={() => deleteMessage(msg.id)} className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-red-600 transition-colors" title="Excluir">
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                            )}
                             <div
-                                className={`max-w-[80%] p-3 rounded-2xl text-xs shadow-sm ${msg.sender_id === user.id
+                                className={`max-w-[80%] p-3 rounded-2xl text-xs shadow-sm ${Number(msg.sender_id) === Number(user.id)
                                     ? 'bg-blue-600 text-white rounded-tr-none'
                                     : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'
                                     }`}
                             >
                                 <p className="leading-relaxed">{msg.message}</p>
-                                <p className={`text-[9px] mt-1 opacity-60 ${msg.sender_id === user.id ? 'text-right' : 'text-left'}`}>
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <p className={`text-[9px] mt-1 opacity-60 ${Number(msg.sender_id) === Number(user.id) ? 'text-right' : 'text-left'}`}>
+                                    {msg.is_edited ? '(Editado) ' : ''}{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
                         </div>

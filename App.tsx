@@ -10,6 +10,7 @@ import AIAssistant from './components/AIAssistant';
 import Profile from './components/Profile';
 import AdminPanel from './components/AdminPanel';
 import ServiceDesk, { CreateTicketModal } from './components/ServiceDesk';
+import PublicFAQ from './components/PublicFAQ';
 import IframeViewer from './components/IframeViewer';
 import { User, UserRole } from './types';
 import { LogIn, ShieldCheck, Database, Key, Eye, EyeOff, LayoutDashboard, Globe, Monitor } from 'lucide-react';
@@ -18,7 +19,9 @@ import { useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const queryParams = new URLSearchParams(window.location.search);
+  const initialTab = queryParams.get('tab') || 'dashboard';
+  const [activeTab, setActiveTab] = React.useState(initialTab);
   const [targetUserId, setTargetUserId] = React.useState<string | null>(null);
   const { user, isAuthenticated, login: authLogin, logout: authLogout, loading: authLoading } = useAuth();
   const [loading, setLoading] = React.useState(false);
@@ -316,6 +319,8 @@ const App: React.FC = () => {
       case 'ai': return <AIAssistant />;
       case 'profile':
         return <Profile user={user!} targetUserId={targetUserId} onUpdate={(updatedUser) => authLogin(updatedUser, localStorage.getItem('token') || '')} />;
+      case 'faq':
+        return <PublicFAQ />;
       case 'admin':
         if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
         return <AdminPanel />;

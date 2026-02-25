@@ -27,6 +27,9 @@ import {
   Plus
 } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
+import { MessengerProvider, useMessenger } from './Messenger/MessengerContext';
+import MessengerButton from './Messenger/MessengerButton';
+import ChatWindow from './Messenger/ChatWindow';
 
 interface Notification {
   id: number;
@@ -413,176 +416,204 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-4 flex-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
-              <Menu size={24} />
-            </button>
-            <div className={`max-w-md w-full relative ${isMobileSearchOpen ? 'flex fixed inset-y-0 left-0 right-0 bg-white z-50 p-4 items-center animate-in slide-in-from-top duration-300' : 'hidden md:block'}`} ref={searchRef}>
-              {isMobileSearchOpen && (
-                <button
-                  onClick={() => {
-                    setIsMobileSearchOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="mr-3 p-2 text-slate-400 hover:text-slate-600 lg:hidden"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-              )}
-              <Search className={`absolute left-3 md:left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
-              <input
-                type="text"
-                placeholder="Buscar usuários, eventos..."
-                autoFocus={isMobileSearchOpen}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSearchOverlay(true);
-                }}
-                onFocus={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQuery.length >= 2) {
-                    setShowSearchOverlay(true);
-                  }
-                }}
-                className="w-full pl-10 pr-12 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                {isSearching ? (
-                  <Loader2 className="text-blue-500 animate-spin" size={16} />
-                ) : (
-                  <button
-                    onClick={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
-                    className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                  >
-                    <Search size={16} />
-                  </button>
-                )}
+        <MessengerProvider user={user}>
+          {/* Header */}
+          <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
+            <div className="flex items-center gap-4 flex-1">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                <Menu size={24} />
+              </button>
+              <div className={`max-w-md w-full relative ${isMobileSearchOpen ? 'flex fixed inset-y-0 left-0 right-0 bg-white z-50 p-4 items-center animate-in slide-in-from-top duration-300' : 'hidden md:block'}`} ref={searchRef}>
                 {isMobileSearchOpen && (
                   <button
                     onClick={() => {
                       setIsMobileSearchOpen(false);
                       setSearchQuery('');
                     }}
-                    className="p-1 text-slate-400 hover:text-red-500 lg:hidden"
+                    className="mr-3 p-2 text-slate-400 hover:text-slate-600 lg:hidden"
                   >
-                    <X size={16} />
+                    <ChevronLeft size={24} />
                   </button>
                 )}
-              </div>
-
-              {showSearchOverlay && searchQuery.length >= 2 && (
-                <SearchOverlay
-                  results={searchResults}
-                  isLoading={isSearching}
-                  searchQuery={searchQuery}
-                  onClose={() => {
-                    setShowSearchOverlay(false);
-                    if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                <Search className={`absolute left-3 md:left-3 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-500' : 'text-slate-400'}`} size={18} />
+                <input
+                  type="text"
+                  placeholder="Buscar usuários, eventos..."
+                  autoFocus={isMobileSearchOpen}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchOverlay(true);
                   }}
-                  onSelect={(item) => {
-                    handleSelectSearchResult(item);
-                    if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                  onFocus={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchQuery.length >= 2) {
+                      setShowSearchOverlay(true);
+                    }
                   }}
+                  className="w-full pl-10 pr-12 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 />
-              )}
-            </div>
-          </div>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {isSearching ? (
+                    <Loader2 className="text-blue-500 animate-spin" size={16} />
+                  ) : (
+                    <button
+                      onClick={() => searchQuery.length >= 2 && setShowSearchOverlay(true)}
+                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                    >
+                      <Search size={16} />
+                    </button>
+                  )}
+                  {isMobileSearchOpen && (
+                    <button
+                      onClick={() => {
+                        setIsMobileSearchOpen(false);
+                        setSearchQuery('');
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-500 lg:hidden"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            <button
-              onClick={() => setIsMobileSearchOpen(true)}
-              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-            >
-              <Search size={20} />
-            </button>
-
-            <div className="relative" ref={notificationRef}>
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={`p-2 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-blue-600' : 'text-slate-500'}`}
-              >
-                <Bell size={20} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                {showSearchOverlay && searchQuery.length >= 2 && (
+                  <SearchOverlay
+                    results={searchResults}
+                    isLoading={isSearching}
+                    searchQuery={searchQuery}
+                    onClose={() => {
+                      setShowSearchOverlay(false);
+                      if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                    }}
+                    onSelect={(item) => {
+                      handleSelectSearchResult(item);
+                      if (isMobileSearchOpen) setIsMobileSearchOpen(false);
+                    }}
+                  />
                 )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 md:gap-4">
+              <button
+                onClick={() => setIsMobileSearchOpen(true)}
+                className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <Search size={20} />
               </button>
 
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                      <Bell size={16} className="text-blue-600" />
-                      Notificações
-                    </h3>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={handleReadAll}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1"
-                      >
-                        <CheckCheck size={12} />
-                        Ler tudo
-                      </button>
-                    )}
-                  </div>
+              <MessengerButton />
 
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      <div className="divide-y divide-slate-50">
-                        {notifications.map((notif) => (
-                          <div
-                            key={notif.id}
-                            onClick={() => handleNotificationClick(notif)}
-                            className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors relative group ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
-                          >
-                            {!notif.is_read && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
-                            )}
-                            <div className="flex gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'mural_mention' ? 'bg-purple-100 text-purple-600' :
-                                notif.type === 'drive_share' ? 'bg-blue-100 text-blue-600' :
-                                  notif.type === 'calendar_invite' ? 'bg-emerald-100 text-emerald-600' :
-                                    'bg-orange-100 text-orange-600'
-                                }`}>
-                                <Inbox size={14} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-800 truncate">{notif.title}</p>
-                                <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
-                                <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
-                                  <Clock size={10} />
-                                  {formatTime(notif.created_at)}
-                                </div>
-                              </div>
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className={`p-2 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-blue-600' : 'text-slate-500'}`}
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                        <Bell size={16} className="text-blue-600" />
+                        Notificações
+                      </h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleReadAll}
+                          className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1"
+                        >
+                          <CheckCheck size={12} />
+                          Ler tudo
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-slate-50">
+                          {notifications.map((notif) => (
+                            <div
+                              key={notif.id}
+                              onClick={() => handleNotificationClick(notif)}
+                              className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors relative group ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                            >
                               {!notif.is_read && (
-                                <div className="w-2 h-2 bg-blue-600 rounded-full mt-1"></div>
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
                               )}
+                              <div className="flex gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'mural_mention' ? 'bg-purple-100 text-purple-600' :
+                                  notif.type === 'drive_share' ? 'bg-blue-100 text-blue-600' :
+                                    notif.type === 'calendar_invite' ? 'bg-emerald-100 text-emerald-600' :
+                                      'bg-orange-100 text-orange-600'
+                                  }`}>
+                                  <Inbox size={14} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-slate-800 truncate">{notif.title}</p>
+                                  <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
+                                  <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
+                                    <Clock size={10} />
+                                    {formatTime(notif.created_at)}
+                                  </div>
+                                </div>
+                                {!notif.is_read && (
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-1"></div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center">
-                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Bell size={24} className="text-slate-300" />
+                          ))}
                         </div>
-                        <p className="text-sm text-slate-500 font-medium">Nenhuma notificação por aqui.</p>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="p-8 text-center">
+                          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Bell size={24} className="text-slate-300" />
+                          </div>
+                          <p className="text-sm text-slate-500 font-medium">Nenhuma notificação por aqui.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
+          {/* Content Area */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            {children}
+          </main>
+
+          {/* Active Chat Windows Overlay */}
+          <ChatWindowsOverlay user={user} />
+        </MessengerProvider>
       </div>
+    </div>
+  );
+};
+
+// Sub-component to manage multiple chat windows
+const ChatWindowsOverlay: React.FC<{ user: User }> = ({ user }) => {
+  const { activeChats, closeChat, toggleMinimizeChat } = useMessenger();
+
+  return (
+    <div className="fixed bottom-0 right-10 flex flex-row-reverse items-end gap-4 z-[70] pointer-events-none">
+      {activeChats.map(({ contact, isMinimized }) => (
+        <div key={contact.id} className="pointer-events-auto">
+          <ChatWindow
+            user={user}
+            contact={contact}
+            isMinimized={isMinimized}
+            onClose={() => closeChat(contact.id)}
+            onToggleMinimize={() => toggleMinimizeChat(contact.id)}
+          />
+        </div>
+      ))}
     </div>
   );
 };

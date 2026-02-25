@@ -36,9 +36,7 @@ router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) =
     let avatarPath = null;
 
     if (req.file) {
-        const protocol = req.protocol;
-        const host = req.get('host');
-        avatarPath = `${protocol}://${host}/uploads/${req.file.filename}`;
+        avatarPath = `/uploads/${req.file.filename}`;
     }
 
     try {

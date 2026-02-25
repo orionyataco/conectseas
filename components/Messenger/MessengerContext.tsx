@@ -50,8 +50,13 @@ export const MessengerProvider: React.FC<{ user: User; children: React.ReactNode
         newSocket.on('receive_message', (msg) => {
             // Only increment unread if chat with sender is not open or is minimized
             // Use ref to check current active chats without triggering effect re-run
-            const senderId = msg.sender_id;
-            const chatOpen = activeChatsRef.current.find(c => c.contact.id === senderId);
+            const senderId = Number(msg.sender_id);
+            const currentUserId = Number(user.id);
+
+            // Ignore if we sent the message ourselves (e.g., from another tab or back from server)
+            if (senderId === currentUserId) return;
+
+            const chatOpen = activeChatsRef.current.find(c => Number(c.contact.id) === senderId);
 
             if (!chatOpen || chatOpen.isMinimized) {
                 setUnreadCount(prev => prev + 1);

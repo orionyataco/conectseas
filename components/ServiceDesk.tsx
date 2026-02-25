@@ -38,8 +38,6 @@ import {
     updateTecticTicket,
     deleteTecticTickets,
     addTecticComment,
-
-    getTriageSuggestions,
     getTecticDrive,
     uploadTecticFile,
     createTecticNotice,
@@ -52,7 +50,9 @@ import {
 } from '../services/api';
 
 const ServiceDesk: React.FC = () => {
-    const [activeSubTab, setActiveSubTab] = useState('painel');
+    const queryParams = new URLSearchParams(window.location.search);
+    const initialSubTab = queryParams.get('subtab') || 'painel';
+    const [activeSubTab, setActiveSubTab] = useState(initialSubTab);
     const [stats, setStats] = useState<any>(null);
     const [tickets, setTickets] = useState<TecticTicket[]>([]);
     const [loading, setLoading] = useState(true);
@@ -181,8 +181,6 @@ const ServiceDesk: React.FC = () => {
                 {activeSubTab === 'chamados' && <TicketManagement tickets={tickets} loading={loading} onView={handleViewDossier} onRefresh={loadTickets} />}
                 {activeSubTab === 'drive' && <TECDrive />}
                 {activeSubTab === 'base' && <KnowledgeBase />}
-
-
             </div>
 
             {isDossierOpen && selectedTicket && (
@@ -205,7 +203,6 @@ const ServiceDesk: React.FC = () => {
                     }}
                 />
             )}
-
         </div>
     );
 };
@@ -1049,14 +1046,52 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
 
                         <section>
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Classificação Técnica</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-center">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prioridade</p>
-                                    <p className="text-xs font-black text-slate-800 mt-1">{ticket.priority}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-center flex flex-col items-center">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Categoria</label>
+                                    <select
+                                        value={ticket.category}
+                                        onChange={(e) => {
+                                            updateTecticTicket(ticket.id, { category: e.target.value }).then(onUpdate);
+                                        }}
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300"
+                                    >
+                                        <option>Hardware</option>
+                                        <option>Software</option>
+                                        <option>Rede</option>
+                                        <option>Sistemas</option>
+                                        <option>Telefonia</option>
+                                        <option>Outros</option>
+                                    </select>
                                 </div>
-                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-center">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Nível</p>
-                                    <p className="text-xs font-black text-blue-600 mt-1">{ticket.support_level}</p>
+                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-center flex flex-col items-center">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Prioridade</label>
+                                    <select
+                                        value={ticket.priority}
+                                        onChange={(e) => {
+                                            updateTecticTicket(ticket.id, { priority: e.target.value }).then(onUpdate);
+                                        }}
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300"
+                                    >
+                                        <option>Baixa</option>
+                                        <option>Média</option>
+                                        <option>Alta</option>
+                                        <option>Crítica</option>
+                                    </select>
+                                </div>
+                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-center flex flex-col items-center">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nível</label>
+                                    <select
+                                        value={ticket.support_level}
+                                        onChange={(e) => {
+                                            updateTecticTicket(ticket.id, { support_level: e.target.value }).then(onUpdate);
+                                        }}
+                                        className="w-full bg-slate-50 border border-slate-200 text-blue-600 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300"
+                                    >
+                                        <option>L1</option>
+                                        <option>L2</option>
+                                        <option>L3</option>
+                                    </select>
                                 </div>
                             </div>
                         </section>
@@ -1187,27 +1222,6 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
         priority: 'Baixa',
         support_level: 'L1'
     });
-    const [isTriaging, setIsTriaging] = useState(false);
-    const [triageResult, setTriageResult] = useState<any>(null);
-
-    const handleTriage = async () => {
-        if (!formData.description) return;
-        setIsTriaging(true);
-        try {
-            const result = await getTriageSuggestions(formData.description);
-            setTriageResult(result);
-            setFormData(prev => ({
-                ...prev,
-                category: result.category,
-                priority: result.priority,
-                support_level: result.support_level
-            }));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsTriaging(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1227,7 +1241,7 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
                         <Ticket size={24} />
                     </div>
                     <div>
-                        <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Novo Chamado Técnico</h2>
+                        <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Chamado Técnico</h2>
                         <p className="text-xs md:text-sm text-slate-500 font-medium">Abertura de ticket no ServiceDesk</p>
                     </div>
                 </div>
@@ -1245,18 +1259,7 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between ml-1">
-                            <label className="text-sm font-bold text-slate-700">Descrição do Problema</label>
-                            <button
-                                type="button"
-                                onClick={handleTriage}
-                                disabled={isTriaging || !formData.description}
-                                className="text-xs font-black text-blue-600 flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
-                            >
-                                <Bot size={16} />
-                                {isTriaging ? 'Analisando...' : 'Triagem Inteligente'}
-                            </button>
-                        </div>
+                        <label className="text-sm font-bold text-slate-700 ml-1">Descrição do Problema</label>
                         <textarea
                             required
                             value={formData.description}
@@ -1267,59 +1270,18 @@ export const CreateTicketModal: React.FC<{ onClose: () => void, onCreated: () =>
                         />
                     </div>
 
-                    {triageResult && (
-                        <div className="p-5 bg-blue-50 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-500">
-                            <div className="flex gap-3 text-blue-800">
-                                <Bot size={20} className="shrink-0 mt-1" />
-                                <div>
-                                    <p className="text-[11px] font-black uppercase mb-1">Sugestão de Triagem IA</p>
-                                    <p className="text-sm italic leading-relaxed font-medium">"{triageResult.reasoning}"</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 ml-1">Categoria</label>
-                            <select
-                                value={formData.category}
-                                onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option>Hardware</option>
-                                <option>Software</option>
-                                <option>Rede</option>
-                                <option>Sistemas</option>
-                                <option>Telefonia</option>
-                                <option>Outros</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 ml-1">Prioridade</label>
-                            <select
-                                value={formData.priority}
-                                onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option>Baixa</option>
-                                <option>Média</option>
-                                <option>Alta</option>
-                                <option>Crítica</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 ml-1">Nível</label>
-                            <select
-                                value={formData.support_level}
-                                onChange={e => setFormData({ ...formData, support_level: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option>L1</option>
-                                <option>L2</option>
-                                <option>L3</option>
-                            </select>
-                        </div>
+                    <div className="pt-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                window.open(window.location.pathname + '?tab=faq', '_blank');
+                            }}
+                            className="w-full h-12 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all"
+                        >
+                            <BookOpen size={18} />
+                            Consultar Base de Conhecimento
+                        </button>
                     </div>
 
                     <div className="flex gap-4 pt-4">

@@ -4,6 +4,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { initSocket } from './socket.js';
 
 // DB and Initialization
 import pool from './db.js';
@@ -22,6 +24,7 @@ import aiRoutes from './routes/ai.js';
 import holidayRoutes from './routes/holidays.js';
 import searchRoutes from './routes/search.js';
 import tecticRoutes from './routes/tectic.js';
+import messengerRoutes from './routes/messenger.js';
 
 // Middleware
 import authMiddleware from './middleware/auth.js';
@@ -31,6 +34,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = http.createServer(app);
+const io = initSocket(server);
 const PORT = process.env.PORT || 3002;
 
 // Basic Middleware
@@ -71,6 +76,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/tectic', tecticRoutes);
 app.use('/api/holidays', holidayRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/messenger', messengerRoutes);
 
 // Custom routes that were scattered in index.js and didn't fit perfectly in the new modules
 // or were forgotten in the initial modularization plan.
@@ -145,6 +151,6 @@ app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

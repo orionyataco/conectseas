@@ -388,7 +388,7 @@ router.post('/notices', adminMiddleware, async (req, res) => {
 });
 
 // Knowledge Base List
-router.get('/knowledge', adminMiddleware, async (req, res) => {
+router.get('/knowledge', async (req, res) => {
     try {
         const [rows] = await pool.query(`
             SELECT k.*, u.name as author_name 
