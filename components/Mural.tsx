@@ -36,7 +36,9 @@ import {
   Italic,
   Underline,
   Type,
-  Strikethrough
+  Strikethrough,
+  Link as LinkIcon,
+  Globe
 } from 'lucide-react';
 
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -53,6 +55,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const [isUrgent, setIsUrgent] = React.useState(false);
   const [likedPosts, setLikedPosts] = React.useState<number[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
+
+  // Link preview state
+  const [linkPreview, setLinkPreview] = React.useState<{ title: string | null; description: string | null; image: string | null; siteName: string | null; url: string } | null>(null);
+  const [previewLoading, setPreviewLoading] = React.useState(false);
+  const [detectedUrl, setDetectedUrl] = React.useState<string | null>(null);
+  const [includePreviewText, setIncludePreviewText] = React.useState(true);
+  const [includePreviewImage, setIncludePreviewImage] = React.useState(true);
+  const linkPreviewDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Comments state
   const [expandedComments, setExpandedComments] = React.useState<number[]>([]);
@@ -193,6 +203,31 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     const selectionStart = e.target.selectionStart;
     setNewPostContent(value);
 
+    // Detect URL for link preview
+    const urlRegex = /https?:\/\/[^\s]{4,}/g;
+    const urls = value.match(urlRegex);
+    const firstUrl = urls ? urls[0] : null;
+
+    if (firstUrl && firstUrl !== detectedUrl) {
+      setDetectedUrl(firstUrl);
+      if (linkPreviewDebounce.current) clearTimeout(linkPreviewDebounce.current);
+      linkPreviewDebounce.current = setTimeout(async () => {
+        setPreviewLoading(true);
+        try {
+          const res = await api.get(`/mural/link-preview?url=${encodeURIComponent(firstUrl)}`);
+          setLinkPreview(res.data);
+        } catch {
+          setLinkPreview(null);
+        } finally {
+          setPreviewLoading(false);
+        }
+      }, 800);
+    } else if (!firstUrl && detectedUrl) {
+      setDetectedUrl(null);
+      setLinkPreview(null);
+      if (linkPreviewDebounce.current) clearTimeout(linkPreviewDebounce.current);
+    }
+
     // Check for mention trigger
     const lastAtPos = value.lastIndexOf('@', selectionStart - 1);
 
@@ -216,6 +251,12 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     }
 
     setShowMentionList(false);
+  };
+
+  const clearLinkPreview = () => {
+    setLinkPreview(null);
+    setDetectedUrl(null);
+    if (linkPreviewDebounce.current) clearTimeout(linkPreviewDebounce.current);
   };
 
   const handleMentionSelect = (selectedUser: User) => {
@@ -299,19 +340,32 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   };
 
   const renderPostContent = (content: string) => {
-    // 1. Linkify URLs
+    // 0. Extract markdown images ![alt](url) and remove them from the main text
+    //    so they don't get linkified (which would break the <img> src attribute)
+    const extractedImages: string[] = [];
+    let rendered = content.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, (_, _alt, src) => {
+      extractedImages.push(src);
+      return ''; // Remove from text flow
+    });
+
+    // 1. Linkify plain URLs in the remaining text
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    let rendered = content.replace(urlRegex, (url) => {
+    rendered = rendered.replace(urlRegex, (url) => {
       return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline break-all">${url}</a>`;
     });
 
-    // 2. Formatting
+    // 2. Markdown formatting
     rendered = rendered
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')       // Bold
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')                 // Italic
-      .replace(/__(.*?)__/g, '<u>$1</u>')                   // Underline
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')               // Strikethrough
-      .replace(/\n/g, '<br />');                             // New lines
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<u>$1</u>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/\n/g, '<br />');
+
+    // 3. Append images at the end, safely separate from linkification
+    extractedImages.forEach(src => {
+      rendered += `<br/><img src="${src}" alt="preview" class="rounded-xl max-w-full mt-2 mb-1 border border-slate-100" style="max-height:320px;object-fit:cover" />`;
+    });
 
     return <div dangerouslySetInnerHTML={{ __html: rendered }} />;
   };
@@ -320,7 +374,22 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user || !newPostContent.trim()) return;
 
     const formData = new FormData();
-    formData.append('content', newPostContent);
+
+    // Build content, optionally appending link preview text and/or image
+    let content = newPostContent;
+    if (linkPreview) {
+      if (includePreviewText) {
+        const parts: string[] = [];
+        if (linkPreview.title) parts.push(`\n\n🔗 **${linkPreview.title}**`);
+        if (linkPreview.description) parts.push(linkPreview.description);
+        content += parts.join('\n');
+      }
+      if (includePreviewImage && linkPreview.image) {
+        content += `\n![preview](${linkPreview.image})`;
+      }
+    }
+
+    formData.append('content', content);
     formData.append('userId', user.id);
     formData.append('isUrgent', isUrgent.toString());
 
@@ -334,6 +403,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
       setNewPostContent('');
       setSelectedFiles([]);
       setIsUrgent(false);
+      clearLinkPreview();
       loadFeed();
     } catch (error) {
       console.error('Failed to create post:', error);
@@ -565,6 +635,75 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
             )}
           </div>
         </div>
+
+        {/* Link Preview Card */}
+        {(previewLoading || linkPreview) && (
+          <div className="px-4 pb-3">
+            {previewLoading ? (
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 animate-pulse flex items-center gap-3">
+                <Globe size={20} className="text-slate-300" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-slate-200 rounded w-2/3" />
+                  <div className="h-2 bg-slate-200 rounded w-full" />
+                </div>
+              </div>
+            ) : linkPreview && (
+              <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30 relative">
+                <button
+                  onClick={clearLinkPreview}
+                  className="absolute top-2 right-2 p-1 bg-white rounded-full text-slate-400 hover:text-red-500 shadow-sm z-10"
+                >
+                  <X size={14} />
+                </button>
+
+                <div className="flex gap-0">
+                  {linkPreview.image && (
+                    <div className="w-28 min-h-[90px] flex-shrink-0 overflow-hidden">
+                      <img
+                        src={linkPreview.image}
+                        alt={linkPreview.title || ''}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 p-3 min-w-0">
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium mb-1 uppercase tracking-wide">
+                      <LinkIcon size={10} />
+                      {linkPreview.siteName || new URL(linkPreview.url).hostname}
+                    </div>
+                    {linkPreview.title && <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 mb-1">{linkPreview.title}</p>}
+                    {linkPreview.description && <p className="text-xs text-slate-500 line-clamp-2">{linkPreview.description}</p>}
+                  </div>
+                </div>
+
+                <div className="border-t border-blue-100 px-3 py-2 bg-white flex items-center gap-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Incluir na postagem:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includePreviewText}
+                      onChange={e => setIncludePreviewText(e.target.checked)}
+                      className="rounded text-blue-600 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs text-slate-600 font-medium">Texto</span>
+                  </label>
+                  {linkPreview.image && (
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includePreviewImage}
+                        onChange={e => setIncludePreviewImage(e.target.checked)}
+                        className="rounded text-blue-600 w-3.5 h-3.5"
+                      />
+                      <span className="text-xs text-slate-600 font-medium">Imagem</span>
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {selectedFiles.length > 0 && (
           <div className="px-4 pb-3">

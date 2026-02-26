@@ -37,7 +37,7 @@ export const globalSearch = async (req, res) => {
 
         // 3. Search Documents (Files and Folders)
         const [folders] = await pool.query(
-            `SELECT f.id, f.name, 'folder' as type, f.user_id
+            `SELECT DISTINCT f.id, f.name, 'folder' as type, f.user_id
              FROM user_folders f
              LEFT JOIN folder_shares fs ON f.id = fs.folder_id
              WHERE f.name LIKE ? AND f.is_deleted = 0 AND (f.user_id = ? OR fs.user_id = ? OR ? = 'ADMIN')
@@ -46,7 +46,7 @@ export const globalSearch = async (req, res) => {
         );
 
         const [files] = await pool.query(
-            `SELECT fi.id, fi.original_name as name, 'file' as type, fi.user_id, fi.folder_id
+            `SELECT DISTINCT fi.id, fi.original_name as name, 'file' as type, fi.user_id, fi.folder_id
              FROM user_files fi
              JOIN user_folders fo ON fi.folder_id = fo.id
              LEFT JOIN folder_shares fs ON fo.id = fs.folder_id

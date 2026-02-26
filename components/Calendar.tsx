@@ -19,7 +19,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
   const [showModal, setShowModal] = React.useState(false);
   const [editingEvent, setEditingEvent] = React.useState<Event | null>(null);
   const [sharedWith, setSharedWith] = React.useState<string[]>([]);
-  const [inviteType, setInviteType] = React.useState<'specific' | 'all'>('specific');
+  const [userSearch, setUserSearch] = React.useState('');
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -123,9 +123,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         visibility: formData.visibility,
         eventType: formData.eventType,
         meetingLink: formData.meetingLink || null,
-        sharedWith: inviteType === 'all'
-          ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
-          : sharedWith
+        sharedWith: sharedWith
       };
 
       await api.post('/events', payload);
@@ -162,9 +160,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         visibility: formData.visibility,
         eventType: formData.eventType,
         meetingLink: formData.meetingLink || null,
-        sharedWith: inviteType === 'all'
-          ? users.filter(u => u.id.toString() !== user.id).map(u => u.id.toString())
-          : sharedWith
+        sharedWith: sharedWith
       };
 
       await api.put(`/events/${editingEvent.id}`, payload);
@@ -208,7 +204,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       eventType: 'other'
     });
     setSharedWith([]);
-    setInviteType('specific');
+    setUserSearch('');
     setEditingEvent(null);
     setShowModal(false);
   };
@@ -783,61 +779,80 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-3">Convidados</label>
+              {formData.visibility === 'private' && (
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Participantes</label>
 
-                <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  {/* Search input */}
+                  <div className="relative mb-2">
                     <input
-                      type="radio"
-                      name="inviteType"
-                      checked={inviteType === 'specific'}
-                      onChange={() => setInviteType('specific')}
-                      className="text-blue-600 focus:ring-blue-500"
+                      type="text"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      placeholder="Buscar usuário por nome..."
                     />
-                    <span className="text-sm text-slate-700">Selecionar Usuários</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="inviteType"
-                      checked={inviteType === 'all'}
-                      onChange={() => setInviteType('all')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">Todos os Usuários</span>
-                  </label>
-                </div>
-
-                {inviteType === 'specific' && (
-                  <div className="border border-slate-100 rounded-xl p-3 bg-slate-50 space-y-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase">Selecione os participantes:</label>
-                    <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
-                      {users.filter(u => u.id != user?.id).map(u => (
-                        <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors group">
-                          <input
-                            type="checkbox"
-                            checked={sharedWith.includes(u.id.toString())}
-                            onChange={(e) => {
-                              if (e.target.checked) {
+                    {userSearch && (
+                      <div className="absolute z-10 top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 max-h-44 overflow-y-auto">
+                        {users
+                          .filter(u =>
+                            u.id.toString() !== user?.id?.toString() &&
+                            !sharedWith.includes(u.id.toString()) &&
+                            u.name.toLowerCase().includes(userSearch.toLowerCase())
+                          )
+                          .map(u => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => {
                                 setSharedWith([...sharedWith, u.id.toString()]);
-                              } else {
-                                setSharedWith(sharedWith.filter(id => id !== u.id.toString()));
-                              }
-                            }}
-                            className="rounded text-blue-600 focus:ring-blue-500"
-                          />
-                          <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-6 h-6 rounded-full" alt="" />
-                          <span className="text-sm text-slate-700 group-hover:text-blue-600 font-medium">{u.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {sharedWith.length === 0 && (
-                      <p className="text-[10px] text-slate-400 font-medium italic">Nenhum usuário selecionado (apenas você verá este evento se for privado).</p>
+                                setUserSearch('');
+                              }}
+                              className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 text-left transition-colors"
+                            >
+                              <img src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}`} className="w-7 h-7 rounded-full" alt="" />
+                              <span className="text-sm text-slate-700 font-medium">{u.name}</span>
+                              {u.position && <span className="text-xs text-slate-400 ml-auto">{u.position}</span>}
+                            </button>
+                          ))
+                        }
+                        {users.filter(u =>
+                          u.id.toString() !== user?.id?.toString() &&
+                          !sharedWith.includes(u.id.toString()) &&
+                          u.name.toLowerCase().includes(userSearch.toLowerCase())
+                        ).length === 0 && (
+                            <p className="text-sm text-slate-400 px-4 py-3 italic">Nenhum usuário encontrado.</p>
+                          )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+
+                  {/* Selected participants as chips */}
+                  {sharedWith.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {sharedWith.map(id => {
+                        const found = users.find(u => u.id.toString() === id);
+                        if (!found) return null;
+                        return (
+                          <div key={id} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full pl-1 pr-3 py-1">
+                            <img src={found.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}`} className="w-6 h-6 rounded-full" alt="" />
+                            <span className="text-xs text-blue-700 font-semibold">{found.name.split(' ')[0]}</span>
+                            <button
+                              type="button"
+                              onClick={() => setSharedWith(sharedWith.filter(i => i !== id))}
+                              className="text-blue-400 hover:text-red-500 transition-colors ml-1"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">Nenhum participante adicionado. Apenas você verá este evento.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 p-6 border-t border-slate-100 bg-white rounded-b-2xl">

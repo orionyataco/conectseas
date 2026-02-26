@@ -175,7 +175,7 @@ router.get('/feed', async (req, res) => {
             post.attachments = attachments;
         }
         const [events] = await pool.query(`
-            SELECT e.id, e.user_id, 'event' as type, e.title as content, e.description, e.event_date, e.event_end_date, e.event_time, e.event_end_time, e.event_type, e.meeting_link, e.created_at, u.name as author_name, u.position as author_role, u.avatar as author_avatar
+            SELECT DISTINCT e.id, e.user_id, 'event' as type, e.title as content, e.description, e.event_date, e.event_end_date, e.event_time, e.event_end_time, e.event_type, e.meeting_link, e.created_at, u.name as author_name, u.position as author_role, u.avatar as author_avatar
             FROM calendar_events e JOIN users u ON e.user_id = u.id LEFT JOIN event_shares es ON e.id = es.event_id
             WHERE e.visibility = 'public' OR e.user_id = ? OR es.user_id = ?
         `, [userId, userId]);
@@ -194,6 +194,63 @@ router.get('/feed', async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar feed:', error);
         res.status(500).json({ error: 'Erro ao buscar feed' });
+    }
+});
+
+// Link Preview — custom lightweight OG parser (Node 18 compatible)
+router.get('/link-preview', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                'Accept': 'text/html'
+            },
+            redirect: 'follow'
+        });
+        clearTimeout(timer);
+
+        if (!response.ok) return res.status(422).json({ error: 'Não foi possível acessar o link' });
+
+        const html = await response.text();
+
+        // Helper to extract meta tag content
+        const getMeta = (property) => {
+            const match = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']*?)["']`, 'i'))
+                || html.match(new RegExp(`<meta[^>]+content=["']([^"']*?)["'][^>]+(?:property|name)=["']${property}["']`, 'i'));
+            return match ? match[1].trim() : null;
+        };
+
+        const title = getMeta('og:title') || getMeta('twitter:title')
+            || (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim()) || null;
+        const description = getMeta('og:description') || getMeta('twitter:description')
+            || getMeta('description') || null;
+        const image = getMeta('og:image') || getMeta('twitter:image') || null;
+        const siteName = getMeta('og:site_name') || null;
+
+        // Resolve relative image URL
+        let resolvedImage = image;
+        if (image && !image.startsWith('http')) {
+            try {
+                resolvedImage = new URL(image, url).href;
+            } catch {
+                resolvedImage = null;
+            }
+        }
+
+        res.json({ title, description, image: resolvedImage, siteName, url });
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            return res.status(504).json({ error: 'Tempo limite excedido ao acessar o link' });
+        }
+        console.error('Erro ao buscar link preview:', err);
+        res.status(500).json({ error: 'Erro ao buscar prévia do link' });
     }
 });
 
