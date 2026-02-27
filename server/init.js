@@ -1,28 +1,17 @@
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-import pool, { isMySQL } from './db.js';
+import pool from './db.js';
 import bcrypt from 'bcryptjs';
 
 const initDB = async () => {
   try {
     const connection = await pool.getConnection();
-    console.log('Conectado ao SQLite para inicialização.');
-
-    // Enable foreign keys (SQLite only)
-    if (!isMySQL) {
-      await connection.query('PRAGMA foreign_keys = ON');
-    }
-
-    const AUTO_INC = isMySQL ? 'AUTO_INCREMENT' : 'AUTOINCREMENT';
-    const KEY_TYPE = isMySQL ? 'VARCHAR(255)' : 'TEXT'; // For Unique/Primary keys
-    const JSON_TYPE = isMySQL ? 'JSON' : 'TEXT';
+    console.log('Conectado ao PostgreSQL para inicialização.');
 
     // Create users table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
-        username ${KEY_TYPE} NOT NULL UNIQUE,
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) NOT NULL UNIQUE,
         password TEXT NOT NULL,
         name TEXT NOT NULL,
         email TEXT,
@@ -36,38 +25,36 @@ const initDB = async () => {
         mobile_phone TEXT,
         registration_number TEXT,
         appointment_date DATE,
-        storage_quota INTEGER DEFAULT 1073741824,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        storage_quota BIGINT DEFAULT 1073741824,
+        vacation_status INTEGER DEFAULT 0,
+        vacation_message TEXT,
+        vacation_start_date DATE,
+        vacation_end_date DATE,
+        last_seen TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Migration for existing tables (safe add columns)
-    const columnsToAdd = [
+    // Safe column migrations (PostgreSQL supports ADD COLUMN IF NOT EXISTS)
+    const userCols = [
       { name: 'nickname', type: 'TEXT' },
       { name: 'bio', type: 'TEXT' },
       { name: 'birth_date', type: 'DATE' },
       { name: 'mobile_phone', type: 'TEXT' },
       { name: 'registration_number', type: 'TEXT' },
       { name: 'appointment_date', type: 'DATE' },
-      { name: 'storage_quota', type: 'INTEGER DEFAULT 1073741824' },
-      { name: 'vacation_status', type: 'BOOLEAN DEFAULT 0' },
+      { name: 'storage_quota', type: 'BIGINT DEFAULT 1073741824' },
+      { name: 'vacation_status', type: 'INTEGER DEFAULT 0' },
       { name: 'vacation_message', type: 'TEXT' },
       { name: 'vacation_start_date', type: 'DATE' },
       { name: 'vacation_end_date', type: 'DATE' },
-      { name: 'last_seen', type: 'DATETIME' }
+      { name: 'last_seen', type: 'TIMESTAMPTZ' }
     ];
 
-    for (const col of columnsToAdd) {
+    for (const col of userCols) {
       try {
-        await connection.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
-        console.log(`Coluna "${col.name}" adicionada à tabela users.`);
-      } catch (error) {
-        // Ignore error if column already exists
-        const msg = error.message.toLowerCase();
-        if (!msg.includes('duplicate column name') && !msg.includes('duplicate column')) {
-          // console.warn(`Nota: Coluna ${col.name} já existe ou erro ao adicionar:`, error.message);
-        }
-      }
+        await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+      } catch (e) { /* ignore */ }
     }
 
     console.log('Tabela "users" verificada/criada.');
@@ -75,13 +62,13 @@ const initDB = async () => {
     // Create warnings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS warnings (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         urgency TEXT DEFAULT 'low',
         target_audience TEXT DEFAULT 'all',
-        active BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Tabela "warnings" verificada/criada.');
@@ -89,12 +76,12 @@ const initDB = async () => {
     // Create posts table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS posts (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        is_urgent BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_urgent INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -103,14 +90,14 @@ const initDB = async () => {
     // Create post_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_attachments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         post_id INTEGER NOT NULL,
         filename TEXT NOT NULL,
         original_name TEXT NOT NULL,
         file_type TEXT NOT NULL,
         file_size INTEGER NOT NULL,
-        is_image BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_image INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
       )
     `);
@@ -119,29 +106,26 @@ const initDB = async () => {
     // Create post_likes table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_likes (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(post_id, user_id)
       )
-    `);
-    // Note: UNIQUE constraints might need separate index in SQLite or inline UNIQUE(post_id, user_id)
-    await connection.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_post_likes_unique ON post_likes(post_id, user_id)
     `);
     console.log('Tabela "post_likes" verificada/criada.');
 
     // Create post_comments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS post_comments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -151,7 +135,7 @@ const initDB = async () => {
     // Create calendar_events table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS calendar_events (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -162,8 +146,8 @@ const initDB = async () => {
         visibility TEXT DEFAULT 'public',
         event_type TEXT DEFAULT 'other',
         meeting_link TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -172,10 +156,10 @@ const initDB = async () => {
     // Create event_shares table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS event_shares (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         event_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (event_id) REFERENCES calendar_events(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE(event_id, user_id)
@@ -186,72 +170,57 @@ const initDB = async () => {
     // Create user_folders table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_folders (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         parent_id INTEGER DEFAULT NULL,
         name TEXT NOT NULL,
-        is_favorite BOOLEAN DEFAULT 0,
-        is_deleted BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (parent_id) REFERENCES user_folders(id) ON DELETE CASCADE
+        is_favorite INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-
-    // Migration for user_folders
-    try {
-      await connection.query('ALTER TABLE user_folders ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE user_folders ADD COLUMN updated_at DATETIME');
-      await connection.query('UPDATE user_folders SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE user_folders ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
-    } catch (e) { }
+    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
+    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
+    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_folders" verificada/criada.');
 
     // Create user_files table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_files (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         folder_id INTEGER DEFAULT NULL,
-        filename TEXT NOT NULL,
-        original_name TEXT NOT NULL,
+        name TEXT,
+        filename TEXT,
+        original_name TEXT,
+        type TEXT,
         file_type TEXT,
+        path TEXT,
         file_size INTEGER,
-        is_favorite BOOLEAN DEFAULT 0,
-        is_deleted BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (folder_id) REFERENCES user_folders(id) ON DELETE CASCADE
+        size INTEGER,
+        is_public INTEGER DEFAULT 0,
+        is_favorite INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-
-    // Migration for user_files
-    try {
-      await connection.query('ALTER TABLE user_files ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE user_files ADD COLUMN updated_at DATETIME');
-      await connection.query('UPDATE user_files SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE user_files ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
-    } catch (e) { }
+    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
+    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
+    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_files" verificada/criada.');
 
     // Create folder_shares table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS folder_shares (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         folder_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        permission TEXT DEFAULT 'READ', -- 'READ' or 'WRITE'
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        permission TEXT DEFAULT 'READ',
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (folder_id) REFERENCES user_folders(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE(folder_id, user_id)
@@ -262,63 +231,57 @@ const initDB = async () => {
     // Create user_notes table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_notes (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
-        user_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE,
         content TEXT,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
-    `);
-    // Ensure one note per user
-    await connection.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_notes_user_id ON user_notes(user_id)
     `);
     console.log('Tabela "user_notes" verificada/criada.');
 
     // Create user_shortcuts table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS user_shortcuts (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
         url TEXT NOT NULL,
         icon_name TEXT DEFAULT 'Globe',
         color TEXT DEFAULT 'bg-indigo-50',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_favorite INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+    try { await connection.query('ALTER TABLE user_shortcuts ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_shortcuts" verificada/criada.');
-    try {
-      await connection.query('ALTER TABLE user_shortcuts ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
-    } catch (e) { }
 
-    // Create system_shortcuts table (Shared systems)
+    // Create system_shortcuts table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS system_shortcuts (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
-        name ${KEY_TYPE} NOT NULL UNIQUE,
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE,
         description TEXT,
         url TEXT NOT NULL,
         icon_name TEXT DEFAULT 'Box',
         color TEXT DEFAULT 'bg-blue-50',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        is_favorite INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    try { await connection.query('ALTER TABLE system_shortcuts ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "system_shortcuts" verificada/criada.');
-    try {
-      await connection.query('ALTER TABLE system_shortcuts ADD COLUMN is_favorite BOOLEAN DEFAULT 0');
-    } catch (e) { }
 
     // Create todos table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         text TEXT NOT NULL,
-        completed BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -327,7 +290,7 @@ const initDB = async () => {
     // Create projects table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
         owner_id INTEGER NOT NULL,
@@ -337,39 +300,24 @@ const initDB = async () => {
         end_date DATE,
         visibility TEXT DEFAULT 'public',
         color TEXT DEFAULT '#3B82F6',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_archived BOOLEAN DEFAULT 0,
+        is_archived INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-
-    // Check if is_archived exists
-    try {
-      await connection.query('SELECT is_archived FROM projects LIMIT 1');
-    } catch (error) {
-      console.log('Adicionando coluna is_archived na tabela projects');
-      await connection.query('ALTER TABLE projects ADD COLUMN is_archived BOOLEAN DEFAULT 0');
-    }
-
-    // Check if visibility exists
-    try {
-      await connection.query('SELECT visibility FROM projects LIMIT 1');
-    } catch (error) {
-      console.log('Adicionando coluna visibility na tabela projects');
-      await connection.query("ALTER TABLE projects ADD COLUMN visibility TEXT DEFAULT 'public'");
-    }
-
+    try { await connection.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_archived INTEGER DEFAULT 0'); } catch (e) { }
+    try { await connection.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'public'"); } catch (e) { }
     console.log('Tabela "projects" verificada/criada.');
 
     // Create project_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_attachments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         project_id INTEGER NOT NULL,
         file_id INTEGER NOT NULL,
         uploaded_by INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         FOREIGN KEY (file_id) REFERENCES user_files(id) ON DELETE CASCADE,
         FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
@@ -380,11 +328,11 @@ const initDB = async () => {
     // Create project_members table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_members (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         project_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         role TEXT DEFAULT 'member',
-        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE(project_id, user_id)
@@ -395,7 +343,7 @@ const initDB = async () => {
     // Create project_tasks table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS project_tasks (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         project_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -407,11 +355,10 @@ const initDB = async () => {
         estimated_hours REAL,
         actual_hours REAL,
         order_index INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        completed_at DATETIME,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMPTZ,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -420,12 +367,12 @@ const initDB = async () => {
     // Create task_comments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_comments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         task_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -435,11 +382,11 @@ const initDB = async () => {
     // Create task_attachments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_attachments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         task_id INTEGER NOT NULL,
         file_id INTEGER NOT NULL,
         uploaded_by INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (file_id) REFERENCES user_files(id) ON DELETE CASCADE,
         FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
@@ -450,10 +397,10 @@ const initDB = async () => {
     // Create task_assignees table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_assignees (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         task_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE(task_id, user_id)
@@ -464,11 +411,11 @@ const initDB = async () => {
     // Create task_subtasks table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS task_subtasks (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         task_id INTEGER NOT NULL,
         title TEXT NOT NULL,
-        is_completed BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_completed INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES project_tasks(id) ON DELETE CASCADE
       )
     `);
@@ -477,9 +424,9 @@ const initDB = async () => {
     // Create system_settings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS system_settings (
-        key ${KEY_TYPE} PRIMARY KEY,
-        value ${JSON_TYPE} NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Tabela "system_settings" verificada/criada.');
@@ -487,41 +434,42 @@ const initDB = async () => {
     // Create notifications table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         type TEXT NOT NULL,
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         link TEXT,
-        is_read BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_read INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('Tabela "notifications" verificada/criada.');
 
-    // Create sidebar_items table for configurable sidebar
+    // Create sidebar_items table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS sidebar_items (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
-        key ${KEY_TYPE} UNIQUE NOT NULL,
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(255) UNIQUE NOT NULL,
         label TEXT NOT NULL,
         icon TEXT NOT NULL,
         path TEXT,
         order_index INTEGER DEFAULT 0,
-        is_active BOOLEAN DEFAULT 1,
+        is_active INTEGER DEFAULT 1,
         required_role TEXT,
-        is_system BOOLEAN DEFAULT 0,
-        open_in_iframe BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        is_system INTEGER DEFAULT 0,
+        open_in_iframe INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    try { await connection.query('ALTER TABLE sidebar_items ADD COLUMN IF NOT EXISTS open_in_iframe INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "sidebar_items" verificada/criada.');
 
     // Populate default sidebar items if table is empty
     const [existingItems] = await connection.query('SELECT COUNT(*) as count FROM sidebar_items');
-    if (existingItems[0].count === 0) {
+    if (parseInt(existingItems[0].count) === 0) {
       const defaultSidebarItems = [
         { key: 'dashboard', label: 'Início', icon: 'LayoutDashboard', path: 'dashboard', order_index: 1, is_system: 1 },
         { key: 'mural', label: 'Mural', icon: 'MessageSquare', path: 'mural', order_index: 2, is_system: 1 },
@@ -542,131 +490,95 @@ const initDB = async () => {
       console.log('Itens padrão da sidebar inseridos.');
     }
 
-    // Migration for sidebar_items
-    try {
-      const [tableInfo] = await connection.query("PRAGMA table_info(sidebar_items)");
-      const hasColumn = tableInfo.some(col => col.name === 'open_in_iframe');
-      if (!hasColumn) {
-        await connection.query('ALTER TABLE sidebar_items ADD COLUMN open_in_iframe BOOLEAN DEFAULT 0');
-        console.log('Coluna "open_in_iframe" vinculada à tabela sidebar_items.');
-      }
-    } catch (e) {
-      console.error('Erro ao migrar sidebar_items:', e);
-    }
-
     // --- ServiceDesk Tables ---
 
-    // Tickets Table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_tickets (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         assigned_to INTEGER,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
-        category TEXT NOT NULL, -- Hardware, Software, Rede, Sistemas, Outros
-        priority TEXT DEFAULT 'Baixa', -- Baixa, Média, Alta, Crítica
-        status TEXT DEFAULT 'Aberto', -- Aberto, Em Atendimento, Pendente, Resolvido, Cancelado
-        support_level TEXT DEFAULT 'L1', -- L1, L2, L3
+        category TEXT NOT NULL,
+        priority TEXT DEFAULT 'Baixa',
+        status TEXT DEFAULT 'Aberto',
+        support_level TEXT DEFAULT 'L1',
         solution TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        resolved_at DATETIME,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TIMESTAMPTZ,
         resolved_by INTEGER,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
-        FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    // Migration for resolved_by
-    try {
-      await connection.query('ALTER TABLE tectic_tickets ADD COLUMN resolved_by INTEGER');
-    } catch (e) { }
+    try { await connection.query('ALTER TABLE tectic_tickets ADD COLUMN IF NOT EXISTS resolved_by INTEGER'); } catch (e) { }
     console.log('Tabela "tectic_tickets" verificada/criada.');
 
-    // Ticket Comments/History
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_ticket_comments (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         ticket_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         comment TEXT NOT NULL,
-        is_internal BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_internal INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (ticket_id) REFERENCES tectic_tickets(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('Tabela "tectic_ticket_comments" verificada/criada.');
 
-    // Knowledge Base
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_knowledge (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         category TEXT NOT NULL,
         tags TEXT,
         author_id INTEGER NOT NULL,
         views INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-
-    // Migration for tectic_knowledge
-    try {
-      await connection.query('ALTER TABLE tectic_knowledge ADD COLUMN tags TEXT');
-      console.log('Coluna "tags" adicionada à tabela tectic_knowledge.');
-    } catch (e) {
-      // Ignore if column already exists
-    }
-
+    try { await connection.query('ALTER TABLE tectic_knowledge ADD COLUMN IF NOT EXISTS tags TEXT'); } catch (e) { }
     console.log('Tabela "tectic_knowledge" verificada/criada.');
 
-    // TEC-Drive Files
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_files (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         original_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
-        file_type TEXT NOT NULL, -- Instalador, Documento, Script
+        file_type TEXT NOT NULL,
         file_size INTEGER NOT NULL,
         mimetype TEXT,
         uploaded_by INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('Tabela "tectic_files" verificada/criada.');
 
-    // Mural de Avisos TI
     await connection.query(`
       CREATE TABLE IF NOT EXISTS tectic_notices (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
-        urgency TEXT DEFAULT 'Normal', -- Normal, Importante, Crítico
-        expires_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        urgency TEXT DEFAULT 'Normal',
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER NOT NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('Tabela "tectic_notices" verificada/criada.');
 
-    // Seed default settings
+    // Seed default settings — ON CONFLICT DO NOTHING é suportado pelo PostgreSQL
     const defaultSettings = [
-      {
-        key: 'ldap_config',
-        value: JSON.stringify({ enabled: false, url: '', bindDN: '', bindCredentials: '', searchBase: '' })
-      },
-      {
-        key: 'visual_identity',
-        value: JSON.stringify({ app_name: 'CONECTSEAS', app_description: 'Governo do Amapá', app_logo: null })
-      },
+      { key: 'ldap_config', value: JSON.stringify({ enabled: false, url: '', bindDN: '', bindCredentials: '', searchBase: '' }) },
+      { key: 'visual_identity', value: JSON.stringify({ app_name: 'CONECTSEAS', app_description: 'Governo do Amapá', app_logo: null }) },
       {
         key: 'login_ui',
         value: JSON.stringify({
@@ -678,38 +590,23 @@ const initDB = async () => {
           description_text: 'Plataforma unificada para serviços de assistência social e ferramentas internas do Estado.'
         })
       },
-      {
-        key: 'security_policy',
-        value: JSON.stringify({
-          min_password_length: 8,
-          require_special_chars: true,
-          session_timeout: 1440 // in minutes (24h)
-        })
-      },
-      {
-        key: 'upload_config',
-        value: JSON.stringify({
-          max_file_size: 10 * 1024 * 1024, // 10MB
-          allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-        })
-      },
-      {
-        key: 'theme_config',
-        value: JSON.stringify({
-          primary_color: '#2563eb', // blue-600
-          theme_name: 'default'
-        })
-      }
+      { key: 'security_policy', value: JSON.stringify({ min_password_length: 8, require_special_chars: true, session_timeout: 1440 }) },
+      { key: 'upload_config', value: JSON.stringify({ max_file_size: 10 * 1024 * 1024, allowed_types: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] }) },
+      { key: 'theme_config', value: JSON.stringify({ primary_color: '#2563eb', theme_name: 'default' }) }
     ];
 
     for (const setting of defaultSettings) {
-      await connection.query('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', [setting.key, setting.value]);
+      // PostgreSQL upsert — equivalente ao INSERT OR IGNORE do SQLite
+      await connection.query(
+        'INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING',
+        [setting.key, setting.value]
+      );
     }
     console.log('Configurações de sistema verificadas/atualizadas.');
 
-    // Seed default system shortcuts if empty
+    // Seed default system shortcuts
     const [existingSystems] = await connection.query('SELECT COUNT(*) as count FROM system_shortcuts');
-    if (existingSystems[0].count === 0) {
+    if (parseInt(existingSystems[0].count) === 0) {
       const defaultSystems = [
         { name: 'SIGA', desc: 'Sistema Integrado de Gestão', url: 'https://siga.ap.gov.br', icon: 'Box', color: 'bg-blue-50' },
         { name: 'PRODOC', desc: 'Protocolo de Documentos', url: 'https://prodoc.ap.gov.br', icon: 'FileText', color: 'bg-purple-50' },
@@ -720,19 +617,18 @@ const initDB = async () => {
       ];
 
       for (const sys of defaultSystems) {
-        await connection.query(`
-          INSERT INTO system_shortcuts (name, description, url, icon_name, color)
-          VALUES (?, ?, ?, ?, ?)
-        `, [sys.name, sys.desc, sys.url, sys.icon, sys.color]);
+        await connection.query(
+          'INSERT INTO system_shortcuts (name, description, url, icon_name, color) VALUES (?, ?, ?, ?, ?)',
+          [sys.name, sys.desc, sys.url, sys.icon, sys.color]
+        );
       }
       console.log('Atalhos de sistema padrão inseridos.');
     }
 
-    // Check for admin user
+    // Create admin user if not exists
     const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
 
     if (rows.length === 0) {
-      // Insert default admin
       const hashedPassword = await bcrypt.hash('admin', 10);
       await connection.query(`
         INSERT INTO users (username, password, name, email, role, department, position, avatar)
@@ -747,12 +643,12 @@ const initDB = async () => {
         'Super Usuário',
         'https://ui-avatars.com/api/?name=Admin+Sistema&background=0D8ABC&color=fff'
       ]);
-      console.log('Usuário "admin" criado com sucesso (senha hasheada).');
+      console.log('Usuário "admin" criado com sucesso.');
     } else {
       console.log('Usuário "admin" já existe.');
     }
 
-    // Migrate existing plaintext passwords to bcrypt
+    // Migrate plaintext passwords to bcrypt
     const [allUsers] = await connection.query('SELECT id, password FROM users');
     for (const u of allUsers) {
       if (!u.password.startsWith('$2a$') && !u.password.startsWith('$2b$')) {
@@ -765,37 +661,28 @@ const initDB = async () => {
     // Create messenger_messages table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS messenger_messages (
-        id INTEGER PRIMARY KEY ${AUTO_INC},
+        id SERIAL PRIMARY KEY,
         sender_id INTEGER NOT NULL,
         receiver_id INTEGER NOT NULL,
         message TEXT NOT NULL,
-        is_read BOOLEAN DEFAULT 0,
-        is_edited BOOLEAN DEFAULT 0,
-        is_deleted BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_read INTEGER DEFAULT 0,
+        is_edited INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-
-    // Migration for messenger_messages
-    try {
-      await connection.query('ALTER TABLE messenger_messages ADD COLUMN is_edited BOOLEAN DEFAULT 0');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE messenger_messages ADD COLUMN is_deleted BOOLEAN DEFAULT 0');
-    } catch (e) { }
-    try {
-      await connection.query('ALTER TABLE messenger_messages ADD COLUMN updated_at DATETIME');
-      await connection.query('UPDATE messenger_messages SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
-    } catch (e) { }
-
+    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS is_edited INTEGER DEFAULT 0'); } catch (e) { }
+    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
+    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
     console.log('Tabela "messenger_messages" verificada/criada.');
 
     connection.release();
+    console.log('✅ Banco de dados PostgreSQL inicializado com sucesso!');
   } catch (error) {
-    console.error('Erro na inicialização do banco:', error);
+    console.error('❌ Erro na inicialização do banco:', error.message);
   }
 };
 

@@ -52,11 +52,15 @@ router.delete('/warnings/:id', async (req, res) => {
     }
 });
 
-// Notes
+// Notes — restrito ao próprio usuário autenticado
 router.get('/notes/:userId', async (req, res) => {
-    const { userId } = req.params;
+    const requesterId = req.user.id;
+    // Verifica que o userId do param pertence ao próprio usuário autenticado
+    if (String(req.params.userId) !== String(requesterId)) {
+        return res.status(403).json({ error: 'Não autorizado' });
+    }
     try {
-        const [rows] = await pool.query('SELECT content FROM user_notes WHERE user_id = ?', [userId]);
+        const [rows] = await pool.query('SELECT content FROM user_notes WHERE user_id = ?', [requesterId]);
         res.json({ content: rows[0]?.content || '' });
     } catch (error) {
         console.error('Erro ao buscar nota:', error);
@@ -65,7 +69,9 @@ router.get('/notes/:userId', async (req, res) => {
 });
 
 router.post('/notes', async (req, res) => {
-    const { userId, content } = req.body;
+    // userId sempre do token JWT — nunca de req.body
+    const userId = req.user.id;
+    const { content } = req.body;
     try {
         await pool.query('INSERT INTO user_notes (user_id, content) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET content = EXCLUDED.content, updated_at = CURRENT_TIMESTAMP', [userId, content]);
         res.json({ success: true });
@@ -75,11 +81,14 @@ router.post('/notes', async (req, res) => {
     }
 });
 
-// Shortcuts
+// Shortcuts — restrito ao próprio usuário autenticado
 router.get('/shortcuts/:userId', async (req, res) => {
-    const { userId } = req.params;
+    const requesterId = req.user.id;
+    if (String(req.params.userId) !== String(requesterId)) {
+        return res.status(403).json({ error: 'Não autorizado' });
+    }
     try {
-        const [rows] = await pool.query('SELECT *, name as label, icon_name as icon FROM user_shortcuts WHERE user_id = ? ORDER BY is_favorite DESC, name ASC', [userId]);
+        const [rows] = await pool.query('SELECT *, name as label, icon_name as icon FROM user_shortcuts WHERE user_id = ? ORDER BY is_favorite DESC, name ASC', [requesterId]);
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar atalhos:', error);
@@ -88,7 +97,9 @@ router.get('/shortcuts/:userId', async (req, res) => {
 });
 
 router.post('/shortcuts', async (req, res) => {
-    const { userId, name, url, iconName, color, description } = req.body;
+    // userId sempre do token JWT
+    const userId = req.user.id;
+    const { name, url, iconName, color, description } = req.body;
     try {
         await pool.query('INSERT INTO user_shortcuts (user_id, name, url, icon_name, color, description) VALUES (?, ?, ?, ?, ?, ?)', [userId, name, url, iconName, color, description || '']);
         res.json({ success: true });
@@ -100,8 +111,13 @@ router.post('/shortcuts', async (req, res) => {
 
 router.put('/shortcuts/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { name, url, iconName, color, description } = req.body;
     try {
+        // Ownership check: garante que o atalho pertence ao usuário autenticado
+        const [rows] = await pool.query('SELECT user_id FROM user_shortcuts WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Atalho não encontrado' });
+        if (rows[0].user_id !== requesterId) return res.status(403).json({ error: 'Não autorizado' });
         await pool.query('UPDATE user_shortcuts SET name = ?, url = ?, icon_name = ?, color = ?, description = ? WHERE id = ?', [name, url, iconName, color, description, id]);
         res.json({ success: true });
     } catch (error) {
@@ -112,7 +128,12 @@ router.put('/shortcuts/:id', async (req, res) => {
 
 router.delete('/shortcuts/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     try {
+        // Ownership check
+        const [rows] = await pool.query('SELECT user_id FROM user_shortcuts WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Atalho não encontrado' });
+        if (rows[0].user_id !== requesterId) return res.status(403).json({ error: 'Não autorizado' });
         await pool.query('DELETE FROM user_shortcuts WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -123,8 +144,13 @@ router.delete('/shortcuts/:id', async (req, res) => {
 
 router.patch('/shortcuts/:id/favorite', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { isFavorite } = req.body;
     try {
+        // Ownership check
+        const [rows] = await pool.query('SELECT user_id FROM user_shortcuts WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Atalho não encontrado' });
+        if (rows[0].user_id !== requesterId) return res.status(403).json({ error: 'Não autorizado' });
         await pool.query('UPDATE user_shortcuts SET is_favorite = ? WHERE id = ?', [isFavorite ? 1 : 0, id]);
         res.json({ success: true });
     } catch (error) {
@@ -133,7 +159,7 @@ router.patch('/shortcuts/:id/favorite', async (req, res) => {
     }
 });
 
-// System Shortcuts
+// System Shortcuts — leitura liberada, escrita requer verificação (mantida como estava, gerenciada por admin)
 router.get('/system-shortcuts', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT *, name as label, icon_name as icon FROM system_shortcuts ORDER BY is_favorite DESC, name ASC');
@@ -190,11 +216,14 @@ router.patch('/system-shortcuts/:id/favorite', async (req, res) => {
     }
 });
 
-// Todos
+// Todos — restrito ao próprio usuário autenticado
 router.get('/todos/:userId', async (req, res) => {
-    const { userId } = req.params;
+    const requesterId = req.user.id;
+    if (String(req.params.userId) !== String(requesterId)) {
+        return res.status(403).json({ error: 'Não autorizado' });
+    }
     try {
-        const [rows] = await pool.query('SELECT id, user_id, text, completed, created_at FROM todos WHERE user_id = ? ORDER BY completed ASC, created_at DESC', [userId]);
+        const [rows] = await pool.query('SELECT id, user_id, text, completed, created_at FROM todos WHERE user_id = ? ORDER BY completed ASC, created_at DESC', [requesterId]);
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar todos:', error);
@@ -203,7 +232,9 @@ router.get('/todos/:userId', async (req, res) => {
 });
 
 router.post('/todos', async (req, res) => {
-    const { userId, title } = req.body;
+    // userId sempre do token JWT — nunca de req.body
+    const userId = req.user.id;
+    const { title } = req.body;
     try {
         const [result] = await pool.query('INSERT INTO todos (user_id, text) VALUES (?, ?)', [userId, title]);
         res.json({ success: true, id: result.insertId });
@@ -215,8 +246,13 @@ router.post('/todos', async (req, res) => {
 
 router.patch('/todos/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { completed } = req.body;
     try {
+        // Ownership check: garante que o todo pertence ao usuário autenticado
+        const [rows] = await pool.query('SELECT user_id FROM todos WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Todo não encontrado' });
+        if (rows[0].user_id !== requesterId) return res.status(403).json({ error: 'Não autorizado' });
         await pool.query('UPDATE todos SET completed = ? WHERE id = ?', [completed ? 1 : 0, id]);
         res.json({ success: true });
     } catch (error) {
@@ -227,7 +263,12 @@ router.patch('/todos/:id', async (req, res) => {
 
 router.delete('/todos/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     try {
+        // Ownership check
+        const [rows] = await pool.query('SELECT user_id FROM todos WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Todo não encontrado' });
+        if (rows[0].user_id !== requesterId) return res.status(403).json({ error: 'Não autorizado' });
         await pool.query('DELETE FROM todos WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {

@@ -11,7 +11,9 @@ router.use(authMiddleware);
 
 // Get Posts
 router.post('/posts', upload.array('attachments'), async (req, res) => {
-    const { userId, content, isUrgent } = req.body;
+    // userId sempre do token JWT — nunca de req.body
+    const userId = req.user.id;
+    const { content, isUrgent } = req.body;
     try {
         const [result] = await pool.query(
             'INSERT INTO posts (user_id, content, is_urgent) VALUES (?, ?, ?)',
@@ -38,11 +40,16 @@ router.post('/posts', upload.array('attachments'), async (req, res) => {
 
 router.put('/posts/:id', async (req, res) => {
     const { id } = req.params;
-    const { content, userId, userRole } = req.body;
+    // userId e userRole sempre do token JWT — nunca de req.body
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
+    const { content } = req.body;
     try {
         const [posts] = await pool.query('SELECT user_id FROM posts WHERE id = ?', [id]);
         if (posts.length === 0) return res.status(404).json({ error: 'Post não encontrado' });
-        if (userRole !== 'ADMIN' && posts[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
+        if (requesterRole !== 'ADMIN' && posts[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('UPDATE posts SET content = ? WHERE id = ?', [content, id]);
         res.json({ success: true });
     } catch (error) {
@@ -53,11 +60,15 @@ router.put('/posts/:id', async (req, res) => {
 
 router.delete('/posts/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, userRole } = req.query;
+    // userId e userRole sempre do token JWT — nunca de req.query
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     try {
         const [posts] = await pool.query('SELECT user_id FROM posts WHERE id = ?', [id]);
         if (posts.length === 0) return res.status(404).json({ error: 'Post não encontrado' });
-        if (userRole !== 'ADMIN' && posts[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
+        if (requesterRole !== 'ADMIN' && posts[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('DELETE FROM posts WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -69,7 +80,8 @@ router.delete('/posts/:id', async (req, res) => {
 // Likes
 router.post('/posts/:id/like', async (req, res) => {
     const { id } = req.params;
-    const { userId } = req.body;
+    // userId sempre do token JWT
+    const userId = req.user.id;
     try {
         const [existing] = await pool.query('SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?', [id, userId]);
         if (existing.length > 0) {
@@ -118,7 +130,9 @@ router.get('/posts/:id/comments', async (req, res) => {
 
 router.post('/posts/:id/comments', async (req, res) => {
     const { id } = req.params;
-    const { userId, content } = req.body;
+    // userId sempre do token JWT — nunca de req.body
+    const userId = req.user.id;
+    const { content } = req.body;
     try {
         await pool.query('INSERT INTO post_comments (post_id, user_id, content) VALUES (?, ?, ?)', [id, userId, content]);
         const [author] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
@@ -132,11 +146,16 @@ router.post('/posts/:id/comments', async (req, res) => {
 
 router.put('/comments/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, userRole, content } = req.body;
+    // userId e userRole sempre do token JWT — nunca de req.body
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
+    const { content } = req.body;
     try {
         const [comments] = await pool.query('SELECT user_id FROM post_comments WHERE id = ?', [id]);
         if (comments.length === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
-        if (userRole !== 'ADMIN' && comments[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
+        if (requesterRole !== 'ADMIN' && comments[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('UPDATE post_comments SET content = ? WHERE id = ?', [content, id]);
         res.json({ success: true });
     } catch (error) {
@@ -147,11 +166,15 @@ router.put('/comments/:id', async (req, res) => {
 
 router.delete('/comments/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, userRole } = req.query;
+    // userId e userRole sempre do token JWT — nunca de req.query
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     try {
         const [comments] = await pool.query('SELECT user_id FROM post_comments WHERE id = ?', [id]);
         if (comments.length === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
-        if (userRole !== 'ADMIN' && comments[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
+        if (requesterRole !== 'ADMIN' && comments[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('DELETE FROM post_comments WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -162,7 +185,8 @@ router.delete('/comments/:id', async (req, res) => {
 
 // Feed
 router.get('/feed', async (req, res) => {
-    const { userId } = req.query;
+    // userId sempre do token JWT — nunca de req.query
+    const userId = req.user.id;
     try {
         const [posts] = await pool.query(`
             SELECT p.id, p.user_id, 'post' as type, p.content, p.created_at, u.name as author_name, u.position as author_role, u.avatar as author_avatar, p.is_urgent,

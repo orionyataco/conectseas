@@ -35,10 +35,9 @@ router.get('/stats', adminMiddleware, async (req, res) => {
         const [resolved] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE status = 'Resolvido'");
         const [urgent] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE priority IN ('Alta', 'Crítica') AND status != 'Resolvido'");
 
-        const [categories] = await pool.query('SELECT category, COUNT(*) as count FROM tectic_tickets GROUP BY category');
-        const [byWeekday] = await pool.query("SELECT strftime('%w', created_at) as day, COUNT(*) as count FROM tectic_tickets GROUP BY day ORDER BY day");
-        const [byMonth] = await pool.query("SELECT strftime('%m', created_at) as month, COUNT(*) as count FROM tectic_tickets GROUP BY month ORDER BY month");
-        const [byYear] = await pool.query("SELECT strftime('%Y', created_at) as year, COUNT(*) as count FROM tectic_tickets GROUP BY year ORDER BY year");
+        const [byWeekday] = await pool.query("SELECT EXTRACT(DOW FROM created_at) as day, COUNT(*) as count FROM tectic_tickets GROUP BY day ORDER BY day");
+        const [byMonth] = await pool.query("SELECT EXTRACT(MONTH FROM created_at) as month, COUNT(*) as count FROM tectic_tickets GROUP BY month ORDER BY month");
+        const [byYear] = await pool.query("SELECT EXTRACT(YEAR FROM created_at) as year, COUNT(*) as count FROM tectic_tickets GROUP BY year ORDER BY year");
 
         const [byDept] = await pool.query(`
             SELECT u.department, COUNT(t.id) as count 
@@ -51,7 +50,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             SELECT u.department, COUNT(t.id) as count 
             FROM tectic_tickets t 
             JOIN users u ON t.user_id = u.id 
-            WHERE t.created_at >= date('now', '-7 days')
+            WHERE t.created_at >= CURRENT_DATE - INTERVAL '7 days'
             GROUP BY u.department 
             ORDER BY count DESC
         `);
@@ -59,7 +58,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             SELECT u.department, COUNT(t.id) as count 
             FROM tectic_tickets t 
             JOIN users u ON t.user_id = u.id 
-            WHERE t.created_at >= date('now', 'start of month')
+            WHERE t.created_at >= date_trunc('month', CURRENT_DATE)
             GROUP BY u.department 
             ORDER BY count DESC
         `);
@@ -67,7 +66,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             SELECT u.department, COUNT(t.id) as count 
             FROM tectic_tickets t 
             JOIN users u ON t.user_id = u.id 
-            WHERE t.created_at >= date('now', 'start of year')
+            WHERE t.created_at >= date_trunc('year', CURRENT_DATE)
             GROUP BY u.department 
             ORDER BY count DESC
         `);

@@ -9,9 +9,28 @@ const router = express.Router();
 // Apply auth middleware to all routes in this file
 router.use(authMiddleware);
 
+// Helper: verifica se o usuário autenticado é owner ou manager do projeto
+async function assertProjectOwnerOrManager(projectId, userId, res) {
+    const [rows] = await pool.query(
+        'SELECT p.owner_id, pm.role FROM projects p LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = ? WHERE p.id = ?',
+        [userId, projectId]
+    );
+    if (rows.length === 0) {
+        res.status(404).json({ error: 'Projeto não encontrado' });
+        return false;
+    }
+    const { owner_id, role } = rows[0];
+    if (owner_id !== userId && role !== 'owner' && role !== 'manager') {
+        res.status(403).json({ error: 'Não autorizado' });
+        return false;
+    }
+    return true;
+}
+
 // Projects
 router.get('/', async (req, res) => {
-    const { userId } = req.query;
+    // Usa o userId do token JWT — nunca de req.query
+    const userId = req.user.id;
     try {
         const [projects] = await pool.query(`
             SELECT p.*, u.name as owner_name, u.avatar as owner_avatar,
@@ -46,7 +65,9 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', upload.array('attachments'), async (req, res) => {
-    const { name, description, ownerId, status, priority, startDate, endDate, visibility, color, members } = req.body;
+    // ownerId sempre vem do token JWT autenticado
+    const ownerId = req.user.id;
+    const { name, description, status, priority, startDate, endDate, visibility, color, members } = req.body;
     try {
         const [result] = await pool.query(
             'INSERT INTO projects (name, description, owner_id, status, priority, start_date, end_date, visibility, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -79,8 +100,12 @@ router.post('/', upload.array('attachments'), async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { name, description, status, priority, startDate, endDate, visibility, color } = req.body;
     try {
+        // Verifica se o usuário autenticado é owner ou manager antes de permitir edição
+        const ok = await assertProjectOwnerOrManager(parseInt(id), requesterId, res);
+        if (!ok) return;
         await pool.query('UPDATE projects SET name = ?, description = ?, status = ?, priority = ?, start_date = ?, end_date = ?, visibility = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [name, description, status, priority, startDate, endDate, visibility, color, id]);
         res.json({ success: true });
     } catch (error) {
@@ -91,12 +116,15 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId } = req.query;
+    // userId e role vêm do token JWT — nunca de req.query
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     try {
         const [projects] = await pool.query('SELECT owner_id FROM projects WHERE id = ?', [id]);
         if (projects.length === 0) return res.status(404).json({ error: 'Projeto não encontrado' });
-        const [users] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
-        if (projects[0].owner_id != userId && users[0].role !== 'ADMIN') return res.status(403).json({ error: 'Não autorizado' });
+        if (projects[0].owner_id !== requesterId && requesterRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('DELETE FROM projects WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -107,7 +135,9 @@ router.delete('/:id', async (req, res) => {
 
 router.post('/:id/duplicate', async (req, res) => {
     const { id } = req.params;
-    const { userId, newName } = req.body;
+    // userId sempre do token JWT
+    const userId = req.user.id;
+    const { newName } = req.body;
     try {
         const [projects] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
         if (projects.length === 0) return res.status(404).json({ error: 'Projeto não encontrado' });
@@ -132,8 +162,12 @@ router.post('/:id/duplicate', async (req, res) => {
 
 router.patch('/:id/archive', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { is_archived } = req.body;
     try {
+        // Verifica ownership antes de arquivar
+        const ok = await assertProjectOwnerOrManager(parseInt(id), requesterId, res);
+        if (!ok) return;
         await pool.query('UPDATE projects SET is_archived = ? WHERE id = ?', [is_archived ? 1 : 0, id]);
         res.json({ success: true });
     } catch (error) {
@@ -176,8 +210,12 @@ router.get('/:id/members', async (req, res) => {
 
 router.post('/:id/members', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
     const { userId, role } = req.body;
     try {
+        // Apenas owner ou manager pode adicionar membros
+        const ok = await assertProjectOwnerOrManager(parseInt(id), requesterId, res);
+        if (!ok) return;
         await pool.query('INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)', [id, userId, role || 'member']);
         const [project] = await pool.query('SELECT name FROM projects WHERE id = ?', [id]);
         await sendNotification(userId, 'project_invite', 'Convite de Projeto', `Você foi adicionado ao projeto: ${project[0]?.name || 'um projeto'}`, 'projetos');
@@ -190,8 +228,12 @@ router.post('/:id/members', async (req, res) => {
 
 router.put('/:projectId/members/:userId', async (req, res) => {
     const { projectId, userId } = req.params;
+    const requesterId = req.user.id;
     const { role } = req.body;
     try {
+        // Apenas owner ou manager pode alterar roles
+        const ok = await assertProjectOwnerOrManager(parseInt(projectId), requesterId, res);
+        if (!ok) return;
         await pool.query('UPDATE project_members SET role = ? WHERE project_id = ? AND user_id = ?', [role, projectId, userId]);
         res.json({ success: true });
     } catch (error) {
@@ -202,7 +244,14 @@ router.put('/:projectId/members/:userId', async (req, res) => {
 
 router.delete('/:projectId/members/:userId', async (req, res) => {
     const { projectId, userId } = req.params;
+    const requesterId = req.user.id;
     try {
+        // Apenas owner/manager pode remover membros, ou o próprio usuário pode sair
+        const isOwnRemoval = String(requesterId) === String(userId);
+        if (!isOwnRemoval) {
+            const ok = await assertProjectOwnerOrManager(parseInt(projectId), requesterId, res);
+            if (!ok) return;
+        }
         await pool.query('DELETE FROM project_members WHERE project_id = ? AND user_id = ?', [projectId, userId]);
         res.json({ success: true });
     } catch (error) {
@@ -219,35 +268,30 @@ router.get('/:id/tasks', async (req, res) => {
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
                 (SELECT COUNT(*) FROM task_comments WHERE task_id = t.id) as comment_count,
                 (SELECT COUNT(*) FROM task_attachments WHERE task_id = t.id) as attachment_count,
-                (SELECT json_group_array(json_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id) as assignees,
-                (SELECT json_group_array(json_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id) as subtasks
+                COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id), '[]'::json) as assignees,
+                COALESCE((SELECT json_agg(json_build_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id), '[]'::json) as subtasks
             FROM project_tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id JOIN users u2 ON t.created_by = u2.id
             WHERE t.project_id = ? ORDER BY t.order_index ASC, t.created_at DESC
         `, [id]);
-        res.json(tasks.map(t => ({ ...t, assignees: JSON.parse(t.assignees || '[]'), subtasks: JSON.parse(t.subtasks || '[]') })));
+        // pg retorna JSON já parseado como objeto JS — sem necessidade de JSON.parse
+        res.json(tasks.map(t => ({ ...t, assignees: t.assignees || [], subtasks: t.subtasks || [] })));
     } catch (error) {
         console.error('Error fetching project tasks:', error);
         res.status(500).json({ error: 'Erro ao buscar tarefas do projeto' });
     }
 });
 
-// Single task & task actions move here as well if prefixed correctly.
-// For now, I'll keep the task routes in this file but mapped to /api/projects/:id/tasks or similar if possible.
-// Actually, the frontend uses /api/tasks/:id for some calls. 
-// I'll create a separate tasks.js if needed, or just include them here.
-// Let's include everything related to projects/tasks in projects.js for now.
-
 router.get('/tasks/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const [tasks] = await pool.query(`
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
-                (SELECT json_group_array(json_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id) as assignees,
-                (SELECT json_group_array(json_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id) as subtasks
+                COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id), '[]'::json) as assignees,
+                COALESCE((SELECT json_agg(json_build_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id), '[]'::json) as subtasks
             FROM project_tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id JOIN users u2 ON t.created_by = u2.id WHERE t.id = ?
         `, [id]);
         if (tasks.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
-        res.json({ ...tasks[0], assignees: JSON.parse(tasks[0].assignees || '[]'), subtasks: JSON.parse(tasks[0].subtasks || '[]') });
+        res.json({ ...tasks[0], assignees: tasks[0].assignees || [], subtasks: tasks[0].subtasks || [] });
     } catch (error) {
         console.error('Error fetching task:', error);
         res.status(500).json({ error: 'Erro ao buscar tarefa' });
@@ -256,7 +300,9 @@ router.get('/tasks/:id', async (req, res) => {
 
 router.post('/:id/tasks', async (req, res) => {
     const { id } = req.params;
-    const { title, description, assignees, createdBy, status, priority, dueDate, subtasks } = req.body;
+    // createdBy sempre do token JWT
+    const createdBy = req.user.id;
+    const { title, description, assignees, status, priority, dueDate, subtasks } = req.body;
     try {
         const [result] = await pool.query('INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title, description, (assignees && assignees.length > 0) ? assignees[0] : null, createdBy, status || 'todo', priority || 'medium', dueDate]);
         const taskId = result.insertId;
@@ -278,8 +324,17 @@ router.post('/:id/tasks', async (req, res) => {
 
 router.put('/tasks/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     const { title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, subtasks, assignees } = req.body;
     try {
+        // Verifica se o solicitante é membro do projeto da tarefa ou admin
+        const [taskRows] = await pool.query('SELECT project_id FROM project_tasks WHERE id = ?', [id]);
+        if (taskRows.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
+        if (requesterRole !== 'ADMIN') {
+            const [membership] = await pool.query('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?', [taskRows[0].project_id, requesterId]);
+            if (membership.length === 0) return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query(`UPDATE project_tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ?, estimated_hours = ?, actual_hours = ?, completed_at = ${status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL'}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, id]);
         if (assignees && Array.isArray(assignees)) {
             const [prev] = await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [id]);
@@ -303,8 +358,17 @@ router.put('/tasks/:id', async (req, res) => {
 
 router.patch('/tasks/:id/status', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     const { status, orderIndex } = req.body;
     try {
+        // Verifica membership no projeto da tarefa
+        const [taskRows] = await pool.query('SELECT project_id FROM project_tasks WHERE id = ?', [id]);
+        if (taskRows.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
+        if (requesterRole !== 'ADMIN') {
+            const [membership] = await pool.query('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?', [taskRows[0].project_id, requesterId]);
+            if (membership.length === 0) return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query(`UPDATE project_tasks SET status = ?, order_index = ?, completed_at = ${status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL'}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, orderIndex, id]);
         res.json({ success: true });
     } catch (error) {
@@ -315,7 +379,16 @@ router.patch('/tasks/:id/status', async (req, res) => {
 
 router.delete('/tasks/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     try {
+        // Verifica se solicitante é owner/manager do projeto ou admin
+        const [taskRows] = await pool.query('SELECT project_id, created_by FROM project_tasks WHERE id = ?', [id]);
+        if (taskRows.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
+        if (requesterRole !== 'ADMIN') {
+            const ok = await assertProjectOwnerOrManager(taskRows[0].project_id, requesterId, res);
+            if (!ok) return;
+        }
         await pool.query('DELETE FROM project_tasks WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -353,7 +426,9 @@ router.get('/tasks/:id/comments', async (req, res) => {
 
 router.post('/tasks/:id/comments', async (req, res) => {
     const { id } = req.params;
-    const { userId, content } = req.body;
+    // userId do comentário sempre do token JWT
+    const userId = req.user.id;
+    const { content } = req.body;
     try {
         const [result] = await pool.query('INSERT INTO task_comments (task_id, user_id, content) VALUES (?, ?, ?)', [id, userId, content]);
         res.json({ success: true, id: result.insertId });
@@ -365,8 +440,15 @@ router.post('/tasks/:id/comments', async (req, res) => {
 
 router.put('/task-comments/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     const { content } = req.body;
     try {
+        const [comments] = await pool.query('SELECT user_id FROM task_comments WHERE id = ?', [id]);
+        if (comments.length === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
+        if (requesterRole !== 'ADMIN' && comments[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('UPDATE task_comments SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [content, id]);
         res.json({ success: true });
     } catch (error) {
@@ -377,7 +459,14 @@ router.put('/task-comments/:id', async (req, res) => {
 
 router.delete('/task-comments/:id', async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
     try {
+        const [comments] = await pool.query('SELECT user_id FROM task_comments WHERE id = ?', [id]);
+        if (comments.length === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
+        if (requesterRole !== 'ADMIN' && comments[0].user_id !== requesterId) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
         await pool.query('DELETE FROM task_comments WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
