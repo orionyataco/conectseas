@@ -17,7 +17,7 @@ export const getEvents = async (req, res) => {
                 u.name as author_name,
                 u.position as author_role,
                 u.avatar as author_avatar,
-                (SELECT GROUP_CONCAT(user_id) FROM event_shares WHERE event_id = e.id) as shared_with
+                (SELECT STRING_AGG(user_id::text, ',') FROM event_shares WHERE event_id = e.id) as shared_with
             FROM calendar_events e
             JOIN users u ON e.user_id = u.id
             LEFT JOIN event_shares es ON e.id = es.event_id

@@ -114,7 +114,9 @@ export async function authenticateLDAP(username, password, ldapConfig) {
                         // Extract user info
                         const getAttr = (name) => {
                             const attr = userEntry.attributes.find(a => a.type === name);
-                            return attr?.values?.[0] || null;
+                            const val = attr?.values?.[0];
+                            if (val === undefined || val === null) return null;
+                            return typeof val === 'string' ? val : val.toString();
                         };
 
                         resolve({

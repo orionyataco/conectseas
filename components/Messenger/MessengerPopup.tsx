@@ -119,8 +119,8 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{u.name}</p>
-                                                    <p className="text-[10px] text-slate-400 truncate">{u.position}</p>
+                                                    <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{typeof u.name === 'string' ? u.name : JSON.stringify(u.name)}</p>
+                                                    <p className="text-[10px] text-slate-400 truncate">{typeof u.position === 'string' ? u.position : JSON.stringify(u.position)}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 pr-1">

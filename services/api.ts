@@ -547,9 +547,9 @@ export const updateUserQuota = async (userId: number, quota: number) => {
     }
 };
 
-export const testLDAPConnection = async () => {
+export const testLDAPConnection = async (config?: any) => {
     try {
-        const response = await api.post('/admin/ldap/test');
+        const response = await api.post('/admin/ldap/test', config || {});
         return response.data;
     } catch (error) {
         console.error('Error testing LDAP connection:', error);

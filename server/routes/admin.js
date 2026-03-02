@@ -25,12 +25,38 @@ router.get('/settings', async (req, res) => {
 });
 
 // Update System Setting
-router.put('/settings/:key', async (req, params) => {
-    // Note: The original code had a bug in param usage or just inconsistency. 
-    // I'll stick to req, res pattern.
+// Fixed version of Update System Setting
+router.put('/settings/visual-identity', upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'favicon', maxCount: 1 }
+]), async (req, res) => {
+    const { app_name, app_description, primary_color } = req.body;
+    try {
+        const [rows] = await pool.query('SELECT value FROM system_settings WHERE key = ?', ['visual_identity']);
+        let visualIdentity = rows.length > 0 ? JSON.parse(rows[0].value) : {};
+
+        if (app_name) visualIdentity.app_name = app_name;
+        if (app_description) visualIdentity.app_description = app_description;
+        if (primary_color) visualIdentity.primary_color = primary_color;
+
+        if (req.files && req.files['logo']) {
+            visualIdentity.app_logo = `/uploads/${req.files['logo'][0].filename}`;
+        }
+        if (req.files && req.files['favicon']) {
+            visualIdentity.app_favicon = `/uploads/${req.files['favicon'][0].filename}`;
+        }
+
+        await pool.query(
+            'INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP',
+            ['visual_identity', JSON.stringify(visualIdentity)]
+        );
+        res.json({ success: true, settings: visualIdentity });
+    } catch (error) {
+        console.error('Erro ao atualizar identidade visual:', error);
+        res.status(500).json({ error: 'Erro ao atualizar identidade visual' });
+    }
 });
 
-// Fixed version of Update System Setting
 router.put('/settings/:key', async (req, res) => {
     const { key } = req.params;
     const { value } = req.body;
@@ -43,22 +69,6 @@ router.put('/settings/:key', async (req, res) => {
     } catch (error) {
         console.error(`Erro ao atualizar configuração ${key}:`, error);
         res.status(500).json({ error: `Erro ao atualizar configuração ${key}` });
-    }
-});
-
-// Update Visual Identity
-router.put('/settings/visual-identity', async (req, res) => {
-    const { name, description, primaryColor, logo, favicon } = req.body;
-    try {
-        const visualIdentity = { name, description, primaryColor, logo, favicon };
-        await pool.query(
-            'INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP',
-            ['visual_identity', JSON.stringify(visualIdentity)]
-        );
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao atualizar identidade visual:', error);
-        res.status(500).json({ error: 'Erro ao atualizar identidade visual' });
     }
 });
 
@@ -154,7 +164,7 @@ router.put('/sidebar-items/reorder', async (req, res) => {
 router.get('/stats', async (req, res) => {
     try {
         const [userCount] = await pool.query('SELECT COUNT(*) as total FROM users');
-        const [adminCount] = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = "ADMIN"');
+        const [adminCount] = await pool.query("SELECT COUNT(*) as total FROM users WHERE role = 'ADMIN'");
         const [postCount] = await pool.query('SELECT COUNT(*) as total FROM posts');
         const [fileCount] = await pool.query('SELECT COUNT(*) as total FROM user_files');
 
@@ -210,8 +220,14 @@ router.put('/users/:id/quota', async (req, res) => {
 // LDAP Test
 router.post('/ldap/test', async (req, res) => {
     try {
-        const [ldapSettings] = await pool.query('SELECT value FROM system_settings WHERE key = ?', ['ldap_config']);
-        const ldapConfig = ldapSettings.length > 0 ? JSON.parse(ldapSettings[0].value) : { enabled: false };
+        let ldapConfig;
+        if (req.body && Object.keys(req.body).length > 0) {
+            ldapConfig = req.body;
+        } else {
+            const [ldapSettings] = await pool.query('SELECT value FROM system_settings WHERE key = ?', ['ldap_config']);
+            ldapConfig = ldapSettings.length > 0 ? JSON.parse(ldapSettings[0].value) : { enabled: false };
+        }
+
         const { testLDAPConnection } = await import('../ldapTest.js');
         const result = await testLDAPConnection(ldapConfig);
         res.json(result);

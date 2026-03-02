@@ -54,7 +54,11 @@ import {
 } from '../services/api';
 import { UserRole } from '../types';
 
-const AdminPanel: React.FC = () => {
+interface AdminPanelProps {
+    onSettingsChange?: () => void;
+}
+
+const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -209,7 +213,7 @@ const AdminPanel: React.FC = () => {
         } catch (err: any) {
             console.error(`Error saving ${key}:`, err);
             const errorMsg = err.response?.data?.error || err.message || 'Erro desconhecido';
-            setError(`Erro ao salvar ${key}: ${errorMsg}`);
+            setError(`Erro ao salvar ${key}: ${typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg)}`);
             setTimeout(() => setError(''), 5000);
         } finally {
             setSaving(false);
@@ -358,12 +362,12 @@ const AdminPanel: React.FC = () => {
                         setTestingLdap(true);
                         setLdapTestResult(null);
                         try {
-                            const result = await testLDAPConnection();
+                            const result = await testLDAPConnection(settings.ldap_config);
                             setLdapTestResult(result);
                         } catch (err: any) {
                             setLdapTestResult({
                                 success: false,
-                                error: err.response?.data?.error || err.message
+                                error: err.response?.data?.error || err.message || 'Erro ao testar conexão'
                             });
                         } finally {
                             setTestingLdap(false);
@@ -411,16 +415,16 @@ const AdminPanel: React.FC = () => {
                                         'bg-red-100'
                                     }`}>
                                     <p className="font-bold text-sm">{idx + 1}. {step.step}</p>
-                                    <p className="text-xs mt-1">{step.message}</p>
-                                    {step.bindDn && <p className="text-xs text-slate-600 mt-1">Bind DN: {step.bindDn}</p>}
-                                    {step.baseDn && <p className="text-xs text-slate-600 mt-1">Base DN: {step.baseDn}</p>}
+                                    <p className="text-xs mt-1">{typeof step.message === 'string' ? step.message : JSON.stringify(step.message)}</p>
+                                    {step.bindDn && <p className="text-xs text-slate-600 mt-1">Bind DN: {typeof step.bindDn === 'string' ? step.bindDn : JSON.stringify(step.bindDn)}</p>}
+                                    {step.baseDn && <p className="text-xs text-slate-600 mt-1">Base DN: {typeof step.baseDn === 'string' ? step.baseDn : JSON.stringify(step.baseDn)}</p>}
                                     {step.entries && step.entries.length > 0 && (
                                         <details className="mt-2">
                                             <summary className="text-xs font-bold cursor-pointer">Ver {step.entries.length} registros encontrados</summary>
                                             <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
                                                 {step.entries.map((entry: any, i: number) => (
                                                     <div key={i} className="bg-white p-2 rounded text-xs">
-                                                        <p className="font-bold">{entry.dn}</p>
+                                                        <p className="font-bold">{typeof entry.dn === 'string' ? entry.dn : JSON.stringify(entry.dn)}</p>
                                                         <pre className="text-[10px] mt-1 overflow-x-auto">{JSON.stringify(entry.attributes, null, 2)}</pre>
                                                     </div>
                                                 ))}
@@ -433,7 +437,9 @@ const AdminPanel: React.FC = () => {
                     )}
 
                     {ldapTestResult.error && (
-                        <p className="text-red-700 font-bold mt-3">{ldapTestResult.error}</p>
+                        <p className="text-red-700 font-bold mt-3">
+                            {typeof ldapTestResult.error === 'string' ? ldapTestResult.error : JSON.stringify(ldapTestResult.error)}
+                        </p>
                     )}
                 </div>
             )}
@@ -641,11 +647,18 @@ const AdminPanel: React.FC = () => {
                     visual_identity: response.settings
                 });
                 setSuccess('Identidade visual atualizada com sucesso!');
+                if (onSettingsChange) onSettingsChange();
                 setTimeout(() => setSuccess(''), 3000);
+
+                // Aplicar tema se mudou
+                if (settings.visual_identity.primary_color) {
+                    applyTheme(settings.visual_identity.primary_color);
+                }
             }
         } catch (err: any) {
             console.error('Error saving visual identity:', err);
-            setError('Erro ao salvar identidade visual.');
+            const errorMsg = err.response?.data?.error || err.message || 'Erro desconhecido';
+            setError(`Erro ao salvar identidade visual: ${typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg)}`);
         } finally {
             setSaving(false);
         }
@@ -696,7 +709,7 @@ const AdminPanel: React.FC = () => {
                             <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
                                 {settings.visual_identity.app_logo ? (
                                     <img
-                                        src={`/uploads/${settings.visual_identity.app_logo}`}
+                                        src={settings.visual_identity.app_logo.startsWith('http') || settings.visual_identity.app_logo.startsWith('/') ? settings.visual_identity.app_logo : `/uploads/${settings.visual_identity.app_logo}`}
                                         alt="Logo"
                                         className="w-full h-full object-contain p-2"
                                     />
@@ -951,18 +964,18 @@ const AdminPanel: React.FC = () => {
                                                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold">
-                                                    {user.name.charAt(0)}
+                                                    {(typeof user.name === 'string' ? user.name : String(user.name)).charAt(0)}
                                                 </div>
                                             )}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-800">{user.name}</p>
+                                            <p className="text-sm font-bold text-slate-800">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
                                             <p className="text-xs text-slate-500">@{user.username}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-slate-600">{user.department || 'N/A'}</td>
-                                <td className="px-6 py-4 text-sm text-slate-600 font-medium">{user.position || 'N/A'}</td>
+                                <td className="px-6 py-4 text-sm text-slate-600">{typeof user.department === 'string' ? user.department : (user.department ? JSON.stringify(user.department) : 'N/A')}</td>
+                                <td className="px-6 py-4 text-sm text-slate-600 font-medium">{typeof user.position === 'string' ? user.position : (user.position ? JSON.stringify(user.position) : 'N/A')}</td>
                                 <td className="px-6 py-4">
                                     <span className={`text-[10px] font-extrabold px-2 py-1 rounded-md ${user.role === UserRole.ADMIN
                                         ? 'bg-red-50 text-red-600 border border-red-100'
@@ -1310,14 +1323,16 @@ const AdminPanel: React.FC = () => {
             {success && (
                 <div className="p-4 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-3 animate-bounce">
                     <CheckCircle2 size={20} />
-                    <span className="font-bold">{success}</span>
+                    <span className="font-bold">{typeof success === 'string' ? success : JSON.stringify(success)}</span>
                 </div>
             )}
 
             {error && (
                 <div className="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 flex items-center gap-3">
                     <AlertCircle size={20} />
-                    <span className="font-bold">{error}</span>
+                    <span className="font-bold">
+                        {typeof error === 'string' ? error : JSON.stringify(error)}
+                    </span>
                 </div>
             )}
 

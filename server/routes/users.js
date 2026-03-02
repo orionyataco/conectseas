@@ -47,10 +47,10 @@ router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) =
         if (nickname !== undefined) { updates.push('nickname = ?'); params.push(nickname); }
         if (email !== undefined) { updates.push('email = ?'); params.push(email); }
         if (bio !== undefined) { updates.push('bio = ?'); params.push(bio); }
-        if (birthDate !== undefined) { updates.push('birth_date = ?'); params.push(birthDate); }
+        if (birthDate !== undefined) { updates.push('birth_date = ?'); params.push(birthDate === '' ? null : birthDate); }
         if (mobilePhone !== undefined) { updates.push('mobile_phone = ?'); params.push(mobilePhone); }
         if (registrationNumber !== undefined) { updates.push('registration_number = ?'); params.push(registrationNumber); }
-        if (appointmentDate !== undefined) { updates.push('appointment_date = ?'); params.push(appointmentDate); }
+        if (appointmentDate !== undefined) { updates.push('appointment_date = ?'); params.push(appointmentDate === '' ? null : appointmentDate); }
         if (department !== undefined) { updates.push('department = ?'); params.push(department); }
         if (position !== undefined) { updates.push('position = ?'); params.push(position); }
 

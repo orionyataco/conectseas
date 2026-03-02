@@ -116,9 +116,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
 
             if (response.success && response.user) {
                 onUpdate(response.user);
+                setUser(response.user);
+                resetFormData(response.user);
                 setSuccess('Perfil atualizado com sucesso!');
                 setIsEditing(false);
-                // Clear preview only if saved, essentially local user state handles it now
                 setPreviewAvatar(null);
             } else {
                 setError(response.message || 'Erro ao atualizar perfil');
@@ -215,7 +216,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                         <div className="relative group">
                             <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg overflow-hidden bg-white">
                                 <img
-                                    src={previewAvatar || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
+                                    src={previewAvatar || (user.avatar ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : `/uploads/${user.avatar}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`)}
                                     alt={user.name}
                                     className="w-full h-full object-cover"
                                 />

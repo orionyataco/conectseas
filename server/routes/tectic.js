@@ -77,7 +77,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             FROM tectic_tickets t 
             JOIN users u ON t.resolved_by = u.id 
             WHERE t.status = 'Resolvido' 
-            GROUP BY t.resolved_by 
+            GROUP BY u.id, u.name, u.avatar 
             ORDER BY count DESC 
             LIMIT 5
         `);
@@ -89,7 +89,6 @@ router.get('/stats', adminMiddleware, async (req, res) => {
                 resolved: resolved[0].count,
                 urgent: urgent[0].count
             },
-            categories,
             byWeekday,
             byMonth,
             byYear,

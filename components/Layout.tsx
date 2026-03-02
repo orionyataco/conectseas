@@ -273,7 +273,11 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-10 h-10 min-w-[40px] bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {visualIdentity?.app_logo ? (
-                  <img src={`/uploads/${visualIdentity.app_logo}`} alt="Logo" className="w-full h-full object-cover" />
+                  <img
+                    src={visualIdentity.app_logo.startsWith('http') || visualIdentity.app_logo.startsWith('/') ? visualIdentity.app_logo : `/uploads/${visualIdentity.app_logo}`}
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   visualIdentity?.app_name?.charAt(0) || 'C'
                 )}
@@ -387,7 +391,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
               />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{user.name}</p>
+                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
                   <p className="text-xs text-slate-500 truncate">{user.position}</p>
                 </div>
               )}

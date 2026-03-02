@@ -75,15 +75,16 @@ const App: React.FC = () => {
     app_logo: null
   });
 
+  const fetchSettings = async () => {
+    try {
+      const visual = await getVisualIdentity();
+      if (visual) setVisualIdentity(visual);
+    } catch (error) {
+      console.error('Erro ao carregar identidade visual:', error);
+    }
+  };
+
   React.useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const visual = await getVisualIdentity();
-        if (visual) setVisualIdentity(visual);
-      } catch (error) {
-        console.error('Erro ao carregar identidade visual:', error);
-      }
-    };
     fetchSettings();
   }, []);
 
@@ -221,7 +222,7 @@ const App: React.FC = () => {
 
                 {loginError && (
                   <div className="p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2">
-                    <span className="font-bold">Erro:</span> {loginError}
+                    <span className="font-bold">Erro:</span> {typeof loginError === 'string' ? loginError : JSON.stringify(loginError)}
                   </div>
                 )}
                 <div className="relative">
@@ -323,7 +324,7 @@ const App: React.FC = () => {
         return <PublicFAQ />;
       case 'admin':
         if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
-        return <AdminPanel />;
+        return <AdminPanel onSettingsChange={fetchSettings} />;
       case 'tectic':
         if (user?.role !== UserRole.ADMIN) return <Dashboard user={user} />;
         return <ServiceDesk />;

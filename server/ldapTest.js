@@ -109,12 +109,14 @@ export async function testLDAPConnection(ldapConfig) {
 
                 searchRes.on('searchEntry', (entry) => {
                     const entryData = {
-                        dn: entry.objectName,
+                        dn: String(entry.objectName),
                         attributes: {}
                     };
 
                     entry.attributes.forEach(attr => {
-                        entryData.attributes[attr.type] = attr.values;
+                        entryData.attributes[attr.type] = attr.values.map(val =>
+                            val === null || val === undefined ? '' : (typeof val === 'string' ? val : val.toString())
+                        );
                     });
 
                     foundEntries.push(entryData);
