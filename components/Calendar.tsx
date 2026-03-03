@@ -3,7 +3,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Calendar as CalendarIcon, Clock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Event, User } from '../types';
-import api from '../services/api';
+import api, { getEvents, createEvent, updateEvent, deleteEvent } from '../services/api';
 
 interface CalendarProps {
   user: User | null;
@@ -94,8 +94,8 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
   const fetchEvents = async () => {
     if (!user) return;
     try {
-      const res = await api.get(`/events?userId=${user.id}&userRole=${user.role}`);
-      setEvents(res.data);
+      const data = await getEvents();
+      setEvents(data);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
@@ -126,7 +126,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         sharedWith: sharedWith
       };
 
-      await api.post('/events', payload);
+      await createEvent(payload);
 
       setShowModal(false);
       resetForm();
@@ -163,7 +163,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         sharedWith: sharedWith
       };
 
-      await api.put(`/events/${editingEvent.id}`, payload);
+      await updateEvent(editingEvent.id, payload);
 
       setShowModal(false);
       resetForm();
@@ -179,7 +179,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
     if (!user || !confirm('Deseja realmente excluir este evento?')) return;
 
     try {
-      await api.delete(`/events/${eventId}?userId=${user.id}&userRole=${user.role}`);
+      await deleteEvent(eventId);
       fetchEvents();
       resetForm();
       setShowModal(false);

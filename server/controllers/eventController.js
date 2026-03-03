@@ -2,7 +2,8 @@ import pool from '../db.js';
 import { sendNotification } from '../services/notificationService.js';
 
 export const getEvents = async (req, res) => {
-    const { userId, userRole } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
     try {
         // Query logic: 
@@ -42,7 +43,8 @@ export const getEvents = async (req, res) => {
 };
 
 export const createEvent = async (req, res) => {
-    const { userId, title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink, sharedWith } = req.body;
+    const userId = req.user.id;
+    const { title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink, sharedWith } = req.body;
 
     try {
         const [result] = await pool.query(
@@ -80,7 +82,9 @@ export const createEvent = async (req, res) => {
 
 export const updateEvent = async (req, res) => {
     const { id } = req.params;
-    const { userId, userRole, title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink, sharedWith } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { title, description, eventDate, eventEndDate, eventTime, eventEndTime, visibility, eventType, meetingLink, sharedWith } = req.body;
 
     try {
         // Verify ownership or admin
@@ -126,7 +130,8 @@ export const updateEvent = async (req, res) => {
 
 export const deleteEvent = async (req, res) => {
     const { id } = req.params;
-    const { userId, userRole } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     console.log(`[CALENDAR] Attempting to delete event ID: ${id} by User: ${userId} (${userRole})`);
 
     try {

@@ -1,7 +1,8 @@
 import pool from '../db.js';
 
 export const globalSearch = async (req, res) => {
-    const { q, userId, userRole } = req.query;
+    const { q } = req.query;
+    const { id: userId, role: userRole } = req.user;
 
     if (!q || q.length < 2) {
         return res.json({ users: [], events: [], documents: [] });

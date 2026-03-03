@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2 } from 'lucide-react';
+import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { useMessenger } from './MessengerContext';
 import { getMessageHistory } from '../../services/api';
 import { User } from '../../types';
@@ -31,7 +31,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
 
     useEffect(() => {
         setIsLoading(true);
-        getMessageHistory(user.id, contact.id.toString()).then(data => {
+        getMessageHistory(contact.id.toString()).then(data => {
             setMessages(data || []);
             setIsLoading(false);
             setTimeout(scrollToBottom, 100);
@@ -44,6 +44,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
             const userId = Number(user.id);
 
             if (msgSenderId === contactId || msgReceiverId === contactId) {
+                // If we are receiving a message from the contact and chat is active (not minimized), mark as read
+                if (msgSenderId === contactId && !isMinimized && socket) {
+                    socket.emit('mark_read', { sender_id: contactId, receiver_id: userId });
+                }
+
                 setMessages(prev => {
                     // 1. Check if message with this exact server ID already exists
                     if (prev.find(m => m.id === msg.id)) return prev;
@@ -69,10 +74,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
             }
         };
 
-        const handleMessageSent = (msg: any) => {
-            // Already handled by receive_message if server emits to both, 
-            // but we can use this for extra confirmation if needed.
-            // For now, receive_message is enough if server emits to sender room too.
+        const handleMessagesRead = ({ reader_id }: { reader_id: number }) => {
+            if (Number(reader_id) === Number(contact.id)) {
+                setMessages(prev => prev.map(m =>
+                    Number(m.receiver_id) === Number(reader_id) ? { ...m, is_read: 1 } : m
+                ));
+            }
         };
 
         const handleUserTyping = ({ sender_id }: { sender_id: number }) => {
@@ -87,7 +94,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
             const msgSenderId = Number(msg.sender_id);
             const msgReceiverId = Number(msg.receiver_id);
             const contactId = Number(contact.id);
-            const userId = Number(user.id);
 
             if (msgSenderId === contactId || msgReceiverId === contactId) {
                 setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, message: msg.message, is_edited: 1 } : m));
@@ -106,10 +112,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
 
         if (socket) {
             socket.on('receive_message', handleReceiveMessage);
-            socket.on('message_sent', handleReceiveMessage); // Reuse same logic
+            socket.on('message_sent', handleReceiveMessage);
             socket.on('user_typing', handleUserTyping);
             socket.on('message_edited', handleMessageEdited);
             socket.on('message_deleted', handleMessageDeleted);
+            socket.on('messages_read', handleMessagesRead);
         }
 
         const handleClickOutside = (event: MouseEvent) => {
@@ -123,9 +130,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
         return () => {
             if (socket) {
                 socket.off('receive_message', handleReceiveMessage);
+                socket.off('message_sent', handleReceiveMessage);
                 socket.off('user_typing', handleUserTyping);
                 socket.off('message_edited', handleMessageEdited);
                 socket.off('message_deleted', handleMessageDeleted);
+                socket.off('messages_read', handleMessagesRead);
             }
             document.removeEventListener('mousedown', handleClickOutside);
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -289,9 +298,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                                     }`}
                             >
                                 <p className="leading-relaxed">{msg.message}</p>
-                                <p className={`text-[9px] mt-1 opacity-60 ${Number(msg.sender_id) === Number(user.id) ? 'text-right' : 'text-left'}`}>
-                                    {msg.is_edited ? '(Editado) ' : ''}{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
+                                <div className={`flex items-center gap-1 mt-1 opacity-60 ${Number(msg.sender_id) === Number(user.id) ? 'justify-end' : 'justify-start'}`}>
+                                    <span className="text-[9px]">
+                                        {msg.is_edited ? '(Editado) ' : ''}{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {Number(msg.sender_id) === Number(user.id) && (
+                                        <span className="scale-75">
+                                            {msg.is_read ? <CheckCheck size={14} className="text-blue-200" /> : <Check size={14} />}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))

@@ -83,7 +83,7 @@ app.use('/api/messenger', messengerRoutes);
 
 // Notifications
 app.get('/api/notifications', authMiddleware, async (req, res) => {
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [rows] = await pool.query('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', [userId]);
         res.json(rows);
@@ -95,8 +95,9 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
 
 app.put('/api/notifications/:id/read', authMiddleware, async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
-        await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
+        await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', [id, userId]);
         res.json({ success: true });
     } catch (error) {
         console.error('Error marking notification as read:', error);
@@ -105,7 +106,7 @@ app.put('/api/notifications/:id/read', authMiddleware, async (req, res) => {
 });
 
 app.put('/api/notifications/read-all', authMiddleware, async (req, res) => {
-    const { userId } = req.body;
+    const userId = req.user.id;
     try {
         await pool.query('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId]);
         res.json({ success: true });

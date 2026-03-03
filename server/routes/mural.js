@@ -97,8 +97,9 @@ router.post('/posts/:id/like', async (req, res) => {
     }
 });
 
-router.get('/posts/liked/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/posts/liked', async (req, res) => {
+    // userId sempre do token JWT
+    const userId = req.user.id;
     try {
         const [likes] = await pool.query('SELECT post_id FROM post_likes WHERE user_id = ?', [userId]);
         res.json(likes.map(l => l.post_id));

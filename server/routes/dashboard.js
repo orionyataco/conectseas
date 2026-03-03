@@ -53,14 +53,10 @@ router.delete('/warnings/:id', async (req, res) => {
 });
 
 // Notes — restrito ao próprio usuário autenticado
-router.get('/notes/:userId', async (req, res) => {
-    const requesterId = req.user.id;
-    // Verifica que o userId do param pertence ao próprio usuário autenticado
-    if (String(req.params.userId) !== String(requesterId)) {
-        return res.status(403).json({ error: 'Não autorizado' });
-    }
+router.get('/notes', async (req, res) => {
+    const userId = req.user.id;
     try {
-        const [rows] = await pool.query('SELECT content FROM user_notes WHERE user_id = ?', [requesterId]);
+        const [rows] = await pool.query('SELECT content FROM user_notes WHERE user_id = ?', [userId]);
         res.json({ content: rows[0]?.content || '' });
     } catch (error) {
         console.error('Erro ao buscar nota:', error);
@@ -82,13 +78,10 @@ router.post('/notes', async (req, res) => {
 });
 
 // Shortcuts — restrito ao próprio usuário autenticado
-router.get('/shortcuts/:userId', async (req, res) => {
-    const requesterId = req.user.id;
-    if (String(req.params.userId) !== String(requesterId)) {
-        return res.status(403).json({ error: 'Não autorizado' });
-    }
+router.get('/shortcuts', async (req, res) => {
+    const userId = req.user.id;
     try {
-        const [rows] = await pool.query('SELECT *, name as label, icon_name as icon FROM user_shortcuts WHERE user_id = ? ORDER BY is_favorite DESC, name ASC', [requesterId]);
+        const [rows] = await pool.query('SELECT *, name as label, icon_name as icon FROM user_shortcuts WHERE user_id = ? ORDER BY is_favorite DESC, name ASC', [userId]);
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar atalhos:', error);
@@ -217,13 +210,10 @@ router.patch('/system-shortcuts/:id/favorite', async (req, res) => {
 });
 
 // Todos — restrito ao próprio usuário autenticado
-router.get('/todos/:userId', async (req, res) => {
-    const requesterId = req.user.id;
-    if (String(req.params.userId) !== String(requesterId)) {
-        return res.status(403).json({ error: 'Não autorizado' });
-    }
+router.get('/todos', async (req, res) => {
+    const userId = req.user.id;
     try {
-        const [rows] = await pool.query('SELECT id, user_id, text, completed, created_at FROM todos WHERE user_id = ? ORDER BY completed ASC, created_at DESC', [requesterId]);
+        const [rows] = await pool.query('SELECT id, user_id, text, completed, created_at FROM todos WHERE user_id = ? ORDER BY completed ASC, created_at DESC', [userId]);
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar todos:', error);

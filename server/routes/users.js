@@ -32,6 +32,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // Update User Profile
 router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
+
+    // Security: Only the user themselves or an ADMIN can update the profile
+    if (String(id) !== String(requesterId) && requesterRole !== 'ADMIN') {
+        return res.status(403).json({ error: 'Não autorizado a editar este perfil' });
+    }
+
     const { nickname, email, bio, birthDate, mobilePhone, registrationNumber, appointmentDate, department, position } = req.body;
     let avatarPath = null;
 
@@ -87,6 +95,14 @@ router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) =
 // Update User Vacation Status
 router.put('/:id/vacation-status', authMiddleware, async (req, res) => {
     const { id } = req.params;
+    const requesterId = req.user.id;
+    const requesterRole = req.user.role;
+
+    // Security check
+    if (String(id) !== String(requesterId) && requesterRole !== 'ADMIN') {
+        return res.status(403).json({ error: 'Não autorizado' });
+    }
+
     const { vacationStatus, vacationMessage, vacationStartDate, vacationEndDate, publishToMural } = req.body;
 
     try {

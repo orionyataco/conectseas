@@ -131,6 +131,21 @@ export const initSocket = (server) => {
             }
         });
 
+        socket.on('mark_read', async (data) => {
+            const { sender_id, receiver_id } = data; // sender_id is the person who sent the messages being read
+            try {
+                await pool.query(
+                    'UPDATE messenger_messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0',
+                    [Number(sender_id), Number(receiver_id)]
+                );
+
+                // Notify the sender that their messages were read
+                io.to(`user_${sender_id}`).emit('messages_read', { reader_id: receiver_id });
+            } catch (error) {
+                console.error('Error marking messages as read:', error);
+            }
+        });
+
         socket.on('disconnect', () => {
             if (socket.userId) {
                 connectedUsers.delete(socket.userId);

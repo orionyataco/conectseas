@@ -11,7 +11,8 @@ router.use(authMiddleware);
 
 // Folders
 router.get('/folders', async (req, res) => {
-    const { userId, parentId } = req.query;
+    const userId = req.user.id;
+    const { parentId } = req.query;
     try {
         let folders;
         if (parentId && parentId !== 'null') {
@@ -52,9 +53,15 @@ router.get('/folders', async (req, res) => {
 
 router.get('/folders/:id', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
-        const [rows] = await pool.query('SELECT * FROM user_folders WHERE id = ?', [id]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
+        const [rows] = await pool.query(`
+            SELECT f.* FROM user_folders f
+            LEFT JOIN folder_shares s ON f.id = s.folder_id AND s.user_id = ?
+            WHERE f.id = ? AND (f.user_id = ? OR s.user_id = ?)
+        `, [userId, id, userId, userId]);
+
+        if (rows.length === 0) return res.status(403).json({ error: 'Acesso negado ou pasta não encontrada' });
         res.json(rows[0]);
     } catch (error) {
         console.error('Erro ao buscar folder:', error);
@@ -63,7 +70,8 @@ router.get('/folders/:id', async (req, res) => {
 });
 
 router.post('/folders', async (req, res) => {
-    const { userId, parentId, name } = req.body;
+    const userId = req.user.id;
+    const { parentId, name } = req.body;
     try {
         if (parentId) {
             const [access] = await pool.query(`
@@ -83,7 +91,8 @@ router.post('/folders', async (req, res) => {
 
 router.put('/folders/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, name } = req.body;
+    const userId = req.user.id;
+    const { name } = req.body;
     try {
         await pool.query('UPDATE user_folders SET name = ? WHERE id = ? AND user_id = ?', [name, id, userId]);
         res.json({ success: true });
@@ -95,7 +104,7 @@ router.put('/folders/:id', async (req, res) => {
 
 router.delete('/folders/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [folders] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
         if (folders.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
@@ -110,7 +119,8 @@ router.delete('/folders/:id', async (req, res) => {
 
 // Files
 router.get('/files', async (req, res) => {
-    const { userId, folderId } = req.query;
+    const userId = req.user.id;
+    const { folderId } = req.query;
     try {
         if (folderId && folderId !== 'null') {
             const [access] = await pool.query(`
@@ -132,7 +142,8 @@ router.get('/files', async (req, res) => {
 });
 
 router.post('/upload', upload.single('file'), async (req, res) => {
-    const { userId, folderId } = req.body;
+    const userId = req.user.id;
+    const { folderId } = req.body;
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     try {
@@ -154,7 +165,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
 router.put('/files/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId, name } = req.body;
+    const userId = req.user.id;
+    const { name } = req.body;
     try {
         await pool.query('UPDATE user_files SET original_name = ? WHERE id = ? AND user_id = ?', [name, id, userId]);
         res.json({ success: true });
@@ -166,7 +178,7 @@ router.put('/files/:id', async (req, res) => {
 
 router.delete('/files/:id', async (req, res) => {
     const { id } = req.params;
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [files] = await pool.query('SELECT user_id FROM user_files WHERE id = ?', [id]);
         if (files.length === 0) return res.status(404).json({ error: 'Arquivo não encontrado' });
@@ -182,7 +194,8 @@ router.delete('/files/:id', async (req, res) => {
 // Favorites
 router.post('/folders/:id/favorite', async (req, res) => {
     const { id } = req.params;
-    const { userId, is_favorite } = req.body;
+    const userId = req.user.id;
+    const { is_favorite } = req.body;
     try {
         await pool.query('UPDATE user_folders SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [is_favorite ? 1 : 0, id, userId]);
         res.json({ success: true });
@@ -194,7 +207,8 @@ router.post('/folders/:id/favorite', async (req, res) => {
 
 router.post('/files/:id/favorite', async (req, res) => {
     const { id } = req.params;
-    const { userId, is_favorite } = req.body;
+    const userId = req.user.id;
+    const { is_favorite } = req.body;
     try {
         await pool.query('UPDATE user_files SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [is_favorite ? 1 : 0, id, userId]);
         res.json({ success: true });
@@ -206,7 +220,7 @@ router.post('/files/:id/favorite', async (req, res) => {
 
 // Unified views
 router.get('/recent', async (req, res) => {
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [folders] = await pool.query("SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_deleted = 0 ORDER BY updated_at DESC LIMIT 10", [userId]);
         const [files] = await pool.query("SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_deleted = 0 ORDER BY updated_at DESC LIMIT 20", [userId]);
@@ -219,7 +233,7 @@ router.get('/recent', async (req, res) => {
 });
 
 router.get('/favorites', async (req, res) => {
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [folders] = await pool.query("SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_favorite = 1 AND is_deleted = 0 ORDER BY updated_at DESC", [userId]);
         const [files] = await pool.query("SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_favorite = 1 AND is_deleted = 0 ORDER BY updated_at DESC", [userId]);
@@ -232,7 +246,7 @@ router.get('/favorites', async (req, res) => {
 });
 
 router.get('/trash', async (req, res) => {
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [folders] = await pool.query("SELECT *, 'folder' as item_type FROM user_folders WHERE user_id = ? AND is_deleted = 1 ORDER BY updated_at DESC", [userId]);
         const [files] = await pool.query("SELECT *, 'file' as item_type FROM user_files WHERE user_id = ? AND is_deleted = 1 ORDER BY updated_at DESC", [userId]);
@@ -246,7 +260,7 @@ router.get('/trash', async (req, res) => {
 
 router.post('/:type/:id/trash', async (req, res) => {
     const { type, id } = req.params;
-    const { userId } = req.body;
+    const userId = req.user.id;
     const table = type === 'folders' ? 'user_folders' : 'user_files';
     try {
         await pool.query(`UPDATE ${table} SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`, [id, userId]);
@@ -259,7 +273,7 @@ router.post('/:type/:id/trash', async (req, res) => {
 
 router.post('/:type/:id/restore', async (req, res) => {
     const { type, id } = req.params;
-    const { userId } = req.body;
+    const userId = req.user.id;
     const table = type === 'folders' ? 'user_folders' : 'user_files';
     try {
         await pool.query(`UPDATE ${table} SET is_deleted = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`, [id, userId]);
@@ -272,7 +286,7 @@ router.post('/:type/:id/restore', async (req, res) => {
 
 // Sharing
 router.get('/shared', async (req, res) => {
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [rows] = await pool.query(`
             SELECT f.*, s.permission, s.id as share_id, 'folder' as item_type
@@ -290,7 +304,8 @@ router.get('/shared', async (req, res) => {
 
 router.post('/folders/:id/share', async (req, res) => {
     const { id } = req.params;
-    const { userId, targetUserId, permission } = req.body;
+    const userId = req.user.id;
+    const { targetUserId, permission } = req.body;
     try {
         const [owner] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
         if (owner.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
@@ -307,7 +322,16 @@ router.post('/folders/:id/share', async (req, res) => {
 
 router.get('/folders/:id/shares', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
+        // Only owner or people with shared access can see shares? 
+        // Usually only owner should see who else it's shared with.
+        const [owner] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
+        if (owner.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
+        if (owner[0].user_id !== userId && req.user.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+
         const [rows] = await pool.query(`
             SELECT s.*, u.name as user_name, u.email as user_email, u.avatar as user_avatar
             FROM folder_shares s JOIN users u ON s.user_id = u.id WHERE s.folder_id = ?
@@ -321,7 +345,7 @@ router.get('/folders/:id/shares', async (req, res) => {
 
 router.delete('/folders/:id/shares/:targetUserId', async (req, res) => {
     const { id, targetUserId } = req.params;
-    const { userId } = req.query;
+    const userId = req.user.id;
     try {
         const [owner] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
         if (owner[0].user_id != userId && targetUserId != userId) return res.status(403).json({ error: 'Não autorizado' });
@@ -334,8 +358,8 @@ router.delete('/folders/:id/shares/:targetUserId', async (req, res) => {
 });
 
 // Storage
-router.get('/storage-stats/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/storage-stats', async (req, res) => {
+    const userId = req.user.id;
     try {
         const [sumRows] = await pool.query('SELECT SUM(file_size) as used FROM user_files WHERE user_id = ? AND is_deleted = 0', [userId]);
         const [userRows] = await pool.query('SELECT storage_quota FROM users WHERE id = ?', [userId]);

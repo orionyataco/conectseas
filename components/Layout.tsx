@@ -78,7 +78,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   // React Query for Notifications
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', user?.id],
-    queryFn: () => getNotifications(user!.id),
+    queryFn: () => getNotifications(),
     enabled: !!user?.id,
     refetchInterval: 30000
   });
@@ -146,7 +146,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await globalSearch(searchQuery, user.id, user.role);
+        const results = await globalSearch(searchQuery);
         setSearchResults(results);
       } catch (error) {
         console.error('Search error:', error);
@@ -218,7 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
   const handleReadAll = async () => {
     try {
-      await markAllNotificationsAsRead(user.id);
+      await markAllNotificationsAsRead();
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
     } catch (err) {
       console.error('Error marking all as read:', err);

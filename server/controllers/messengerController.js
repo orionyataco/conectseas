@@ -2,7 +2,7 @@ import pool from '../db.js';
 
 export const getMessengerUsers = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const userId = req.user.id;
         // Fetch all users except the current one, including unread message count
         const [users] = await pool.query(
             `SELECT u.id, u.name, u.username, u.department, u.position, u.avatar, u.last_seen,
@@ -33,7 +33,8 @@ export const getMessengerUsers = async (req, res) => {
 
 export const getMessageHistory = async (req, res) => {
     try {
-        const { userId, contactId } = req.query;
+        const userId = req.user.id;
+        const { contactId } = req.query;
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
@@ -70,7 +71,7 @@ export const getMessageHistory = async (req, res) => {
 
 export const getUnreadCount = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const userId = req.user.id;
         const [rows] = await pool.query(
             'SELECT COUNT(*) as count FROM messenger_messages WHERE receiver_id = ? AND is_read = 0',
             [userId]

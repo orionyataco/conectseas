@@ -1054,7 +1054,7 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                                         onChange={(e) => {
                                             updateTecticTicket(ticket.id, { category: e.target.value }).then(onUpdate);
                                         }}
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300"
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer hover:border-blue-300"
                                     >
                                         <option>Hardware</option>
                                         <option>Software</option>

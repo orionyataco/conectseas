@@ -99,8 +99,8 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   });
 
   const { data: likedPostsData } = useQuery({
-    queryKey: ['likedPosts', user?.id],
-    queryFn: () => getLikedPosts(user!.id),
+    queryKey: ['likedPosts'],
+    queryFn: () => getLikedPosts(),
     enabled: !!user?.id
   });
 
@@ -153,7 +153,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   });
 
   const editPostMutation = useMutation({
-    mutationFn: ({ postId, content }: { postId: number, content: string }) => editPost(postId, user!.id, content),
+    mutationFn: ({ postId, content }: { postId: number, content: string }) => editPost(postId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
       toast.success('Postagem atualizada');
@@ -161,7 +161,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   });
 
   const deletePostMutation = useMutation({
-    mutationFn: (postId: number) => deletePost(postId, user!.id, user!.role),
+    mutationFn: (postId: number) => deletePost(postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
       toast.success('Postagem removida');
@@ -169,15 +169,15 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   });
 
   const toggleLikeMutation = useMutation({
-    mutationFn: (postId: number) => toggleLike(postId, user!.id),
+    mutationFn: (postId: number) => toggleLike(postId),
     onSuccess: (data, postId) => {
       queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
-      queryClient.invalidateQueries({ queryKey: ['likedPosts', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['likedPosts'] });
     }
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: ({ postId, comment }: { postId: number, comment: string }) => addComment(postId, user!.id, comment),
+    mutationFn: ({ postId, comment }: { postId: number, comment: string }) => addComment(postId, comment),
     onSuccess: (data, { postId }) => {
       queryClient.invalidateQueries({ queryKey: ['muralFeed'] });
       loadComments(postId);
@@ -390,7 +390,6 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     }
 
     formData.append('content', content);
-    formData.append('userId', user.id);
     formData.append('isUrgent', isUrgent.toString());
 
     selectedFiles.forEach(file => {
@@ -414,7 +413,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user) return;
 
     try {
-      await editPost(postId, user.id, editContent);
+      await editPost(postId, editContent);
       setEditingPost(null);
       loadFeed();
     } catch (error) {
@@ -429,7 +428,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user || !confirm('Deseja realmente excluir esta postagem?')) return;
 
     try {
-      await deletePost(postId, user.id, user.role);
+      await deletePost(postId);
       loadFeed();
     } catch (error) {
       console.error('Failed to delete post:', error);
@@ -440,7 +439,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user) return;
 
     try {
-      const data = await toggleLike(postId, user.id);
+      const data = await toggleLike(postId);
       if (data.liked) {
         setLikedPosts([...likedPosts, postId]);
       } else {
@@ -467,7 +466,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user || !newComment[postId]?.trim()) return;
 
     try {
-      await addComment(postId, user.id, newComment[postId]);
+      await addComment(postId, newComment[postId]);
       setNewComment({ ...newComment, [postId]: '' });
       loadComments(postId);
       loadFeed();
@@ -480,7 +479,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user) return;
 
     try {
-      await editComment(commentId, user.id, editCommentContent);
+      await editComment(commentId, editCommentContent);
       setEditingComment(null);
       loadComments(postId);
     } catch (error) {
@@ -494,7 +493,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     if (!user || !confirm('Deseja realmente excluir este comentário?')) return;
 
     try {
-      await deleteComment(commentId, user.id, user.role);
+      await deleteComment(commentId);
       loadComments(postId);
       loadFeed();
     } catch (error) {

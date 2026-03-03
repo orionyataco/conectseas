@@ -70,8 +70,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   // User data queries
   const { data: noteData } = useQuery({
-    queryKey: ['note', user?.id],
-    queryFn: () => getNote(user!.id),
+    queryKey: ['note'],
+    queryFn: () => getNote(),
     enabled: !!user?.id
   });
 
@@ -82,14 +82,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   });
 
   const { data: customShortcutsData } = useQuery({
-    queryKey: ['customShortcuts', user?.id],
-    queryFn: () => getShortcuts(user!.id),
+    queryKey: ['customShortcuts'],
+    queryFn: () => getShortcuts(),
     enabled: !!user?.id
   });
 
   const { data: todosData } = useQuery({
-    queryKey: ['todos', user?.id],
-    queryFn: () => getTodos(user!.id),
+    queryKey: ['todos'],
+    queryFn: () => getTodos(),
     enabled: !!user?.id
   });
 
@@ -106,7 +106,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           name: s.name,
           desc: s.description,
           url: s.url,
-          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w-8 h-8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')}` }),
+          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w - 8 h - 8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')} ` }),
           color: s.color,
           isSystem: true,
           iconName: s.icon_name,
@@ -129,7 +129,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           name: s.name,
           desc: s.description,
           url: s.url,
-          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w-8 h-8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')}` }),
+          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w - 8 h - 8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')} ` }),
           color: s.color,
           isCustom: true,
           iconName: s.icon_name,
@@ -214,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     saveTimeoutRef.current = setTimeout(async () => {
       if (user?.id) {
-        await saveNote(user.id, newValue);
+        await saveNote(newValue);
       }
     }, 1000);
   };
@@ -226,13 +226,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     try {
       const payload = {
-        userId: user.id,
         name: newShortcut.name,
         description: newShortcut.desc || 'Atalho',
         url: newShortcut.url,
         iconName: newShortcut.iconName,
         color: newShortcut.color,
-        userRole: user.role
       };
 
       if (isEditingSystem) {
@@ -258,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       setIsEditingSystem(false);
       setNewShortcut({ name: '', desc: '', url: '', iconName: 'Globe', color: 'bg-indigo-50' });
       queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
-      queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['customShortcuts'] });
       toast.success('Atalho salvo com sucesso!');
     } catch (error) {
       console.error('Failed to save shortcut:', error);
@@ -292,8 +290,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         await deleteSystemShortcut(shortcut.id);
         queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
       } else {
-        await deleteShortcut(shortcut.id, user.id);
-        queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
+        await deleteShortcut(shortcut.id);
+        queryClient.invalidateQueries({ queryKey: ['customShortcuts'] });
       }
       toast.success('Atalho removido.');
     } catch (error) {
@@ -309,12 +307,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     try {
       if (sys.isSystem) {
-        await toggleSystemShortcutFavorite(sys.id, user.role, !sys.isFavorite);
-      } else {
-        await toggleShortcutFavorite(sys.id, user.id, !sys.isFavorite);
+        await toggleShortcutFavorite(sys.id, !sys.isFavorite);
       }
       queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
-      queryClient.invalidateQueries({ queryKey: ['customShortcuts', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['customShortcuts'] });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
     }
@@ -325,9 +321,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!newTodoText.trim() || !user) return;
 
     try {
-      await createTodo(user.id, newTodoText.trim());
+      await createTodo(newTodoText.trim());
       setNewTodoText('');
-      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
       toast.success('Tarefa adicionada.');
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -339,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user) return;
     try {
       await updateTodo(id, !completed);
-      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
     } catch (error) {
       console.error('Failed to toggle todo:', error);
     }
@@ -349,7 +345,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user) return;
     try {
       await deleteTodo(id);
-      queryClient.invalidateQueries({ queryKey: ['todos', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
       toast.success('Tarefa removida.');
     } catch (error) {
       console.error('Failed to delete todo:', error);
@@ -407,8 +403,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* Aviso Dinâmico */}
       {warning && (
-        <div className={`border-l-4 rounded-xl p-6 shadow-sm flex items-start gap-4 relative overflow-hidden ${urgencyStyles.container}`}>
-          <div className={`p-3 rounded-full ${urgencyStyles.iconBg} relative z-10`}>
+        <div className={`border - l - 4 rounded - xl p - 6 shadow - sm flex items - start gap - 4 relative overflow - hidden ${urgencyStyles.container} `}>
+          <div className={`p - 3 rounded - full ${urgencyStyles.iconBg} relative z - 10`}>
             {warning.urgency === 'high' ? <ShieldAlert size={24} /> : <Info size={24} />}
           </div>
           <div className="flex-1 relative z-10">
@@ -445,7 +441,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </div>
           )}
 
-          <div className={`hidden md:block w-64 h-64 absolute -top-10 -right-10 rounded-full bg-gradient-to-br ${urgencyStyles.gradient} opacity-10 blur-3xl pointer-events-none`}></div>
+          <div className={`hidden md:block w - 64 h - 64 absolute - top - 10 - right - 10 rounded - full bg - gradient - to - br ${urgencyStyles.gradient} opacity - 10 blur - 3xl pointer - events - none`}></div>
         </div>
       )}
 
@@ -544,12 +540,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             {/* System Shortcuts */}
             {systemShortcuts.map((sys, index) => (
               <a
-                key={`system-${sys.name}-${index}`}
+                key={`system - ${sys.name} -${index} `}
                 href={sys.url || '#'}
                 target="_blank"
                 className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group relative block"
               >
-                <div className={`${sys.color} w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                <div className={`${sys.color} w - 14 h - 14 rounded - xl flex items - center justify - center mb - 4 group - hover: scale - 110 transition - transform`}>
                   {sys.icon}
                 </div>
                 <h3 className="font-bold text-slate-800 text-lg">{sys.name}</h3>
@@ -559,7 +555,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button
                       onClick={(e) => handleToggleFavorite(e, sys)}
-                      className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
+                      className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
                       title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                     >
                       <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
@@ -584,7 +580,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   <div className="absolute top-4 right-4">
                     <button
                       onClick={(e) => handleToggleFavorite(e, sys)}
-                      className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
+                      className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
                       title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                     >
                       <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
@@ -597,12 +593,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             {/* Custom Shortcuts */}
             {shortcuts.map((sys, index) => (
               <a
-                key={`custom-${sys.name}-${index}`}
+                key={`custom - ${sys.name} -${index} `}
                 href={sys.url || '#'}
                 target="_blank"
                 className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group relative block"
               >
-                <div className={`${sys.color} w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                <div className={`${sys.color} w - 14 h - 14 rounded - xl flex items - center justify - center mb - 4 group - hover: scale - 110 transition - transform`}>
                   {sys.icon}
                 </div>
                 <h3 className="font-bold text-slate-800 text-lg">{sys.name}</h3>
@@ -611,7 +607,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <div className="absolute top-4 right-4 flex gap-2">
                   <button
                     onClick={(e) => handleToggleFavorite(e, sys)}
-                    className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
+                    className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
                     title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                   >
                     <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
@@ -707,10 +703,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                       onClick={() => handleToggleTodo(todo.id, todo.completed)}
                       className="flex items-center gap-3 flex-1 text-left"
                     >
-                      <div className={`p-1 rounded-md transition-colors ${todo.completed ? 'bg-green-100 text-green-600' : 'bg-white border border-slate-200 text-transparent hover:border-blue-400'}`}>
+                      <div className={`p - 1 rounded - md transition - colors ${todo.completed ? 'bg-green-100 text-green-600' : 'bg-white border border-slate-200 text-transparent hover:border-blue-400'} `}>
                         <Check size={14} />
                       </div>
-                      <span className={`text-sm font-medium transition-all ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                      <span className={`text - sm font - medium transition - all ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-700'} `}>
                         {todo.text}
                       </span>
                     </button>
@@ -782,9 +778,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     <button
                       key={ic.name}
                       onClick={() => setNewShortcut({ ...newShortcut, iconName: ic.name })}
-                      className={`p-3 rounded-xl border-2 transition-all ${newShortcut.iconName === ic.name ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-slate-200'}`}
+                      className={`p - 3 rounded - xl border - 2 transition - all ${newShortcut.iconName === ic.name ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-slate-200'} `}
                     >
-                      {React.cloneElement(ic.icon as React.ReactElement, { className: `w-5 h-5 ${newShortcut.iconName === ic.name ? 'text-blue-600' : 'text-slate-400'}` })}
+                      {React.cloneElement(ic.icon as React.ReactElement, { className: `w - 5 h - 5 ${newShortcut.iconName === ic.name ? 'text-blue-600' : 'text-slate-400'} ` })}
                     </button>
                   ))}
                 </div>

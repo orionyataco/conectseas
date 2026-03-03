@@ -9,6 +9,21 @@ const router = express.Router();
 // Apply auth middleware to all routes in this file
 router.use(authMiddleware);
 
+// Helper: verifica se o usuário autenticado tem acesso ao projeto (público, owner ou membro)
+async function assertProjectAccess(projectId, userId, res) {
+    const [rows] = await pool.query(
+        `SELECT 1 FROM projects p 
+         WHERE p.id = ? AND (p.visibility = 'public' OR p.owner_id = ? 
+         OR EXISTS (SELECT 1 FROM project_members WHERE project_id = p.id AND user_id = ?))`,
+        [projectId, userId, userId]
+    );
+    if (rows.length === 0) {
+        res.status(403).json({ error: 'Acesso negado ao projeto' });
+        return false;
+    }
+    return true;
+}
+
 // Helper: verifica se o usuário autenticado é owner ou manager do projeto
 async function assertProjectOwnerOrManager(projectId, userId, res) {
     const [rows] = await pool.query(
@@ -21,7 +36,7 @@ async function assertProjectOwnerOrManager(projectId, userId, res) {
     }
     const { owner_id, role } = rows[0];
     if (owner_id !== userId && role !== 'owner' && role !== 'manager') {
-        res.status(403).json({ error: 'Não autorizado' });
+        res.status(403).json({ error: 'Não autorizado (requer permissão de gestor ou dono)' });
         return false;
     }
     return true;
@@ -51,7 +66,11 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), userId, res);
+        if (!hasAccess) return;
+
         const [projects] = await pool.query(`
             SELECT p.*, u.name as owner_name, u.avatar as owner_avatar
             FROM projects p JOIN users u ON p.owner_id = u.id WHERE p.id = ?
@@ -139,6 +158,9 @@ router.post('/:id/duplicate', async (req, res) => {
     const userId = req.user.id;
     const { newName } = req.body;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), userId, res);
+        if (!hasAccess) return;
+
         const [projects] = await pool.query('SELECT * FROM projects WHERE id = ?', [id]);
         if (projects.length === 0) return res.status(404).json({ error: 'Projeto não encontrado' });
         const originalProject = projects[0];
@@ -178,7 +200,11 @@ router.patch('/:id/archive', async (req, res) => {
 
 router.get('/:id/stats', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), userId, res);
+        if (!hasAccess) return;
+
         const [stats] = await pool.query(`
             SELECT COUNT(*) as total_tasks, SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed_tasks,
                    SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
@@ -196,7 +222,11 @@ router.get('/:id/stats', async (req, res) => {
 // Members
 router.get('/:id/members', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), userId, res);
+        if (!hasAccess) return;
+
         const [members] = await pool.query(`
             SELECT pm.*, u.name as user_name, u.avatar as user_avatar, u.position as user_position
             FROM project_members pm JOIN users u ON pm.user_id = u.id WHERE pm.project_id = ? ORDER BY pm.role DESC, u.name ASC
@@ -263,7 +293,11 @@ router.delete('/:projectId/members/:userId', async (req, res) => {
 // Tasks
 router.get('/:id/tasks', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), userId, res);
+        if (!hasAccess) return;
+
         const [tasks] = await pool.query(`
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
                 (SELECT COUNT(*) FROM task_comments WHERE task_id = t.id) as comment_count,
@@ -283,6 +317,7 @@ router.get('/:id/tasks', async (req, res) => {
 
 router.get('/tasks/:id', async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     try {
         const [tasks] = await pool.query(`
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
@@ -291,6 +326,9 @@ router.get('/tasks/:id', async (req, res) => {
             FROM project_tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id JOIN users u2 ON t.created_by = u2.id WHERE t.id = ?
         `, [id]);
         if (tasks.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
+
+        const hasAccess = await assertProjectAccess(tasks[0].project_id, userId, res);
+        if (!hasAccess) return;
         res.json({ ...tasks[0], assignees: tasks[0].assignees || [], subtasks: tasks[0].subtasks || [] });
     } catch (error) {
         console.error('Error fetching task:', error);
@@ -302,8 +340,11 @@ router.post('/:id/tasks', async (req, res) => {
     const { id } = req.params;
     // createdBy sempre do token JWT
     const createdBy = req.user.id;
-    const { title, description, assignees, status, priority, dueDate, subtasks } = req.body;
     try {
+        const hasAccess = await assertProjectAccess(parseInt(id), createdBy, res);
+        if (!hasAccess) return;
+
+        const { title, description, assignees, status, priority, dueDate, subtasks } = req.body;
         const [result] = await pool.query('INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title, description, (assignees && assignees.length > 0) ? assignees[0] : null, createdBy, status || 'todo', priority || 'medium', dueDate]);
         const taskId = result.insertId;
         if (assignees && Array.isArray(assignees)) {

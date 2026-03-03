@@ -70,7 +70,7 @@ export const MessengerProvider: React.FC<{ user: User; children: React.ReactNode
         setSocket(newSocket);
 
         // Initial unread count
-        getUnreadCount(user.id).then(data => {
+        getUnreadCount().then(data => {
             if (data && typeof data.count === 'number') {
                 setUnreadCount(data.count);
             }
@@ -90,6 +90,12 @@ export const MessengerProvider: React.FC<{ user: User; children: React.ReactNode
             const count = prev[userId] || 0;
             if (count > 0) {
                 decrementUnreadCount(count);
+
+                // Persist in DB via socket
+                if (socket) {
+                    socket.emit('mark_read', { sender_id: userId, receiver_id: user.id });
+                }
+
                 const newState = { ...prev };
                 delete newState[userId];
                 return newState;

@@ -71,6 +71,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             ORDER BY count DESC
         `);
 
+        const [categories] = await pool.query('SELECT category, COUNT(*) as count FROM tectic_tickets GROUP BY category');
         const [levels] = await pool.query('SELECT support_level, COUNT(*) as count FROM tectic_tickets GROUP BY support_level');
         const [topResolvers] = await pool.query(`
             SELECT u.name as technician_name, u.avatar as technician_avatar, COUNT(t.id) as count 
@@ -96,6 +97,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             byDeptWeek,
             byDeptMonth,
             byDeptYear,
+            categories,
             levels,
             topResolvers
         });
@@ -154,7 +156,7 @@ router.delete('/bulk', adminMiddleware, async (req, res) => {
 
 
 // Single Ticket Dossier
-router.get('/tickets/:id', adminMiddleware, async (req, res) => {
+router.get('/tickets/:id', async (req, res) => {
     try {
         const [rows] = await pool.query(`
             SELECT t.*, u.name as requester_name, u.avatar as requester_avatar, u.email as requester_email, u.department as requester_dept, a.name as technician_name, r.name as resolver_name
@@ -166,6 +168,11 @@ router.get('/tickets/:id', adminMiddleware, async (req, res) => {
         `, [req.params.id]);
 
         if (rows.length === 0) return res.status(404).json({ error: 'Chamado não encontrado' });
+
+        // Access check: Admin or Owner
+        if (req.user.role !== 'ADMIN' && rows[0].user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
 
         const [comments] = await pool.query(`
             SELECT c.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role
@@ -197,7 +204,7 @@ router.post('/tickets', async (req, res) => {
 
 // Update Ticket (Assign, Status, Solution)
 router.put('/tickets/:id', adminMiddleware, async (req, res) => {
-    const { assigned_to, status, solution, priority, support_level, add_to_kb } = req.body;
+    const { assigned_to, status, solution, priority, support_level, category, add_to_kb } = req.body;
     try {
         let updateQuery = 'UPDATE tectic_tickets SET updated_at = CURRENT_TIMESTAMP';
         const params = [];
@@ -213,6 +220,7 @@ router.put('/tickets/:id', adminMiddleware, async (req, res) => {
         if (solution !== undefined) { updateQuery += ', solution = ?'; params.push(solution); }
         if (priority !== undefined) { updateQuery += ', priority = ?'; params.push(priority); }
         if (support_level !== undefined) { updateQuery += ', support_level = ?'; params.push(support_level); }
+        if (category !== undefined) { updateQuery += ', category = ?'; params.push(category); }
 
         updateQuery += ' WHERE id = ?';
         params.push(req.params.id);
@@ -241,9 +249,17 @@ router.put('/tickets/:id', adminMiddleware, async (req, res) => {
 router.post('/tickets/:id/comments', async (req, res) => {
     const { comment, is_internal } = req.body;
     try {
+        // Ownership check
+        const [ticket] = await pool.query('SELECT user_id FROM tectic_tickets WHERE id = ?', [req.params.id]);
+        if (ticket.length === 0) return res.status(404).json({ error: 'Chamado não encontrado' });
+
+        if (req.user.role !== 'ADMIN' && ticket[0].user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Não autorizado' });
+        }
+
         await pool.query(
             'INSERT INTO tectic_ticket_comments (ticket_id, user_id, comment, is_internal) VALUES (?, ?, ?, ?)',
-            [req.params.id, req.user.id, comment, is_internal ? 1 : 0]
+            [req.params.id, req.user.id, comment, is_internal && req.user.role === 'ADMIN' ? 1 : 0]
         );
         res.json({ success: true });
     } catch (error) {

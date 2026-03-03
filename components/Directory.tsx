@@ -75,7 +75,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
         if (folderId) {
           try {
             // Fetch folder info to set as current
-            const folderRes = await api.get(`/drive/folders/${folderId}?userId=${user.id}`);
+            const folderRes = await api.get(`/drive/folders/${folderId}`);
             if (folderRes.data) {
               // For simplicity, we clear history when jumping from search
               // unless we implement a path fetcher
@@ -100,13 +100,13 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     try {
       if (viewMode === 'all') {
         const parentId = currentFolder ? currentFolder.id : 'null';
-        const foldersRes = await api.get(`/drive/folders?userId=${user.id}&parentId=${parentId}`);
+        const foldersRes = await api.get(`/drive/folders?parentId=${parentId}`);
         setFolders(foldersRes.data);
-        const filesRes = await api.get(`/drive/files?userId=${user.id}&folderId=${parentId}`);
+        const filesRes = await api.get(`/drive/files?folderId=${parentId}`);
         setFiles(filesRes.data);
       } else {
         // For recent, shared, favorites, trash
-        const res = await api.get(`/drive/${viewMode}?userId=${user.id}`);
+        const res = await api.get(`/drive/${viewMode}`);
         setUnifiedItems(res.data);
         setFolders([]);
         setFiles([]);
@@ -122,7 +122,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     if (!user) return;
     try {
       const { getStorageStats } = await import('../services/api');
-      const stats = await getStorageStats(user.id);
+      const stats = await getStorageStats();
       setStorageStats(stats);
     } catch (e) {
       console.error('Failed to fetch storage stats:', e);
@@ -133,7 +133,6 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     if (!user) return;
     try {
       await api.post(`/drive/${type}s/${itemId}/favorite`, {
-        userId: user.id,
         is_favorite: !isFavorite
       });
       fetchContent();
@@ -165,7 +164,6 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     setShareLoading(true);
     try {
       await api.post(`/drive/folders/${sharingFolder.id}/share`, {
-        userId: user.id,
         targetUserId,
         permission
       });
@@ -180,7 +178,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
   const handleRemoveShare = async (targetUserId: string) => {
     if (!user || !sharingFolder) return;
     try {
-      await api.delete(`/drive/folders/${sharingFolder.id}/shares/${targetUserId}?userId=${user.id}`);
+      await api.delete(`/drive/folders/${sharingFolder.id}/shares/${targetUserId}`);
       fetchShares(sharingFolder.id);
     } catch (e) {
       console.error('Failed to remove share:', e);
@@ -199,7 +197,6 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
     try {
       await api.post('/drive/folders', {
-        userId: user.id,
         parentId: currentFolder?.id,
         name: newFolderName
       });
@@ -217,7 +214,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     if (viewMode === 'trash') {
       if (!confirm('Excluir permanentemente esta pasta e todo seu conteúdo?')) return;
       try {
-        await api.delete(`/drive/folders/${folderId}?userId=${user.id}`);
+        await api.delete(`/drive/folders/${folderId}`);
         fetchContent();
         fetchStorageStats();
       } catch (error) {
@@ -226,7 +223,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     } else {
       if (!confirm('Mover para a lixeira?')) return;
       try {
-        await api.post(`/drive/folders/${folderId}/trash`, { userId: user.id });
+        await api.post(`/drive/folders/${folderId}/trash`);
         fetchContent();
       } catch (error) {
         console.error('Failed to trash folder:', error);
@@ -237,7 +234,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
   const handleRestore = async (id: number, type: 'folder' | 'file') => {
     if (!user) return;
     try {
-      await api.post(`/drive/${type}s/${id}/restore`, { userId: user.id });
+      await api.post(`/drive/${type}s/${id}/restore`);
       fetchContent();
     } catch (error) {
       console.error('Failed to restore item:', error);
@@ -250,7 +247,6 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     const file = e.target.files[0];
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('userId', user.id);
     if (currentFolder) {
       formData.append('folderId', currentFolder.id.toString());
     }
@@ -275,7 +271,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     if (viewMode === 'trash') {
       if (!confirm('Excluir permanentemente este arquivo?')) return;
       try {
-        await api.delete(`/drive/files/${fileId}?userId=${user.id}`);
+        await api.delete(`/drive/files/${fileId}`);
         fetchContent();
         fetchStorageStats();
       } catch (error) {
@@ -284,7 +280,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     } else {
       if (!confirm('Mover para a lixeira?')) return;
       try {
-        await api.post(`/drive/files/${fileId}/trash`, { userId: user.id });
+        await api.post(`/drive/files/${fileId}/trash`);
         fetchContent();
       } catch (error) {
         console.error('Failed to trash file:', error);
@@ -349,9 +345,9 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     try {
       const { renameFolder, renameFile } = await import('../services/api');
       if (renamingItem.type === 'folder') {
-        await renameFolder(renamingItem.id, user.id, renameValue);
+        await renameFolder(renamingItem.id, renameValue);
       } else {
-        await renameFile(renamingItem.id, user.id, renameValue);
+        await renameFile(renamingItem.id, renameValue);
       }
       setRenamingItem(null);
       setRenameValue('');

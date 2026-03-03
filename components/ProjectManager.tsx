@@ -120,7 +120,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const loadProjects = async () => {
         try {
             setLoading(true);
-            const data = await getProjects(user.id);
+            const data = await getProjects();
             setProjects(data);
         } catch (error) {
             console.error('Error loading projects:', error);
@@ -220,7 +220,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
         if (!confirm('Tem certeza que deseja excluir este projeto? Todas as tarefas também serão excluídas.')) return;
 
         try {
-            await deleteProject(projectId, user.id);
+            await deleteProject(projectId);
             setProjects(projects.filter(p => p.id !== projectId));
             if (selectedProject?.id === projectId) {
                 setSelectedProject(null);
@@ -233,7 +233,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const handleDuplicateProject = async (projectId: number) => {
         if (!confirm('Deseja duplicar este projeto?')) return;
         try {
-            await duplicateProject(projectId, user.id);
+            await duplicateProject(projectId);
             await loadProjects();
         } catch (error) {
             console.error('Error duplicating project:', error);

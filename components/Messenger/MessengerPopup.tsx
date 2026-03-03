@@ -19,7 +19,7 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
 
     useEffect(() => {
         if (user) {
-            getMessengerUsers(user.id).then(data => {
+            getMessengerUsers().then(data => {
                 setGroupedUsers(data || {});
 
                 // Extract unread counts and update context

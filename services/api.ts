@@ -121,9 +121,9 @@ export const createPost = async (formData: FormData) => {
     }
 };
 
-export const deletePost = async (postId: number, userId: string, userRole: string = '') => {
+export const deletePost = async (postId: number) => {
     try {
-        const response = await api.delete(`/mural/posts/${postId}?userId=${userId}&userRole=${userRole}`);
+        const response = await api.delete(`/mural/posts/${postId}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting post:', error);
@@ -131,9 +131,9 @@ export const deletePost = async (postId: number, userId: string, userRole: strin
     }
 };
 
-export const toggleLike = async (postId: number, userId: string) => {
+export const toggleLike = async (postId: number) => {
     try {
-        const response = await api.post(`/mural/posts/${postId}/like`, { userId });
+        const response = await api.post(`/mural/posts/${postId}/like`);
         return response.data;
     } catch (error) {
         console.error('Error toggling like:', error);
@@ -141,9 +141,9 @@ export const toggleLike = async (postId: number, userId: string) => {
     }
 };
 
-export const getLikedPosts = async (userId: string) => {
+export const getLikedPosts = async () => {
     try {
-        const response = await api.get(`/mural/posts/liked/${userId}`);
+        const response = await api.get('/mural/posts/liked');
         return response.data;
     } catch (error) {
         console.error('Error fetching liked posts:', error);
@@ -161,9 +161,9 @@ export const getComments = async (postId: number) => {
     }
 };
 
-export const addComment = async (postId: number, userId: string, content: string) => {
+export const addComment = async (postId: number, content: string) => {
     try {
-        const response = await api.post(`/mural/posts/${postId}/comments`, { userId, content });
+        const response = await api.post(`/mural/posts/${postId}/comments`, { content });
         return response.data;
     } catch (error) {
         console.error('Error adding comment:', error);
@@ -171,9 +171,9 @@ export const addComment = async (postId: number, userId: string, content: string
     }
 };
 
-export const deleteComment = async (commentId: number, userId: string, userRole: string = '') => {
+export const deleteComment = async (commentId: number) => {
     try {
-        const response = await api.delete(`/mural/comments/${commentId}?userId=${userId}&userRole=${userRole}`);
+        const response = await api.delete(`/mural/comments/${commentId}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting comment:', error);
@@ -181,9 +181,9 @@ export const deleteComment = async (commentId: number, userId: string, userRole:
     }
 };
 
-export const editPost = async (postId: number, userId: string, content: string) => {
+export const editPost = async (postId: number, content: string) => {
     try {
-        const response = await api.put(`/mural/posts/${postId}`, { userId, content });
+        const response = await api.put(`/mural/posts/${postId}`, { content });
         return response.data;
     } catch (error) {
         console.error('Error editing post:', error);
@@ -192,9 +192,9 @@ export const editPost = async (postId: number, userId: string, content: string) 
 };
 
 
-export const editComment = async (commentId: number, userId: string, content: string) => {
+export const editComment = async (commentId: number, content: string) => {
     try {
-        const response = await api.put(`/mural/comments/${commentId}`, { userId, content });
+        const response = await api.put(`/mural/comments/${commentId}`, { content });
         return response.data;
     } catch (error) {
         console.error('Error editing comment:', error);
@@ -246,9 +246,9 @@ export const deleteWarning = async (id: number) => {
 };
 
 // Notes
-export const getNote = async (userId: string) => {
+export const getNote = async () => {
     try {
-        const response = await api.get(`/dashboard/notes/${userId}`);
+        const response = await api.get('/dashboard/notes');
         return response.data;
     } catch (error) {
         console.error('Error fetching note:', error);
@@ -256,9 +256,9 @@ export const getNote = async (userId: string) => {
     }
 };
 
-export const saveNote = async (userId: string, content: string) => {
+export const saveNote = async (content: string) => {
     try {
-        const response = await api.post('/dashboard/notes', { userId, content });
+        const response = await api.post('/dashboard/notes', { content });
         return response.data;
     } catch (error) {
         console.error('Error saving note:', error);
@@ -267,9 +267,9 @@ export const saveNote = async (userId: string, content: string) => {
 };
 
 // Shortcuts
-export const getShortcuts = async (userId: string) => {
+export const getShortcuts = async () => {
     try {
-        const response = await api.get(`/dashboard/shortcuts/${userId}`);
+        const response = await api.get('/dashboard/shortcuts');
         return response.data;
     } catch (error) {
         console.error('Error fetching shortcuts:', error);
@@ -297,9 +297,9 @@ export const updateShortcut = async (id: number, data: any) => {
     }
 };
 
-export const deleteShortcut = async (id: number, userId: string) => {
+export const deleteShortcut = async (id: number) => {
     try {
-        const response = await api.delete(`/dashboard/shortcuts/${id}?userId=${userId}`);
+        const response = await api.delete(`/dashboard/shortcuts/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting shortcut:', error);
@@ -307,9 +307,9 @@ export const deleteShortcut = async (id: number, userId: string) => {
     }
 };
 
-export const toggleShortcutFavorite = async (id: number, userId: string, isFavorite: boolean) => {
+export const toggleShortcutFavorite = async (id: number, isFavorite: boolean) => {
     try {
-        const response = await api.patch(`/dashboard/shortcuts/${id}/favorite`, { userId, isFavorite });
+        const response = await api.patch(`/dashboard/shortcuts/${id}/favorite`, { isFavorite });
         return response.data;
     } catch (error) {
         console.error('Error toggling shortcut favorite:', error);
@@ -358,9 +358,9 @@ export const deleteSystemShortcut = async (id: number) => {
     }
 };
 
-export const toggleSystemShortcutFavorite = async (id: number, userRole: string, isFavorite: boolean) => {
+export const toggleSystemShortcutFavorite = async (id: number, isFavorite: boolean) => {
     try {
-        const response = await api.patch(`/dashboard/system-shortcuts/${id}/favorite`, { userRole, isFavorite });
+        const response = await api.patch(`/dashboard/system-shortcuts/${id}/favorite`, { isFavorite });
         return response.data;
     } catch (error) {
         console.error('Error toggling system shortcut favorite:', error);
@@ -369,9 +369,9 @@ export const toggleSystemShortcutFavorite = async (id: number, userRole: string,
 };
 
 // Todos
-export const getTodos = async (userId: number) => {
+export const getTodos = async () => {
     try {
-        const response = await api.get(`/dashboard/todos/${userId}`);
+        const response = await api.get('/dashboard/todos');
         return response.data;
     } catch (error) {
         console.error('Error fetching todos:', error);
@@ -379,9 +379,9 @@ export const getTodos = async (userId: number) => {
     }
 };
 
-export const createTodo = async (userId: number, title: string) => {
+export const createTodo = async (title: string) => {
     try {
-        const response = await api.post('/dashboard/todos', { userId, title });
+        const response = await api.post('/dashboard/todos', { title });
         return response.data;
     } catch (error) {
         console.error('Error creating todo:', error);
@@ -411,9 +411,9 @@ export const deleteTodo = async (id: number) => {
 
 
 // Events
-export const getEvents = async (userId: string, userRole: string) => {
+export const getEvents = async () => {
     try {
-        const response = await api.get(`/events?userId=${userId}&userRole=${userRole}`);
+        const response = await api.get('/events');
         return response.data;
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -441,9 +441,9 @@ export const updateEvent = async (id: number, data: any) => {
     }
 };
 
-export const deleteEvent = async (id: number, userId: string, userRole: string) => {
+export const deleteEvent = async (id: number) => {
     try {
-        const response = await api.delete(`/events/${id}?userId=${userId}&userRole=${userRole}`);
+        const response = await api.delete(`/events/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting event:', error);
@@ -461,9 +461,9 @@ export const getHolidays = async (year: number) => {
     }
 };
 
-export const globalSearch = async (query: string, userId: string, userRole: string) => {
+export const globalSearch = async (query: string) => {
     try {
-        const response = await api.get(`/search?q=${query}&userId=${userId}&userRole=${userRole}`);
+        const response = await api.get(`/search?q=${query}`);
         return response.data;
     } catch (error) {
         console.error('Error in global search:', error);
@@ -568,9 +568,9 @@ export const getPublicSetting = async (key: string) => {
     }
 };
 
-export const renameFolder = async (id: number, userId: string, name: string) => {
+export const renameFolder = async (id: number, name: string) => {
     try {
-        const response = await api.put(`/drive/folders/${id}`, { userId, name });
+        const response = await api.put(`/drive/folders/${id}`, { name });
         return response.data;
     } catch (error) {
         console.error(`Error renaming folder ${id}:`, error);
@@ -578,9 +578,9 @@ export const renameFolder = async (id: number, userId: string, name: string) => 
     }
 };
 
-export const renameFile = async (id: number, userId: string, name: string) => {
+export const renameFile = async (id: number, name: string) => {
     try {
-        const response = await api.put(`/drive/files/${id}`, { userId, name });
+        const response = await api.put(`/drive/files/${id}`, { name });
         return response.data;
     } catch (error) {
         console.error(`Error renaming file ${id}:`, error);
@@ -588,9 +588,9 @@ export const renameFile = async (id: number, userId: string, name: string) => {
     }
 };
 
-export const getStorageStats = async (userId: string) => {
+export const getStorageStats = async () => {
     try {
-        const response = await api.get(`/drive/storage-stats/${userId}`);
+        const response = await api.get('/drive/storage-stats');
         return response.data;
     } catch (error) {
         console.error('Error fetching storage stats:', error);
@@ -599,9 +599,9 @@ export const getStorageStats = async (userId: string) => {
 };
 
 // Projects API
-export const getProjects = async (userId: string, filters?: any) => {
+export const getProjects = async (filters?: any) => {
     try {
-        const params = new URLSearchParams({ userId, ...filters });
+        const params = new URLSearchParams(filters);
         const response = await api.get(`/projects?${params}`);
         return response.data;
     } catch (error) {
@@ -640,9 +640,9 @@ export const updateProject = async (id: number, data: any) => {
     }
 };
 
-export const deleteProject = async (id: number, userId: string) => {
+export const deleteProject = async (id: number) => {
     try {
-        const response = await api.delete(`/projects/${id}?userId=${userId}`);
+        const response = await api.delete(`/projects/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting project:', error);
@@ -650,9 +650,9 @@ export const deleteProject = async (id: number, userId: string) => {
     }
 };
 
-export const duplicateProject = async (id: number, userId: string, newName?: string) => {
+export const duplicateProject = async (id: number, newName?: string) => {
     try {
-        const response = await api.post(`/projects/${id}/duplicate`, { userId, newName });
+        const response = await api.post(`/projects/${id}/duplicate`, { newName });
         return response.data;
     } catch (error) {
         console.error('Error duplicating project:', error);
@@ -803,9 +803,9 @@ export const getTaskComments = async (taskId: number) => {
     }
 };
 
-export const addTaskComment = async (taskId: number, userId: string, content: string) => {
+export const addTaskComment = async (taskId: number, content: string) => {
     try {
-        const response = await api.post(`/tasks/${taskId}/comments`, { userId, content });
+        const response = await api.post(`/tasks/${taskId}/comments`, { content });
         return response.data;
     } catch (error) {
         console.error('Error adding task comment:', error);
@@ -931,9 +931,9 @@ export const deleteTecticKnowledge = async (id: number) => {
 };
 
 // Notifications API
-export const getNotifications = async (userId: string) => {
+export const getNotifications = async () => {
     try {
-        const response = await api.get(`/notifications?userId=${userId}`);
+        const response = await api.get('/notifications');
         return response.data;
     } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -951,9 +951,9 @@ export const markNotificationAsRead = async (id: number) => {
     }
 };
 
-export const markAllNotificationsAsRead = async (userId: string) => {
+export const markAllNotificationsAsRead = async () => {
     try {
-        const response = await api.put('/notifications/read-all', { userId });
+        const response = await api.put('/notifications/read-all');
         return response.data;
     } catch (error) {
         console.error('Error marking all notifications as read:', error);
@@ -1002,23 +1002,23 @@ export const updateVisualIdentity = async (formData: FormData) => {
     return response.data;
 };
 
-export const getMessengerUsers = async (userId: string) => {
-    const response = await api.get(`/messenger/users?userId=${userId}`);
+export const getMessengerUsers = async () => {
+    const response = await api.get('/messenger/users');
     return response.data;
 };
 
-export const getMessageHistory = async (userId: string, contactId: string) => {
-    const response = await api.get(`/messenger/history?userId=${userId}&contactId=${contactId}`);
+export const getMessageHistory = async (contactId: string) => {
+    const response = await api.get(`/messenger/history?contactId=${contactId}`);
     return response.data;
 };
 
-export const getUnreadCount = async (userId: string) => {
-    const response = await api.get(`/messenger/unread-count?userId=${userId}`);
+export const getUnreadCount = async () => {
+    const response = await api.get('/messenger/unread-count');
     return response.data;
 };
 
-export const updateLastSeen = async (userId: string) => {
-    const response = await api.post('/messenger/heartbeat', { userId });
+export const updateLastSeen = async () => {
+    const response = await api.post('/messenger/heartbeat');
     return response.data;
 };
 
