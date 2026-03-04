@@ -15,7 +15,7 @@ export const globalSearch = async (req, res) => {
         const [users] = await pool.query(
             `SELECT id, name, department, position, avatar, 'user' as type 
              FROM users 
-             WHERE name LIKE ? OR department LIKE ? OR position LIKE ? 
+             WHERE name ILIKE ? OR department ILIKE ? OR position ILIKE ? 
              LIMIT 10`,
             [searchQuery, searchQuery, searchQuery]
         );
@@ -25,7 +25,7 @@ export const globalSearch = async (req, res) => {
             SELECT DISTINCT e.id, e.title as name, e.event_date as date, 'event' as type 
             FROM calendar_events e
             LEFT JOIN event_shares es ON e.id = es.event_id
-            WHERE (e.title LIKE ? OR e.description LIKE ?)
+            WHERE (e.title ILIKE ? OR e.description ILIKE ?)
         `;
         const eventsParams = [searchQuery, searchQuery];
 
@@ -41,7 +41,7 @@ export const globalSearch = async (req, res) => {
             `SELECT DISTINCT f.id, f.name, 'folder' as type, f.user_id
              FROM user_folders f
              LEFT JOIN folder_shares fs ON f.id = fs.folder_id
-             WHERE f.name LIKE ? AND f.is_deleted = 0 AND (f.user_id = ? OR fs.user_id = ? OR ? = 'ADMIN')
+             WHERE f.name ILIKE ? AND f.is_deleted = 0 AND (f.user_id = ? OR fs.user_id = ? OR ? = 'ADMIN')
              LIMIT 5`,
             [searchQuery, userId, userId, userRole]
         );
@@ -51,7 +51,7 @@ export const globalSearch = async (req, res) => {
              FROM user_files fi
              JOIN user_folders fo ON fi.folder_id = fo.id
              LEFT JOIN folder_shares fs ON fo.id = fs.folder_id
-             WHERE fi.original_name LIKE ? AND fi.is_deleted = 0 AND (fi.user_id = ? OR fs.user_id = ? OR ? = 'ADMIN')
+             WHERE fi.original_name ILIKE ? AND fi.is_deleted = 0 AND (fi.user_id = ? OR fs.user_id = ? OR ? = 'ADMIN')
              LIMIT 10`,
             [searchQuery, userId, userId, userRole]
         );

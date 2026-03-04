@@ -327,7 +327,24 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       is_holiday_api: true
     }));
 
-    return [...dayEvents, ...dayHolidays];
+    const dayBirthdays = users.filter(u => {
+      if (!u.birth_date) return false;
+      const dateParts = u.birth_date.split('T')[0].split('-');
+      if (dateParts.length !== 3) return false;
+      const bMonth = Number(dateParts[1]) - 1;
+      const bDay = Number(dateParts[2]);
+      return bMonth === date.getMonth() && bDay === date.getDate();
+    }).map(u => ({
+      id: `birthday-${u.id}-${date.getFullYear()}`,
+      title: `Aniversário: ${u.name}`,
+      event_type: 'birthday',
+      event_date: dayStr,
+      description: `Aniversariante do dia! Setor: ${u.department || 'Não informado'}.`,
+      visibility: 'public',
+      is_holiday_api: true
+    }));
+
+    return [...dayEvents, ...dayHolidays, ...dayBirthdays];
   };
 
   const renderDayView = () => {
