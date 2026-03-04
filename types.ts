@@ -197,6 +197,7 @@ export interface ProjectTask {
   attachment_count?: number;
   assignees?: { id: number; name: string; avatar: string }[];
   subtasks?: { id: number; title: string; is_completed: boolean }[];
+  attachments?: { id: number; name: string; type: string; size: number; path: string }[];
 }
 
 export interface TaskComment {

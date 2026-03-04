@@ -88,25 +88,43 @@ router.post('/', upload.array('attachments'), async (req, res) => {
     const ownerId = req.user.id;
     const { name, description, status, priority, startDate, endDate, visibility, color, members } = req.body;
     try {
+        // Create folder in Drive for the project
+        const [folderResult] = await pool.query(
+            'INSERT INTO user_folders (user_id, parent_id, name, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+            [ownerId, null, `Projeto: ${name}`]
+        );
+        const driveFolderId = folderResult.insertId;
+
         const [result] = await pool.query(
-            'INSERT INTO projects (name, description, owner_id, status, priority, start_date, end_date, visibility, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, description, ownerId, status || 'active', priority || 'medium', startDate || null, endDate || null, visibility || 'public', color || '#3B82F6']
+            'INSERT INTO projects (name, description, owner_id, status, priority, start_date, end_date, visibility, color, drive_folder_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, description, ownerId, status || 'active', priority || 'medium', startDate || null, endDate || null, visibility || 'public', color || '#3B82F6', driveFolderId]
         );
         const projectId = result.insertId;
+
         await pool.query('INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)', [projectId, ownerId, 'owner']);
+
         if (members) {
             const parsedMembers = typeof members === 'string' ? JSON.parse(members) : members;
             if (Array.isArray(parsedMembers)) {
                 for (const memberId of parsedMembers) {
                     if (parseInt(memberId) === parseInt(ownerId)) continue;
                     await pool.query('INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)', [projectId, memberId, 'member']);
+
+                    // Share the Drive folder with project members
+                    await pool.query(
+                        'INSERT INTO folder_shares (folder_id, user_id, permission) VALUES (?, ?, ?) ON CONFLICT(folder_id, user_id) DO NOTHING',
+                        [driveFolderId, memberId, 'WRITE']
+                    );
                 }
             }
         }
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
                 let type = file.mimetype.startsWith('image/') ? 'image' : (file.mimetype === 'application/pdf' ? 'pdf' : 'other');
-                const [fileResult] = await pool.query('INSERT INTO user_files (user_id, name, type, path, size, is_public) VALUES (?, ?, ?, ?, ?, ?)', [ownerId, file.originalname, type, `/uploads/${file.filename}`, file.size, visibility === 'public' ? 1 : 0]);
+                const [fileResult] = await pool.query(
+                    'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                    [ownerId, driveFolderId, file.filename, file.originalname, file.mimetype, file.size]
+                );
                 await pool.query('INSERT INTO project_attachments (project_id, file_id, uploaded_by) VALUES (?, ?, ?)', [projectId, fileResult.insertId, ownerId]);
             }
         }
@@ -117,15 +135,34 @@ router.post('/', upload.array('attachments'), async (req, res) => {
     }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', upload.array('attachments'), async (req, res) => {
     const { id } = req.params;
     const requesterId = req.user.id;
     const { name, description, status, priority, startDate, endDate, visibility, color } = req.body;
+    const finalStartDate = startDate || null;
+    const finalEndDate = endDate || null;
     try {
         // Verifica se o usuário autenticado é owner ou manager antes de permitir edição
         const ok = await assertProjectOwnerOrManager(parseInt(id), requesterId, res);
         if (!ok) return;
-        await pool.query('UPDATE projects SET name = ?, description = ?, status = ?, priority = ?, start_date = ?, end_date = ?, visibility = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [name, description, status, priority, startDate, endDate, visibility, color, id]);
+        await pool.query('UPDATE projects SET name = ?, description = ?, status = ?, priority = ?, start_date = ?, end_date = ?, visibility = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [name, description, status, priority, finalStartDate, finalEndDate, visibility, color, id]);
+
+        if (req.files && req.files.length > 0) {
+            // Get project's drive folder
+            const [project] = await pool.query('SELECT drive_folder_id, owner_id FROM projects WHERE id = ?', [id]);
+            const driveFolderId = project[0]?.drive_folder_id;
+            const ownerId = project[0]?.owner_id;
+
+            if (driveFolderId) {
+                for (const file of req.files) {
+                    const [fileResult] = await pool.query(
+                        'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                        [requesterId, driveFolderId, file.filename, file.originalname, file.mimetype, file.size]
+                    );
+                    await pool.query('INSERT INTO project_attachments (project_id, file_id, uploaded_by) VALUES (?, ?, ?)', [id, fileResult.insertId, requesterId]);
+                }
+            }
+        }
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating project:', error);
@@ -302,13 +339,20 @@ router.get('/:id/tasks', async (req, res) => {
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
                 (SELECT COUNT(*) FROM task_comments WHERE task_id = t.id) as comment_count,
                 (SELECT COUNT(*) FROM task_attachments WHERE task_id = t.id) as attachment_count,
+                COALESCE((SELECT json_agg(json_build_object(
+                    'id', f.id, 
+                    'name', f.original_name, 
+                    'type', f.file_type, 
+                    'size', f.file_size,
+                    'path', '/uploads/' || f.filename
+                )) FROM task_attachments ta JOIN user_files f ON ta.file_id = f.id WHERE ta.task_id = t.id), '[]'::json) as attachments,
                 COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id), '[]'::json) as assignees,
                 COALESCE((SELECT json_agg(json_build_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id), '[]'::json) as subtasks
             FROM project_tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id JOIN users u2 ON t.created_by = u2.id
             WHERE t.project_id = ? ORDER BY t.order_index ASC, t.created_at DESC
         `, [id]);
         // pg retorna JSON já parseado como objeto JS — sem necessidade de JSON.parse
-        res.json(tasks.map(t => ({ ...t, assignees: t.assignees || [], subtasks: t.subtasks || [] })));
+        res.json(tasks.map(t => ({ ...t, assignees: t.assignees || [], subtasks: t.subtasks || [], attachments: t.attachments || [] })));
     } catch (error) {
         console.error('Error fetching project tasks:', error);
         res.status(500).json({ error: 'Erro ao buscar tarefas do projeto' });
@@ -336,7 +380,7 @@ router.get('/tasks/:id', async (req, res) => {
     }
 });
 
-router.post('/:id/tasks', async (req, res) => {
+router.post('/:id/tasks', upload.array('attachments'), async (req, res) => {
     const { id } = req.params;
     // createdBy sempre do token JWT
     const createdBy = req.user.id;
@@ -345,17 +389,40 @@ router.post('/:id/tasks', async (req, res) => {
         if (!hasAccess) return;
 
         const { title, description, assignees, status, priority, dueDate, subtasks } = req.body;
-        const [result] = await pool.query('INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title, description, (assignees && assignees.length > 0) ? assignees[0] : null, createdBy, status || 'todo', priority || 'medium', dueDate]);
+
+        const parsedAssignees = typeof assignees === 'string' ? JSON.parse(assignees) : (assignees || []);
+        const parsedSubtasks = typeof subtasks === 'string' ? JSON.parse(subtasks) : (subtasks || []);
+        const mainAssignee = Array.isArray(parsedAssignees) && parsedAssignees.length > 0 ? parsedAssignees[0] : null;
+        const finalDueDate = dueDate || null;
+
+        const [result] = await pool.query('INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title, description, mainAssignee, createdBy, status || 'todo', priority || 'medium', finalDueDate]);
         const taskId = result.insertId;
-        if (assignees && Array.isArray(assignees)) {
-            for (const userId of assignees) {
+
+        if (Array.isArray(parsedAssignees)) {
+            for (const userId of parsedAssignees) {
                 await pool.query('INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)', [taskId, userId]);
-                if (userId !== createdBy) await sendNotification(userId, 'project_task_assignment', 'Nova tarefa atribuída', `Você foi atribuído à tarefa: ${title}`, 'projetos');
+                if (parseInt(userId) !== parseInt(createdBy)) await sendNotification(userId, 'project_task_assignment', 'Nova tarefa atribuída', `Você foi atribuído à tarefa: ${title}`, 'projetos');
             }
         }
-        if (subtasks && Array.isArray(subtasks)) {
-            for (const subItem of subtasks) await pool.query('INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)', [taskId, typeof subItem === 'string' ? subItem : subItem.title]);
+
+        if (Array.isArray(parsedSubtasks)) {
+            for (const subItem of parsedSubtasks) await pool.query('INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)', [taskId, typeof subItem === 'string' ? subItem : subItem.title]);
         }
+
+        if (req.files && req.files.length > 0) {
+            // Get project's drive folder
+            const [project] = await pool.query('SELECT drive_folder_id FROM projects WHERE id = ?', [id]);
+            const folderId = project[0]?.drive_folder_id || null;
+
+            for (const file of req.files) {
+                const [fileResult] = await pool.query(
+                    'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                    [createdBy, folderId, file.filename, file.originalname, file.mimetype, file.size]
+                );
+                await pool.query('INSERT INTO task_attachments (task_id, file_id, uploaded_by) VALUES (?, ?, ?)', [taskId, fileResult.insertId, createdBy]);
+            }
+        }
+
         res.json({ success: true, id: taskId });
     } catch (error) {
         console.error('Error creating task:', error);
@@ -363,7 +430,7 @@ router.post('/:id/tasks', async (req, res) => {
     }
 });
 
-router.put('/tasks/:id', async (req, res) => {
+router.put('/tasks/:id', upload.array('attachments'), async (req, res) => {
     const { id } = req.params;
     const requesterId = req.user.id;
     const requesterRole = req.user.role;
@@ -372,24 +439,48 @@ router.put('/tasks/:id', async (req, res) => {
         // Verifica se o solicitante é membro do projeto da tarefa ou admin
         const [taskRows] = await pool.query('SELECT project_id FROM project_tasks WHERE id = ?', [id]);
         if (taskRows.length === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
+        const projectId = taskRows[0].project_id;
+
         if (requesterRole !== 'ADMIN') {
-            const [membership] = await pool.query('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?', [taskRows[0].project_id, requesterId]);
+            const [membership] = await pool.query('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?', [projectId, requesterId]);
             if (membership.length === 0) return res.status(403).json({ error: 'Não autorizado' });
         }
-        await pool.query(`UPDATE project_tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ?, estimated_hours = ?, actual_hours = ?, completed_at = ${status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL'}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [title, description, assignedTo, status, priority, dueDate, estimatedHours, actualHours, id]);
-        if (assignees && Array.isArray(assignees)) {
+        const parsedAssignees = typeof assignees === 'string' ? JSON.parse(assignees) : (assignees || []);
+        const parsedSubtasks = typeof subtasks === 'string' ? JSON.parse(subtasks) : (subtasks || []);
+        const mainAssignee = Array.isArray(parsedAssignees) && parsedAssignees.length > 0 ? parsedAssignees[0] : (assignedTo || null);
+        const finalDueDate = dueDate || null;
+
+        await pool.query(`UPDATE project_tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ?, estimated_hours = ?, actual_hours = ?, completed_at = ${status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL'}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [title, description, mainAssignee, status, priority, finalDueDate, estimatedHours, actualHours, id]);
+
+        if (Array.isArray(parsedAssignees)) {
             const [prev] = await pool.query('SELECT user_id FROM task_assignees WHERE task_id = ?', [id]);
             const prevIds = prev.map(a => a.user_id);
             await pool.query('DELETE FROM task_assignees WHERE task_id = ?', [id]);
-            for (const userId of assignees) {
+            for (const userId of parsedAssignees) {
                 await pool.query('INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)', [id, userId]);
                 if (!prevIds.includes(userId)) await sendNotification(userId, 'project_task_assignment', 'Nova tarefa atribuída', `Você foi atribuído à tarefa: ${title}`, 'projetos');
             }
         }
-        if (subtasks && Array.isArray(subtasks)) {
+
+        if (Array.isArray(parsedSubtasks)) {
             await pool.query('DELETE FROM task_subtasks WHERE task_id = ?', [id]);
-            for (const subItem of subtasks) await pool.query('INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)', [id, typeof subItem === 'string' ? subItem : subItem.title]);
+            for (const subItem of parsedSubtasks) await pool.query('INSERT INTO task_subtasks (task_id, title) VALUES (?, ?)', [id, typeof subItem === 'string' ? subItem : subItem.title]);
         }
+
+        if (req.files && req.files.length > 0) {
+            // Get project's drive folder
+            const [project] = await pool.query('SELECT drive_folder_id FROM projects WHERE id = ?', [projectId]);
+            const folderId = project[0]?.drive_folder_id || null;
+
+            for (const file of req.files) {
+                const [fileResult] = await pool.query(
+                    'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                    [requesterId, folderId, file.filename, file.originalname, file.mimetype, file.size]
+                );
+                await pool.query('INSERT INTO task_attachments (task_id, file_id, uploaded_by) VALUES (?, ?, ?)', [id, fileResult.insertId, requesterId]);
+            }
+        }
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating task:', error);

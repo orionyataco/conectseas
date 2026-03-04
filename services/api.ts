@@ -630,9 +630,11 @@ export const createProject = async (data: any) => {
     }
 };
 
-export const updateProject = async (id: number, data: any) => {
+export const updateProject = async (id: number, data: FormData) => {
     try {
-        const response = await api.put(`/projects/${id}`, data);
+        const response = await api.put(`/projects/${id}`, data, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return response.data;
     } catch (error) {
         console.error('Error updating project:', error);
@@ -734,7 +736,7 @@ export const getProjectTasks = async (projectId: number) => {
 
 export const getTaskById = async (id: number) => {
     try {
-        const response = await api.get(`/tasks/${id}`);
+        const response = await api.get(`/projects/tasks/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching task:', error);
@@ -742,9 +744,11 @@ export const getTaskById = async (id: number) => {
     }
 };
 
-export const createTask = async (projectId: number, data: any) => {
+export const createTask = async (projectId: number, formData: FormData) => {
     try {
-        const response = await api.post(`/projects/${projectId}/tasks`, data);
+        const response = await api.post(`/projects/${projectId}/tasks`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return response.data;
     } catch (error) {
         console.error('Error creating task:', error);
@@ -752,9 +756,11 @@ export const createTask = async (projectId: number, data: any) => {
     }
 };
 
-export const updateTask = async (id: number, data: any) => {
+export const updateTask = async (id: number, formData: FormData) => {
     try {
-        const response = await api.put(`/tasks/${id}`, data);
+        const response = await api.put(`/projects/tasks/${id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return response.data;
     } catch (error) {
         console.error('Error updating task:', error);
@@ -764,7 +770,7 @@ export const updateTask = async (id: number, data: any) => {
 
 export const updateTaskStatus = async (id: number, status: string, orderIndex: number) => {
     try {
-        const response = await api.patch(`/tasks/${id}/status`, { status, orderIndex });
+        const response = await api.patch(`/projects/tasks/${id}/status`, { status, orderIndex });
         return response.data;
     } catch (error) {
         console.error('Error updating task status:', error);
@@ -774,7 +780,7 @@ export const updateTaskStatus = async (id: number, status: string, orderIndex: n
 
 export const toggleSubtask = async (id: number, is_completed: boolean) => {
     try {
-        const response = await api.patch(`/subtasks/${id}/toggle`, { is_completed });
+        const response = await api.patch(`/projects/subtasks/${id}/toggle`, { is_completed });
         return response.data;
     } catch (error) {
         console.error('Error toggling subtask:', error);
@@ -784,7 +790,7 @@ export const toggleSubtask = async (id: number, is_completed: boolean) => {
 
 export const deleteTask = async (id: number) => {
     try {
-        const response = await api.delete(`/tasks/${id}`);
+        const response = await api.delete(`/projects/tasks/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting task:', error);
@@ -795,7 +801,7 @@ export const deleteTask = async (id: number) => {
 // Task Comments API
 export const getTaskComments = async (taskId: number) => {
     try {
-        const response = await api.get(`/tasks/${taskId}/comments`);
+        const response = await api.get(`/projects/tasks/${taskId}/comments`);
         return response.data;
     } catch (error) {
         console.error('Error fetching task comments:', error);
@@ -805,7 +811,7 @@ export const getTaskComments = async (taskId: number) => {
 
 export const addTaskComment = async (taskId: number, content: string) => {
     try {
-        const response = await api.post(`/tasks/${taskId}/comments`, { content });
+        const response = await api.post(`/projects/tasks/${taskId}/comments`, { content });
         return response.data;
     } catch (error) {
         console.error('Error adding task comment:', error);
@@ -815,7 +821,7 @@ export const addTaskComment = async (taskId: number, content: string) => {
 
 export const updateTaskComment = async (id: number, content: string) => {
     try {
-        const response = await api.put(`/task-comments/${id}`, { content });
+        const response = await api.put(`/projects/task-comments/${id}`, { content });
         return response.data;
     } catch (error) {
         console.error('Error updating task comment:', error);
@@ -825,7 +831,7 @@ export const updateTaskComment = async (id: number, content: string) => {
 
 export const deleteTaskComment = async (id: number) => {
     try {
-        const response = await api.delete(`/task-comments/${id}`);
+        const response = await api.delete(`/projects/task-comments/${id}`);
         return response.data;
     } catch (error) {
         console.error('Error deleting task comment:', error);

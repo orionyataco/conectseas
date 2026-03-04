@@ -23,7 +23,7 @@ export async function askAI(prompt) {
 
     try {
         const model = genAI.getGenerativeModel({
-            model: 'gemini-flash-latest',
+            model: 'gemini-2.5-flash',
             systemInstruction: systemInstruction
         });
 

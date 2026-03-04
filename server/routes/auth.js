@@ -26,7 +26,8 @@ router.post('/login', async (req, res) => {
 
                     if (users.length === 0) {
                         // Create new user from LDAP
-                        const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+                        const { randomBytes } = await import('node:crypto');
+                        const randomPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
                         await pool.query(
                             'INSERT INTO users (username, name, email, password, role, department, position) VALUES (?, ?, ?, ?, ?, ?, ?)',
                             [ldapResult.userInfo.username, ldapResult.userInfo.name, ldapResult.userInfo.email, randomPassword, 'USER', ldapResult.userInfo.department, ldapResult.userInfo.position]
@@ -38,7 +39,7 @@ router.post('/login', async (req, res) => {
                     const user = users[0];
                     const token = jwt.sign(
                         { id: user.id, username: user.username, role: user.role },
-                        process.env.JWT_SECRET || 'secret',
+                        process.env.JWT_SECRET,
                         { expiresIn: '24h' }
                     );
 
@@ -88,7 +89,7 @@ router.post('/login', async (req, res) => {
             // Generate JWT
             const token = jwt.sign(
                 { id: user.id, username: user.username, role: user.role },
-                process.env.JWT_SECRET || 'secret',
+                process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
 

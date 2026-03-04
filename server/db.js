@@ -51,18 +51,31 @@ const pool = {
     let paramsCursor = 0;
 
     // Expande ? para $1, $2, $3... Se for um array no param (ex: IN(?)), expande para $1, $2
-    const convertedSql = trimmed.replace(/\?/g, () => {
+    let convertedSql = trimmed;
+    const parts = trimmed.split('?');
+    if (parts.length - 1 !== normalizedParams.length && !normalizedParams.some(Array.isArray)) {
+      // Fallback or warning if params count doesn't match and no arrays are involved
+      // This is a simple check, since array expansion changes the count
+    }
+
+    convertedSql = '';
+    for (let i = 0; i < parts.length - 1; i++) {
       const val = normalizedParams[paramsCursor++];
+      convertedSql += parts[i];
       if (Array.isArray(val)) {
-        if (val.length === 0) return 'NULL'; // Previne erro de sintaxe se array vazio
-        const placeholders = val.map(() => `$${paramIndex++}`).join(', ');
-        flatParams.push(...val);
-        return placeholders;
+        if (val.length === 0) {
+          convertedSql += 'NULL';
+        } else {
+          const placeholders = val.map(() => `$${paramIndex++}`).join(', ');
+          convertedSql += placeholders;
+          flatParams.push(...val);
+        }
       } else {
+        convertedSql += `$${paramIndex++}`;
         flatParams.push(val);
-        return `$${paramIndex++}`;
       }
-    });
+    }
+    convertedSql += parts[parts.length - 1];
 
     try {
       const startTime = Date.now();
@@ -73,14 +86,16 @@ const pool = {
         const tableMatch = trimmed.match(/INTO\s+([a-zA-Z0-9_"]+)/i);
         const tableName = tableMatch ? tableMatch[1].toLowerCase().replace(/"/g, '') : '';
 
-        // system_settings não tem coluna 'id', usa 'key' como PK
         const skipReturning = ['system_settings'];
 
         if (!hasReturning && !skipReturning.includes(tableName)) {
           finalSql = `${convertedSql} RETURNING id`;
         }
 
-        const result = await pgPool.query(finalSql, flatParams);
+        const result = await Promise.race([
+          pgPool.query(finalSql, flatParams),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT DB (10s)')), 10000))
+        ]);
 
         const duration = Date.now() - startTime;
         if (duration > 500) console.warn(`[LENTIDÂO DB] Query tomou ${duration}ms: ${finalSql.substring(0, 100)}...`);
@@ -91,7 +106,10 @@ const pool = {
           rows: result.rows
         }, []];
       } else if (command === 'UPDATE' || command === 'DELETE') {
-        const result = await pgPool.query(convertedSql, flatParams);
+        const result = await Promise.race([
+          pgPool.query(convertedSql, flatParams),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT DB (10s)')), 10000))
+        ]);
 
         const duration = Date.now() - startTime;
         if (duration > 500) console.warn(`[LENTIDÂO DB] Query tomou ${duration}ms: ${convertedSql.substring(0, 100)}...`);
@@ -102,8 +120,10 @@ const pool = {
           rows: result.rows
         }, []];
       } else {
-        // SELECT, PRAGMA (ignorado), CREATE, ALTER, etc.
-        const result = await pgPool.query(convertedSql, flatParams);
+        const result = await Promise.race([
+          pgPool.query(convertedSql, flatParams),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT DB (10s)')), 10000))
+        ]);
 
         const duration = Date.now() - startTime;
         if (duration > 500) console.warn(`[LENTIDÂO DB] Query tomou ${duration}ms: ${convertedSql.substring(0, 100)}...`);

@@ -54,7 +54,8 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
   const [shareLoading, setShareLoading] = React.useState(false);
 
   const [uploading, setUploading] = React.useState(false);
-  const [previewImage, setPreviewImage] = React.useState<{ url: string; name: string } | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [previewItem, setPreviewItem] = React.useState<{ url: string; name: string; type: 'image' | 'pdf' | 'docx' } | null>(null);
   const [storageStats, setStorageStats] = React.useState<{ used: number; quota: number } | null>(null);
   const [renamingItem, setRenamingItem] = React.useState<{ id: number, type: 'folder' | 'file', currentName: string } | null>(null);
   const [renameValue, setRenameValue] = React.useState('');
@@ -266,6 +267,51 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewMode === 'all' && !(currentFolder !== null && (currentFolder as any).permission === 'READ')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (viewMode !== 'all' || (currentFolder !== null && (currentFolder as any).permission === 'READ')) return;
+    if (!user || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+
+    const filesToUpload = Array.from(e.dataTransfer.files);
+    setUploading(true);
+
+    try {
+      for (const file of filesToUpload as File[]) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentFolder) {
+          formData.append('folderId', currentFolder.id.toString());
+        }
+        await api.post('/drive/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+      fetchContent();
+      fetchStorageStats();
+    } catch (error) {
+      console.error('Failed to upload dropped files:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDeleteFile = async (fileId: number) => {
     if (!user) return;
     if (viewMode === 'trash') {
@@ -334,9 +380,10 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('image')) return <Image size={24} className="text-purple-500" />;
-    if (type.includes('pdf')) return <FileText size={24} className="text-red-500" />;
+  const getFileIcon = (type: string | null | undefined) => {
+    const t = type || '';
+    if (t.includes('image')) return <Image size={24} className="text-purple-500" />;
+    if (t.includes('pdf')) return <FileText size={24} className="text-red-500" />;
     return <File size={24} className="text-blue-500" />;
   };
 
@@ -358,11 +405,27 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
   };
 
   const handleFileClick = (file: DriveFile | any) => {
-    const isImage = file.file_type?.includes('image') || file.item_type === 'image';
-    if (isImage) {
-      setPreviewImage({
-        url: `/uploads/${file.filename}`,
-        name: file.original_name || file.name
+    const filename = file.filename || '';
+    const originalName = file.original_name || file.name || '';
+    const fileType = file.file_type || '';
+
+    if (fileType.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/i.test(originalName)) {
+      setPreviewItem({
+        url: `/uploads/${filename}`,
+        name: originalName,
+        type: 'image'
+      });
+    } else if (fileType.includes('pdf') || /\.pdf$/i.test(originalName)) {
+      setPreviewItem({
+        url: `/uploads/${filename}`,
+        name: originalName,
+        type: 'pdf'
+      });
+    } else if (fileType.includes('officedocument.wordprocessingml.document') || /\.docx$/i.test(originalName)) {
+      setPreviewItem({
+        url: `/uploads/${filename}`,
+        name: originalName,
+        type: 'docx'
       });
     }
   };
@@ -443,7 +506,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                     viewMode === 'trash' ? 'Lixeira' : 'Meus Favoritos'}
             </h1>
             <p className="text-slate-500">
-              {viewMode === 'all' ? 'Gerencie seus arquivos e pastas pessoais.' :
+              {viewMode === 'all' ? 'Gerencie seus arquivos e pastas.' :
                 viewMode === 'recent' ? 'Documentos acessados ou modificados recentemente.' :
                   viewMode === 'shared' ? 'Pastas e registros que outros usuários compartilharam com você.' :
                     viewMode === 'favorites' ? 'Seus itens marcados como favoritos para acesso rápido.' :
@@ -533,7 +596,20 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
         )}
 
         {/* Content Grid */}
-        <div className="flex-1 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm min-h-[400px]">
+        <div
+          className={`flex-1 bg-white rounded-2xl border-2 p-6 shadow-sm min-h-[400px] transition-all relative ${isDragging ? 'border-dashed border-blue-500 bg-blue-50/50' : 'border-slate-200'}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-500/10 backdrop-blur-[2px] z-10 rounded-2xl animate-pulse cursor-copy">
+              <div className="bg-blue-600 text-white p-4 rounded-full shadow-lg mb-4">
+                <Upload size={32} />
+              </div>
+              <p className="text-blue-600 font-bold text-lg">Solte para fazer o upload</p>
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center items-center h-full">
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
@@ -548,7 +624,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {/* Manual Folders in 'all' view */}
-              {viewMode === 'all' && folders.filter(f => f.name.toLowerCase().includes(localSearchQuery.toLowerCase())).map(folder => (
+              {viewMode === 'all' && folders.filter(f => (f.name || '').toLowerCase().includes((localSearchQuery || '').toLowerCase())).map(folder => (
                 <div
                   key={folder.id}
                   onDoubleClick={() => navigateToFolder(folder)}
@@ -607,7 +683,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               ))}
 
               {/* Manual Files in 'all' view */}
-              {viewMode === 'all' && files.filter(f => f.original_name.toLowerCase().includes(localSearchQuery.toLowerCase())).map(file => (
+              {viewMode === 'all' && files.filter(f => (f.original_name || '').toLowerCase().includes((localSearchQuery || '').toLowerCase())).map(file => (
                 <div
                   key={file.id}
                   className="group relative p-4 bg-white hover:shadow-md border border-slate-200 rounded-xl transition-all flex flex-col items-center justify-between text-center gap-3"
@@ -665,7 +741,11 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               ))}
 
               {/* Unified items in filtered views */}
-              {viewMode !== 'all' && unifiedItems.filter(item => (item.name || item.original_name).toLowerCase().includes(localSearchQuery.toLowerCase())).map(item => (
+              {viewMode !== 'all' && unifiedItems.filter(item => {
+                const name = item.name || item.original_name || '';
+                const search = localSearchQuery || '';
+                return name.toLowerCase().includes(search.toLowerCase());
+              }).map(item => (
                 <div
                   key={`${item.item_type}-${item.id}`}
                   onDoubleClick={() => item.item_type === 'folder' ? (setViewMode('all'), navigateToFolder(item)) : null}
@@ -918,51 +998,102 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
         )}
       </div>
 
-      {/* Image Preview Modal */}
-      {
-        previewImage && (
-          <div
-            className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100] p-4 animate-fadeIn"
-            onClick={() => setPreviewImage(null)}
-          >
-            <div className="absolute top-4 right-4 flex gap-4">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const link = document.createElement('a');
-                  link.href = previewImage.url;
-                  link.download = previewImage.name;
-                  link.click();
-                }}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-                title="Download"
-              >
-                <Download size={24} />
-              </button>
-              <button
-                onClick={() => setPreviewImage(null)}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-                title="Fechar"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="max-w-full max-h-[80vh] flex items-center justify-center bg-transparent" onClick={(e) => e.stopPropagation()}>
-              <img
-                src={previewImage.url}
-                alt={previewImage.name}
-                className="max-w-full max-h-[80vh] object-contain shadow-2xl rounded-lg"
-              />
-            </div>
-
-            <div className="mt-6 text-white text-center">
-              <h3 className="text-lg font-bold">{previewImage.name}</h3>
-            </div>
+      {/* Preview Modal (Images, PDF, Word) */}
+      {previewItem && (
+        <div
+          className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100] p-4 animate-fadeIn"
+          onClick={() => setPreviewItem(null)}
+        >
+          <div className="absolute top-4 right-4 flex gap-4 z-[110]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement('a');
+                link.href = previewItem.url;
+                link.download = previewItem.name;
+                link.click();
+              }}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Download"
+            >
+              <Download size={24} />
+            </button>
+            <button
+              onClick={() => setPreviewItem(null)}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Fechar"
+            >
+              <X size={24} />
+            </button>
           </div>
-        )
-      }
+
+          <div
+            className={`w-full max-w-5xl h-[85vh] flex items-center justify-center bg-transparent rounded-lg overflow-hidden ${previewItem.type === 'docx' ? 'bg-white p-4 overflow-y-auto' : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {previewItem.type === 'image' && (
+              <img
+                src={previewItem.url}
+                alt={previewItem.name}
+                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+              />
+            )}
+
+            {previewItem.type === 'pdf' && (
+              <iframe
+                src={`${previewItem.url}#toolbar=0`}
+                className="w-full h-full border-none rounded-lg shadow-2xl bg-white"
+                title={previewItem.name}
+              />
+            )}
+
+            {previewItem.type === 'docx' && (
+              <DocxRenderer url={previewItem.url} />
+            )}
+          </div>
+
+          <div className="mt-6 text-white text-center">
+            <h3 className="text-lg font-bold">{previewItem.name}</h3>
+          </div>
+        </div>
+      )}
     </div >
+  );
+};
+
+// Componente auxiliar para renderizar DOCX
+const DocxRenderer: React.FC<{ url: string }> = ({ url }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const renderDocx = async () => {
+      if (!containerRef.current) return;
+      try {
+        setLoading(true);
+        const { renderAsync } = await import('docx-preview');
+        const response = await fetch(url);
+        const blob = await response.blob();
+        await renderAsync(blob, containerRef.current);
+      } catch (err) {
+        console.error('Erro ao renderizar DOCX:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    renderDocx();
+  }, [url]);
+
+  return (
+    <div className="w-full h-full relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
+      )}
+      <div ref={containerRef} className="w-full h-full docx-container" />
+    </div>
   );
 };
 

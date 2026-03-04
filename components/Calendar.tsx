@@ -798,7 +798,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                           .filter(u =>
                             u.id.toString() !== user?.id?.toString() &&
                             !sharedWith.includes(u.id.toString()) &&
-                            u.name.toLowerCase().includes(userSearch.toLowerCase())
+                            (u.name || '').toLowerCase().includes((userSearch || '').toLowerCase())
                           )
                           .map(u => (
                             <button
@@ -819,7 +819,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                         {users.filter(u =>
                           u.id.toString() !== user?.id?.toString() &&
                           !sharedWith.includes(u.id.toString()) &&
-                          u.name.toLowerCase().includes(userSearch.toLowerCase())
+                          (u.name || '').toLowerCase().includes((userSearch || '').toLowerCase())
                         ).length === 0 && (
                             <p className="text-sm text-slate-400 px-4 py-3 italic">Nenhum usuário encontrado.</p>
                           )}

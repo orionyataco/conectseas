@@ -59,6 +59,8 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+    const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+    const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
     // Permission helpers
     const getCurrentUserRole = () => {
@@ -85,24 +87,56 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
 
     // Drag and Drop handlers
     const handleDragStart = (e: React.DragEvent, taskId: number) => {
-        e.dataTransfer.setData('taskId', taskId.toString());
+        setDraggedTaskId(taskId);
+        e.dataTransfer.setData('text/plain', taskId.toString());
+        e.dataTransfer.effectAllowed = 'move';
+        // Adiciona um timeout curto para mudar a opacidade do elemento original sem quebrar o ghost image
+        setTimeout(() => {
+            const el = document.getElementById(`task-card-${taskId}`);
+            if (el) el.style.opacity = '0.4';
+        }, 0);
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
+    const handleDragEnd = (e: React.DragEvent, taskId: number) => {
+        setDraggedTaskId(null);
+        setDragOverColumn(null);
+        const el = document.getElementById(`task-card-${taskId}`);
+        if (el) el.style.opacity = '1';
+    };
+
+    const handleDragOver = (e: React.DragEvent, columnKey: string) => {
         e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverColumn !== columnKey) {
+            setDragOverColumn(columnKey);
+        }
+    };
+
+    const handleDragEnter = (e: React.DragEvent, columnKey: string) => {
+        e.preventDefault();
+        setDragOverColumn(columnKey);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        // Não limpamos aqui para evitar flicker, deixamos pro drop ou dragend
     };
 
     const handleDrop = async (e: React.DragEvent, status: string) => {
         e.preventDefault();
-        const taskId = parseInt(e.dataTransfer.getData('taskId'));
+        setDragOverColumn(null);
+        const taskIdStr = e.dataTransfer.getData('text/plain');
+        const taskId = parseInt(taskIdStr) || draggedTaskId;
+
         if (taskId) {
             const task = tasks.find(t => t.id === taskId);
             if (task && task.status !== status) {
                 // Optimistic update
-                setTasks(tasks.map(t => t.id === taskId ? { ...t, status: status as any } : t));
+                setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: status as any } : t));
                 await handleTaskStatusChange(taskId, status, 0);
             }
         }
+        setDraggedTaskId(null);
     };
 
 
@@ -185,7 +219,18 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const handleUpdateProject = async (projectData: any) => {
         if (!editingProject) return;
         try {
-            await updateProject(editingProject.id, projectData);
+            const formData = new FormData();
+            Object.keys(projectData).forEach(key => {
+                if (key === 'members') {
+                    formData.append(key, JSON.stringify(projectData[key]));
+                } else if (key === 'attachments') {
+                    projectData[key].forEach((file: File) => formData.append('attachments', file));
+                } else {
+                    formData.append(key, projectData[key] || '');
+                }
+            });
+
+            await updateProject(editingProject.id, formData);
             await loadProjects();
             setEditingProject(null);
         } catch (error) {
@@ -196,7 +241,18 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const handleCreateTask = async (taskData: any) => {
         if (!selectedProject) return;
         try {
-            await createTask(selectedProject.id, { ...taskData, createdBy: user.id });
+            const formData = new FormData();
+            Object.keys(taskData).forEach(key => {
+                if (key === 'assignees' || key === 'subtasks') {
+                    formData.append(key, JSON.stringify(taskData[key]));
+                } else if (key === 'attachments') {
+                    taskData[key].forEach((file: File) => formData.append('attachments', file));
+                } else {
+                    formData.append(key, taskData[key] || '');
+                }
+            });
+
+            await createTask(selectedProject.id, formData);
             await loadProjectDetails(selectedProject.id);
             setShowNewTaskModal(false);
         } catch (error) {
@@ -207,8 +263,18 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const handleUpdateTask = async (taskData: any) => {
         if (!editingTask || !selectedProject) return;
         try {
-            // Update logic here
-            await updateTask(editingTask.id, { ...taskData });
+            const formData = new FormData();
+            Object.keys(taskData).forEach(key => {
+                if (key === 'assignees' || key === 'subtasks') {
+                    formData.append(key, JSON.stringify(taskData[key]));
+                } else if (key === 'attachments') {
+                    taskData[key].forEach((file: File) => formData.append('attachments', file));
+                } else {
+                    formData.append(key, taskData[key] || '');
+                }
+            });
+
+            await updateTask(editingTask.id, formData);
             await loadProjectDetails(selectedProject.id);
             setEditingTask(null);
         } catch (error) {
@@ -279,6 +345,21 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const handleToggleSubtask = async (subtaskId: number, isCompleted: boolean) => {
         try {
             await toggleSubtask(subtaskId, isCompleted);
+
+            // Lógica para mover automaticamente para 'done' se for a última subtask
+            if (isCompleted && selectedProject) {
+                const task = tasks.find(t => t.subtasks?.some(s => s.id === subtaskId));
+                if (task) {
+                    const otherSubtasks = task.subtasks?.filter(s => s.id !== subtaskId) || [];
+                    const allOthersDone = otherSubtasks.every(s => s.is_completed);
+                    if (allOthersDone && task.status !== 'done') {
+                        // Move para done otimisticamente
+                        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'done' } : t));
+                        await handleTaskStatusChange(task.id, 'done', 0);
+                    }
+                }
+            }
+
             if (selectedProject) {
                 await loadProjectDetails(selectedProject.id);
             }
@@ -313,10 +394,13 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
         }
     };
 
-    const filteredProjects = projects.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredProjects = projects.filter(p => {
+        const name = p.name || '';
+        const desc = p.description || '';
+        const search = searchQuery || '';
+        return name.toLowerCase().includes(search.toLowerCase()) ||
+            desc.toLowerCase().includes(search.toLowerCase());
+    });
 
     const tasksByStatus = {
         todo: tasks.filter(t => t.status === 'todo'),
@@ -375,8 +459,10 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                         ].map(column => (
                             <div
                                 key={column.key}
-                                className="flex-1 min-w-[300px] flex flex-col"
-                                onDragOver={handleDragOver}
+                                className={`flex-1 min-w-[300px] flex flex-col rounded-xl transition-colors ${dragOverColumn === column.key ? 'bg-blue-50/50 ring-2 ring-blue-200' : ''}`}
+                                onDragOver={(e) => handleDragOver(e, column.key)}
+                                onDragEnter={(e) => handleDragEnter(e, column.key)}
+                                onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, column.key)}
                             >
                                 <div className={`${column.color} rounded-t-xl p-4`}>
@@ -387,19 +473,25 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex-1 bg-slate-50 rounded-b-xl p-4 space-y-3 overflow-y-auto">
+                                <div
+                                    className={`flex-1 bg-slate-50/50 rounded-b-xl p-4 space-y-3 overflow-y-auto transition-colors ${dragOverColumn === column.key ? 'bg-blue-50/80' : ''}`}
+                                    onDragOver={(e) => handleDragOver(e, column.key)}
+                                    onDrop={(e) => handleDrop(e, column.key)}
+                                >
                                     {tasksByStatus[column.key as keyof typeof tasksByStatus].map(task => (
                                         <div
                                             key={task.id}
+                                            id={`task-card-${task.id}`}
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, task.id)}
+                                            onDragEnd={(e) => handleDragEnd(e, task.id)}
                                             onDoubleClick={(e) => {
                                                 e.stopPropagation();
                                                 if (canEditTask(task)) {
                                                     setEditingTask(task);
                                                 }
                                             }}
-                                            className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow cursor-pointer relative"
+                                            className={`bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative ${draggedTaskId === task.id ? 'scale-95 shadow-inner' : ''}`}
                                         >
                                             <div className="flex items-start justify-between mb-2">
                                                 <h4 className="font-medium text-slate-900 flex-1">{task.title}</h4>
@@ -785,10 +877,13 @@ const NewProjectModal: React.FC<{
     const [userSearch, setUserSearch] = useState('');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-        (u.position && u.position.toLowerCase().includes(userSearch.toLowerCase()))
-    );
+    const filteredUsers = users.filter(u => {
+        const name = u.name || '';
+        const position = u.position || '';
+        const search = userSearch || '';
+        return name.toLowerCase().includes(search.toLowerCase()) ||
+            position.toLowerCase().includes(search.toLowerCase());
+    });
 
     const handleUserToggle = (userId: string) => {
         if (selectedMembers.includes(userId)) {
@@ -819,12 +914,14 @@ const NewProjectModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-2xl w-full p-6 my-8">
+            <div className="bg-white rounded-xl max-w-xl w-full p-6 my-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">{isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Nome do Projeto *</label>
+                        <label htmlFor="projectName" className="block text-sm font-medium text-slate-700 mb-2">Nome do Projeto *</label>
                         <input
+                            id="projectName"
+                            name="projectName"
                             type="text"
                             required
                             value={formData.name}
@@ -834,8 +931,10 @@ const NewProjectModal: React.FC<{
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
+                        <label htmlFor="projectDescription" className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
                         <textarea
+                            id="projectDescription"
+                            name="projectDescription"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
@@ -846,8 +945,10 @@ const NewProjectModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
+                            <label htmlFor="projectPriority" className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
                             <select
+                                id="projectPriority"
+                                name="projectPriority"
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -859,8 +960,10 @@ const NewProjectModal: React.FC<{
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <label htmlFor="projectStatus" className="block text-sm font-medium text-slate-700 mb-2">Status</label>
                             <select
+                                id="projectStatus"
+                                name="projectStatus"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -874,8 +977,10 @@ const NewProjectModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Visibilidade</label>
+                            <label htmlFor="projectVisibility" className="block text-sm font-medium text-slate-700 mb-2">Visibilidade</label>
                             <select
+                                id="projectVisibility"
+                                name="projectVisibility"
                                 value={formData.visibility}
                                 onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -904,6 +1009,8 @@ const NewProjectModal: React.FC<{
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                     <input
+                                        id="projectUserSearch"
+                                        name="projectUserSearch"
                                         type="text"
                                         value={userSearch}
                                         onChange={(e) => {
@@ -950,8 +1057,10 @@ const NewProjectModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Data de Início</label>
+                            <label htmlFor="projectStartDate" className="block text-sm font-medium text-slate-700 mb-2">Data de Início</label>
                             <input
+                                id="projectStartDate"
+                                name="projectStartDate"
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -959,8 +1068,10 @@ const NewProjectModal: React.FC<{
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Previsão de Entrega</label>
+                            <label htmlFor="projectEndDate" className="block text-sm font-medium text-slate-700 mb-2">Previsão de Entrega</label>
                             <input
+                                id="projectEndDate"
+                                name="projectEndDate"
                                 type="date"
                                 value={formData.endDate}
                                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -970,22 +1081,22 @@ const NewProjectModal: React.FC<{
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Anexos do Projeto</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Anexos</label>
                         <div className="space-y-2">
-                            <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
+                            <label htmlFor="projectAttachments" className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
                                 <Paperclip size={18} className="text-slate-500" />
                                 <span className="text-sm text-slate-600 font-medium">Anexar arquivos</span>
-                                <input type="file" multiple onChange={handleFileChange} className="hidden" />
+                                <input id="projectAttachments" name="projectAttachments" type="file" multiple onChange={handleFileChange} className="hidden" />
                             </label>
                             {attachments.length > 0 && (
-                                <div className="space-y-1">
+                                <div className="grid grid-cols-1 gap-1">
                                     {attachments.map((file, index) => (
-                                        <div key={index} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-                                            <div className="flex items-center gap-2">
-                                                <Paperclip size={14} className="text-slate-400" />
-                                                <span className="text-sm text-slate-700 truncate max-w-[200px]">{file.name}</span>
+                                        <div key={index} className="flex items-center justify-between px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Paperclip size={14} className="text-slate-400 shrink-0" />
+                                                <span className="text-xs text-slate-700 truncate">{file.name}</span>
                                             </div>
-                                            <button type="button" onClick={() => removeAttachment(index)} className="text-slate-400 hover:text-red-600">
+                                            <button type="button" onClick={() => removeAttachment(index)} className="text-slate-400 hover:text-red-600 p-1">
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
@@ -1067,10 +1178,13 @@ const NewTaskModal: React.FC<{
         }
     }, [initialData, users]);
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.position?.toLowerCase().includes(userSearch.toLowerCase())
-    );
+    const filteredUsers = users.filter(u => {
+        const name = u.name || '';
+        const position = u.position || '';
+        const search = userSearch || '';
+        return name.toLowerCase().includes(search.toLowerCase()) ||
+            position.toLowerCase().includes(search.toLowerCase());
+    });
 
     const handleUserSelect = (user: User) => {
         if (!selectedUsers.find(u => u.id === user.id)) {
@@ -1120,13 +1234,15 @@ const NewTaskModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-3xl w-full p-6 my-8">
+            <div className="bg-white rounded-xl max-w-xl w-full p-6 my-8 shadow-2xl">
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">{isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Título */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Título *</label>
+                        <label htmlFor="taskTitle" className="block text-sm font-medium text-slate-700 mb-2">Título *</label>
                         <input
+                            id="taskTitle"
+                            name="taskTitle"
                             type="text"
                             required
                             value={formData.title}
@@ -1138,8 +1254,10 @@ const NewTaskModal: React.FC<{
 
                     {/* Descrição */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
+                        <label htmlFor="taskDescription" className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
                         <textarea
+                            id="taskDescription"
+                            name="taskDescription"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
@@ -1180,6 +1298,8 @@ const NewTaskModal: React.FC<{
                                 <div className="relative w-full">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
+                                        id="taskUserSearch"
+                                        name="taskUserSearch"
                                         type="text"
                                         value={userSearch}
                                         onChange={(e) => {
@@ -1228,8 +1348,10 @@ const NewTaskModal: React.FC<{
                     {/* Prioridade e Prazo */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
+                            <label htmlFor="taskPriority" className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
                             <select
+                                id="taskPriority"
+                                name="taskPriority"
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1241,8 +1363,10 @@ const NewTaskModal: React.FC<{
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Prazo</label>
+                            <label htmlFor="taskDueDate" className="block text-sm font-medium text-slate-700 mb-2">Prazo</label>
                             <input
+                                id="taskDueDate"
+                                name="taskDueDate"
                                 type="date"
                                 value={formData.dueDate}
                                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
@@ -1259,6 +1383,8 @@ const NewTaskModal: React.FC<{
                         <div className="space-y-2">
                             <div className="flex gap-2">
                                 <input
+                                    id="taskNewSubtask"
+                                    name="taskNewSubtask"
                                     type="text"
                                     value={newSubtask}
                                     onChange={(e) => setNewSubtask(e.target.value)}
@@ -1298,27 +1424,49 @@ const NewTaskModal: React.FC<{
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Anexos</label>
                         <div className="space-y-2">
-                            <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
+                            <label htmlFor="taskAttachments" className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
                                 <Paperclip size={18} className="text-slate-500" />
                                 <span className="text-sm text-slate-600">Clique para adicionar arquivos</span>
                                 <input
+                                    id="taskAttachments"
+                                    name="taskAttachments"
                                     type="file"
                                     multiple
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
                             </label>
+                            {/* Existing attachments from server */}
+                            {initialData?.attachments && initialData.attachments.length > 0 && (
+                                <div className="grid grid-cols-1 gap-1">
+                                    {initialData.attachments.map((file: any) => (
+                                        <div key={file.id} className="flex items-center justify-between px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Paperclip size={14} className="text-blue-400 shrink-0" />
+                                                <a href={file.path} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-700 hover:underline truncate">
+                                                    {file.name}
+                                                </a>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-blue-400">{(file.size / 1024).toFixed(1)} KB</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {/* New attachments locally added */}
                             {attachments.length > 0 && (
-                                <div className="space-y-1 mt-3">
+                                <div className="grid grid-cols-1 gap-1">
                                     {attachments.map((file, index) => (
-                                        <div key={index} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-                                            <Paperclip size={14} className="text-slate-400" />
-                                            <span className="flex-1 text-sm text-slate-700">{file.name}</span>
-                                            <span className="text-xs text-slate-500">{(file.size / 1024).toFixed(1)} KB</span>
+                                        <div key={index} className="flex items-center justify-between px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Paperclip size={14} className="text-slate-400 shrink-0" />
+                                                <span className="text-xs text-slate-700 truncate">{file.name}</span>
+                                            </div>
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveAttachment(index)}
-                                                className="text-slate-400 hover:text-red-600"
+                                                className="text-slate-400 hover:text-red-600 p-1"
                                             >
                                                 <Trash2 size={14} />
                                             </button>

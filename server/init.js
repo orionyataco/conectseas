@@ -308,6 +308,7 @@ const initDB = async () => {
     `);
     try { await connection.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_archived INTEGER DEFAULT 0'); } catch (e) { }
     try { await connection.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'public'"); } catch (e) { }
+    try { await connection.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS drive_folder_id INTEGER"); } catch (e) { }
     console.log('Tabela "projects" verificada/criada.');
 
     // Create project_attachments table

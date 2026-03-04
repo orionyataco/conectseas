@@ -144,7 +144,11 @@ initDB();
 // Basic Error Handler
 app.use((err, req, res, next) => {
     console.error('SERVER ERROR:', err);
-    res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+        error: 'Erro interno do servidor',
+        details: isProduction ? 'Ocorreu um erro inesperado. Entre em contato com o suporte.' : err.message
+    });
 });
 
 // Catch-all handler

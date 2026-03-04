@@ -39,8 +39,11 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
 
     const filteredGroups = Object.entries(groupedUsers).reduce((acc, [dept, users]) => {
         const filtered = (users as any[]).filter(u => {
-            const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                u.department?.toLowerCase().includes(searchQuery.toLowerCase());
+            const name = u.name || '';
+            const dept = u.department || '';
+            const search = searchQuery || '';
+            const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) ||
+                dept.toLowerCase().includes(search.toLowerCase());
             const matchesOnline = !showOnlineOnly || u.isOnline;
             return matchesSearch && matchesOnline;
         });
