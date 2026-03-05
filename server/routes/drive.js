@@ -180,9 +180,22 @@ router.delete('/files/:id', async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
     try {
-        const [files] = await pool.query('SELECT user_id FROM user_files WHERE id = ?', [id]);
+        const [files] = await pool.query('SELECT user_id, filename FROM user_files WHERE id = ?', [id]);
         if (files.length === 0) return res.status(404).json({ error: 'Arquivo não encontrado' });
         if (files[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
+
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+
+        try {
+            await fs.unlink(path.join(__dirname, '../../uploads', files[0].filename));
+        } catch (fsErr) {
+            console.warn('Physical file not found or could not be deleted:', fsErr.message);
+        }
+
         await pool.query('DELETE FROM user_files WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {

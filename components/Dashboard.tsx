@@ -61,12 +61,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   });
 
   React.useEffect(() => {
+    console.log("warningData from API:", warningData);
     if (warningData && Array.isArray(warningData)) {
       setWarning(warningData[0] || null);
     } else if (warningData) {
       setWarning(warningData);
     }
   }, [warningData]);
+
+  // LOG warning state before render
+  console.log("Current warning state to render:", warning);
 
   // User data queries
   const { data: noteData } = useQuery({
@@ -403,8 +407,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* Aviso Dinâmico */}
       {warning && (
-        <div className={`border - l - 4 rounded - xl p - 6 shadow - sm flex items - start gap - 4 relative overflow - hidden ${urgencyStyles.container} `}>
-          <div className={`p - 3 rounded - full ${urgencyStyles.iconBg} relative z - 10`}>
+        <div className={`border-l-4 rounded-xl p-6 shadow-sm flex items-start gap-4 relative overflow-hidden ${urgencyStyles.container}`}>
+          <div className={`p-3 rounded-full ${urgencyStyles.iconBg} relative z-10`}>
             {warning.urgency === 'high' ? <ShieldAlert size={24} /> : <Info size={24} />}
           </div>
           <div className="flex-1 relative z-10">
@@ -441,7 +445,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </div>
           )}
 
-          <div className={`hidden md:block w - 64 h - 64 absolute - top - 10 - right - 10 rounded - full bg - gradient - to - br ${urgencyStyles.gradient} opacity - 10 blur - 3xl pointer - events - none`}></div>
+          <div className={`hidden md:block w-64 h-64 absolute -top-10 -right-10 rounded-full bg-gradient-to-br ${urgencyStyles.gradient} opacity-10 blur-3xl pointer-events-none`}></div>
         </div>
       )}
 

@@ -5,6 +5,8 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { initSocket } from './socket.js';
 
 // DB and Initialization
@@ -39,6 +41,7 @@ const io = initSocket(server);
 const PORT = process.env.PORT || 3002;
 
 // Basic Middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -47,6 +50,12 @@ app.use(express.static(path.join(__dirname, '../dist')));
 // --- API Routes ---
 
 // Public Routes
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'Muitas tentativas de login por este IP, tente novamente após 15 minutos' }
+});
+app.use('/api/login', loginLimiter);
 app.use('/api', authRoutes); // /api/login
 
 // Public Settings Route
