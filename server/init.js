@@ -35,28 +35,6 @@ const initDB = async () => {
       )
     `);
 
-    // Safe column migrations (PostgreSQL supports ADD COLUMN IF NOT EXISTS)
-    const userCols = [
-      { name: 'nickname', type: 'TEXT' },
-      { name: 'bio', type: 'TEXT' },
-      { name: 'birth_date', type: 'DATE' },
-      { name: 'mobile_phone', type: 'TEXT' },
-      { name: 'registration_number', type: 'TEXT' },
-      { name: 'appointment_date', type: 'DATE' },
-      { name: 'storage_quota', type: 'BIGINT DEFAULT 1073741824' },
-      { name: 'vacation_status', type: 'INTEGER DEFAULT 0' },
-      { name: 'vacation_message', type: 'TEXT' },
-      { name: 'vacation_start_date', type: 'DATE' },
-      { name: 'vacation_end_date', type: 'DATE' },
-      { name: 'last_seen', type: 'TIMESTAMPTZ' }
-    ];
-
-    for (const col of userCols) {
-      try {
-        await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
-      } catch (e) { /* ignore */ }
-    }
-
     console.log('Tabela "users" verificada/criada.');
 
     // Create warnings table
@@ -181,9 +159,6 @@ const initDB = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
-    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
-    try { await connection.query('ALTER TABLE user_folders ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_folders" verificada/criada.');
 
     // Create user_files table
@@ -208,9 +183,6 @@ const initDB = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
-    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
-    try { await connection.query('ALTER TABLE user_files ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_files" verificada/criada.');
 
     // Create folder_shares table
@@ -255,7 +227,6 @@ const initDB = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE user_shortcuts ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "user_shortcuts" verificada/criada.');
 
     // Create system_shortcuts table
@@ -271,7 +242,6 @@ const initDB = async () => {
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    try { await connection.query('ALTER TABLE system_shortcuts ADD COLUMN IF NOT EXISTS is_favorite INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "system_shortcuts" verificada/criada.');
 
     // Create todos table
@@ -306,9 +276,6 @@ const initDB = async () => {
         FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_archived INTEGER DEFAULT 0'); } catch (e) { }
-    try { await connection.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'public'"); } catch (e) { }
-    try { await connection.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS drive_folder_id INTEGER"); } catch (e) { }
     console.log('Tabela "projects" verificada/criada.');
 
     // Create project_attachments table
@@ -465,7 +432,6 @@ const initDB = async () => {
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    try { await connection.query('ALTER TABLE sidebar_items ADD COLUMN IF NOT EXISTS open_in_iframe INTEGER DEFAULT 0'); } catch (e) { }
     console.log('Tabela "sidebar_items" verificada/criada.');
 
     // Populate default sidebar items if table is empty
@@ -512,7 +478,6 @@ const initDB = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE tectic_tickets ADD COLUMN IF NOT EXISTS resolved_by INTEGER'); } catch (e) { }
     console.log('Tabela "tectic_tickets" verificada/criada.');
 
     await connection.query(`
@@ -543,7 +508,6 @@ const initDB = async () => {
         FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE tectic_knowledge ADD COLUMN IF NOT EXISTS tags TEXT'); } catch (e) { }
     console.log('Tabela "tectic_knowledge" verificada/criada.');
 
     await connection.query(`
@@ -675,9 +639,6 @@ const initDB = async () => {
         FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS is_edited INTEGER DEFAULT 0'); } catch (e) { }
-    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0'); } catch (e) { }
-    try { await connection.query('ALTER TABLE messenger_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ'); } catch (e) { }
     console.log('Tabela "messenger_messages" verificada/criada.');
 
     connection.release();

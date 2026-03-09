@@ -43,6 +43,11 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
 
     React.useEffect(() => {
         const idToFetch = targetUserId || currentUser.id;
+        setIsEditing(false);
+        setError(null);
+        setSuccess(null);
+        setPreviewAvatar(null);
+        setAvatarFile(null);
         fetchUserProfile(idToFetch);
     }, [targetUserId, currentUser.id]);
 
@@ -446,7 +451,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                                         <Award size={16} className="text-yellow-500" />
-                                        Data de Nomeação
+                                        Data de Admissão
                                     </label>
                                     {isEditing ? (
                                         <input

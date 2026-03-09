@@ -8,7 +8,7 @@ const router = express.Router();
 // GET Users (for sharing)
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, name, email, avatar FROM users ORDER BY name ASC');
+        const [rows] = await pool.query('SELECT id, name, email, avatar, birth_date, appointment_date FROM users ORDER BY name ASC');
         res.json(rows);
     } catch (error) {
         console.error('Erro ao buscar usuários:', error);
@@ -37,6 +37,7 @@ router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) =
 
     // Security: Only the user themselves or an ADMIN can update the profile
     if (String(id) !== String(requesterId) && requesterRole !== 'ADMIN') {
+        console.warn(`Tentativa não autorizada de edição de perfil: Usuário ${requesterId} tentou editar perfil ${id}`);
         return res.status(403).json({ error: 'Não autorizado a editar este perfil' });
     }
 

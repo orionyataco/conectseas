@@ -120,7 +120,7 @@ router.get('/posts/:id/comments', async (req, res) => {
 
         const formattedComments = comments.map(c => ({
             ...c,
-            created_at: c.created_at ? new Date(c.created_at + ' UTC').toISOString() : new Date().toISOString()
+            created_at: c.created_at ? new Date(c.created_at).toISOString() : new Date().toISOString()
         }));
         res.json(formattedComments);
     } catch (error) {
@@ -207,11 +207,11 @@ router.get('/feed', async (req, res) => {
 
         const formattedPosts = posts.map(p => ({
             ...p,
-            created_at: p.created_at ? new Date(p.created_at + ' UTC').toISOString() : new Date().toISOString()
+            created_at: p.created_at ? new Date(p.created_at).toISOString() : new Date().toISOString()
         }));
         const formattedEvents = events.map(e => ({
             ...e,
-            created_at: e.created_at ? new Date(e.created_at + ' UTC').toISOString() : new Date().toISOString()
+            created_at: e.created_at ? new Date(e.created_at).toISOString() : new Date().toISOString()
         }));
 
         const feed = [...formattedPosts, ...formattedEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

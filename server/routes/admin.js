@@ -217,6 +217,30 @@ router.put('/users/:id/quota', async (req, res) => {
     }
 });
 
+router.put('/users/:id/department', async (req, res) => {
+    const { id } = req.params;
+    const { department } = req.body;
+    try {
+        await pool.query('UPDATE users SET department = ? WHERE id = ?', [department, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao atualizar departamento do usuário ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao atualizar departamento' });
+    }
+});
+
+router.put('/users/:id/position', async (req, res) => {
+    const { id } = req.params;
+    const { position } = req.body;
+    try {
+        await pool.query('UPDATE users SET position = ? WHERE id = ?', [position, id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Erro ao atualizar cargo do usuário ${id}:`, error);
+        res.status(500).json({ error: 'Erro ao atualizar cargo' });
+    }
+});
+
 // LDAP Test
 router.post('/ldap/test', async (req, res) => {
     try {

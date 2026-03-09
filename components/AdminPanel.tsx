@@ -974,8 +974,58 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-slate-600">{typeof user.department === 'string' ? user.department : (user.department ? JSON.stringify(user.department) : 'N/A')}</td>
-                                <td className="px-6 py-4 text-sm text-slate-600 font-medium">{typeof user.position === 'string' ? user.position : (user.position ? JSON.stringify(user.position) : 'N/A')}</td>
+                                <td className="px-6 py-4">
+                                    <input
+                                        type="text"
+                                        value={user.department || ''}
+                                        onChange={async (e) => {
+                                            const newVal = e.target.value;
+                                            setUsersList(usersList.map(u => u.id === user.id ? { ...u, department: newVal } : u));
+                                        }}
+                                        onBlur={async (e) => {
+                                            const newVal = e.target.value;
+                                            try {
+                                                setSaving(true);
+                                                const { updateUserDepartment } = await import('../services/api');
+                                                await updateUserDepartment(user.id, newVal);
+                                                setSuccess('Departamento atualizado!');
+                                                setTimeout(() => setSuccess(''), 3000);
+                                            } catch (err) {
+                                                setError('Erro ao atualizar departamento.');
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                        placeholder="N/A"
+                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <input
+                                        type="text"
+                                        value={user.position || ''}
+                                        onChange={async (e) => {
+                                            const newVal = e.target.value;
+                                            setUsersList(usersList.map(u => u.id === user.id ? { ...u, position: newVal } : u));
+                                        }}
+                                        onBlur={async (e) => {
+                                            const newVal = e.target.value;
+                                            try {
+                                                setSaving(true);
+                                                const { updateUserPosition } = await import('../services/api');
+                                                await updateUserPosition(user.id, newVal);
+                                                setSuccess('Cargo atualizado!');
+                                                setTimeout(() => setSuccess(''), 3000);
+                                            } catch (err) {
+                                                setError('Erro ao atualizar cargo.');
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                        placeholder="N/A"
+                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                </td>
                                 <td className="px-6 py-4">
                                     <span className={`text-[10px] font-extrabold px-2 py-1 rounded-md ${user.role === UserRole.ADMIN
                                         ? 'bg-red-50 text-red-600 border border-red-100'

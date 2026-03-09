@@ -38,7 +38,9 @@ import {
   Type,
   Strikethrough,
   Link as LinkIcon,
-  Globe
+  Globe,
+  Cake,
+  Award as AwardIcon
 } from 'lucide-react';
 
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -522,15 +524,50 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     return (bytes / 1048576).toFixed(1) + ' MB';
   };
 
+  const getBirthdayPeople = () => {
+    const currentMonth = new Date().getMonth() + 1; // 1-12
+    return users.filter(u => {
+      if (!u.birth_date) return false;
+      const bMonth = new Date(u.birth_date).getUTCMonth() + 1;
+      return bMonth === currentMonth;
+    }).sort((a, b) => {
+      const dayA = new Date(a.birth_date!).getUTCDate();
+      const dayB = new Date(b.birth_date!).getUTCDate();
+      return dayA - dayB;
+    });
+  };
+
+  const getWorkAnniversaries = () => {
+    const today = new Date();
+    const currentMonth = today.getUTCMonth() + 1;
+    return users.filter(u => {
+      if (!u.appointment_date) return false;
+      const aMonth = new Date(u.appointment_date).getUTCMonth() + 1;
+      return aMonth === currentMonth;
+    }).map(u => {
+      const appDate = new Date(u.appointment_date!);
+      let years = today.getUTCFullYear() - appDate.getUTCFullYear();
+      // Only show if it's at least 1 year
+      return { user: u, years };
+    }).filter(item => item.years > 0)
+      .sort((a, b) => {
+        const dayA = new Date(a.user.appointment_date!).getUTCDate();
+        const dayB = new Date(b.user.appointment_date!).getUTCDate();
+        return dayA - dayB;
+      });
+  };
+
+  const birthdayPeople = getBirthdayPeople();
+  const workAnniversaries = getWorkAnniversaries();
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Mural Interativo</h1>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          <span className="text-xs font-medium text-slate-500">Online</span>
-        </div>
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Mural Interativo</h1>
       </header>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex-1 space-y-8 animate-fadeIn">
 
       {/* New Post Creator */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-visible relative z-30">
@@ -1074,6 +1111,73 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
             </article>
           );
         })}
+      </div>
+    </div>
+
+        {/* Sidebar Cards */}
+        <aside className="lg:w-80 space-y-6">
+          {/* Birthdays Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
+            <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-pink-50 to-white flex items-center gap-3">
+              <div className="p-2.5 bg-white text-pink-600 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+                <Cake size={20} />
+              </div>
+              <h3 className="font-bold text-slate-800">Aniversariantes do Mês</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              {birthdayPeople.length > 0 ? (
+                birthdayPeople.map(u => (
+                  <div key={u.id} className="flex items-center gap-3">
+                    <img
+                      src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`}
+                      className="w-10 h-10 rounded-full object-cover border border-slate-100"
+                      alt={u.name}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{u.nickname || u.name}</p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Dia {new Date(u.birth_date!).getUTCDate()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-4 italic">Nenhum aniversariante este mês</p>
+              )}
+            </div>
+          </div>
+
+          {/* Work Anniversaries Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
+            <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-yellow-50 to-white flex items-center gap-3">
+              <div className="p-2.5 bg-white text-yellow-600 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+                <AwardIcon size={20} />
+              </div>
+              <h3 className="font-bold text-slate-800">Tempo de Casa</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              {workAnniversaries.length > 0 ? (
+                workAnniversaries.map(item => (
+                  <div key={item.user.id} className="flex items-center gap-3">
+                    <img
+                      src={item.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user.name)}&background=random`}
+                      className="w-10 h-10 rounded-full object-cover border border-slate-100"
+                      alt={item.user.name}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{item.user.nickname || item.user.name}</p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {item.years} {item.years === 1 ? 'ano' : 'anos'} de casa • Dia {new Date(item.user.appointment_date!).getUTCDate()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-4 italic">Sem aniversários de admissão este mês</p>
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

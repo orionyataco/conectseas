@@ -547,6 +547,26 @@ export const updateUserQuota = async (userId: number, quota: number) => {
     }
 };
 
+export const updateUserDepartment = async (userId: number, department: string) => {
+    try {
+        const response = await api.put(`/admin/users/${userId}/department`, { department });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating user department for ${userId}:`, error);
+        throw error;
+    }
+};
+
+export const updateUserPosition = async (userId: number, position: string) => {
+    try {
+        const response = await api.put(`/admin/users/${userId}/position`, { position });
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating user position for ${userId}:`, error);
+        throw error;
+    }
+};
+
 export const testLDAPConnection = async (config?: any) => {
     try {
         const response = await api.post('/admin/ldap/test', config || {});
