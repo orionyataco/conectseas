@@ -1,41 +1,64 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
-    build: .
+    build:
+      context: .
+    image: conectseas-app:latest
     restart: always
     ports:
-      - "3002:3002"
+      - "3102:3002"
     environment:
-      - PORT=3002
-      - DB_TYPE=mysql
-      - DB_HOST=db
-      - DB_USER=seas_user
-      - DB_PASSWORD=seas_password
-      - DB_NAME=seas_portal
-      - JWT_SECRET=${JWT_SECRET:-changeme_in_production}
+      PORT: 3002
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres_secret}
+      DB_NAME: ${DB_NAME:-conectseas}
+      DB_SSL: ${DB_SSL:-false}
+      JWT_SECRET: ${JWT_SECRET:-changeme_in_production}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./uploads:/app/server/uploads
+      - ./server/uploads:/app/server/uploads
+    networks:
+      - local-network
+      - app-private
 
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_secret}
-      - MYSQL_DATABASE=seas_portal
-      - MYSQL_USER=seas_user
-      - MYSQL_PASSWORD=seas_password
-    ports:
-      - "3306:3306"
+      POSTGRES_DB: ${DB_NAME:-conectseas}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_secret}
     volumes:
-      - db_data:/var/lib/mysql
+      - conectseas_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      timeout: 20s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+    networks:
+      - app-private
+
+  adminer:
+    image: adminer:latest
+    restart: always
+    ports:
+      - "8085:8080"
+    networks:
+      - local-network
+      - app-private
 
 volumes:
-  db_data:
+  conectseas_postgres_data:
+
+networks:
+  local-network:
+    external: true
+  app-private:
+    driver: bridge
+    internal: true
