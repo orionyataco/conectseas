@@ -178,6 +178,10 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    setActiveTab('dashboard');
+    setTargetUserId(null);
+    setSearchContext(null);
+    window.history.replaceState({}, '', window.location.pathname);
     authLogout();
   };
 
@@ -191,37 +195,37 @@ const App: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-100 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-        <div className="bg-white w-full max-w-5xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-slate-200">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950 transition-colors duration-300 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-slate-200 dark:border-slate-800">
           {/* Left Side: Form */}
           <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center">
             <div className="mb-10">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-200">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-200 dark:shadow-none">
                 <Key size={28} />
               </div>
-              <h1 className="text-3xl font-extrabold text-slate-800 mb-2">{loginSettings.title}</h1>
-              <p className="text-slate-500">{loginSettings.subtitle}</p>
+              <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 mb-2">{loginSettings.title}</h1>
+              <p className="text-slate-500 dark:text-slate-400">{loginSettings.subtitle}</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Login</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Login</label>
                 <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Digite seu usuário de rede"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 outline-none transition-all text-sm"
                 />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
-                  <label className="text-sm font-bold text-slate-700">Senha</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Senha</label>
                 </div>
 
                 {loginError && (
-                  <div className="p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-xl border border-red-100 dark:border-red-900/30 flex items-center gap-2">
                     <span className="font-bold">Erro:</span> {typeof loginError === 'string' ? loginError : JSON.stringify(loginError)}
                   </div>
                 )}
@@ -232,12 +236,12 @@ const App: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Digite sua senha institucional"
-                    className="w-full px-5 py-4 pr-12 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all text-sm"
+                    className="w-full px-5 py-4 pr-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 outline-none transition-all text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                     aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -246,14 +250,14 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 px-1">
-                <input type="checkbox" id="remember" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                <label htmlFor="remember" className="text-sm text-slate-500 font-medium">Lembrar-me neste computador</label>
+                <input type="checkbox" id="remember" className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="remember" className="text-sm text-slate-500 dark:text-slate-400 font-medium">Lembrar-me neste computador</label>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-100 disabled:opacity-70"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-100 dark:shadow-none disabled:opacity-70"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -267,10 +271,10 @@ const App: React.FC = () => {
             </form>
 
             <div className="mt-12 flex flex-col gap-3 text-center md:text-left">
-              <p className="text-xs text-slate-400">Problemas com acesso? <a href="#" className="text-blue-600 font-bold hover:underline">Contate o suporte TI</a></p>
-              <p className="text-xs text-slate-300">© {new Date().getFullYear()} Governo do Estado do Amapá. Todos os direitos reservados.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Problemas com acesso? <a href="#" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Contate o suporte TI</a></p>
+              <p className="text-xs text-slate-300 dark:text-slate-600">© {new Date().getFullYear()} Governo do Estado do Amapá. Todos os direitos reservados.</p>
               {dbStatus && (
-                <div className={`flex items-center gap-2 text-xs font-bold ${dbStatus.connected ? 'text-green-600' : 'text-red-500'}`}>
+                <div className={`flex items-center gap-2 text-xs font-bold ${dbStatus.connected ? 'text-green-600 dark:text-green-500' : 'text-red-500'}`}>
                   <Database size={14} />
                   <span>{dbStatus.message}</span>
                 </div>

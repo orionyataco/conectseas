@@ -1,5 +1,6 @@
 import React from 'react';
-import { Bell, Search, LogOut, User as UserIcon, Menu, X, HelpCircle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, Search, LogOut, User as UserIcon, Menu, X, HelpCircle, Loader2, ChevronLeft, ChevronRight, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, getSidebarItems, globalSearch } from '../services/api';
 import { User, UserRole } from '../types';
@@ -59,6 +60,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTargetUserId, onLogout, setSearchContext, onOpenTicket, sidebarItems: propSidebarItems, visualIdentity, children }) => {
+  const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
@@ -262,14 +264,14 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[60] bg-white border-r border-slate-200 transition-all duration-300 flex flex-col
+      <aside className={`fixed inset-y-0 left-0 z-[60] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static
         ${isCollapsed ? 'w-20' : 'w-64'}
       `}>
         <div className="h-full flex flex-col">
-          <div className={`p-4 border-b border-slate-100 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-3`}>
+          <div className={`p-4 border-b border-slate-100 dark:border-slate-700 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-3`}>
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-10 h-10 min-w-[40px] bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {visualIdentity?.app_logo ? (
@@ -284,7 +286,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
               </div>
               {!isCollapsed && (
                 <div className="whitespace-nowrap overflow-hidden">
-                  <h1 className="font-bold text-slate-800 leading-none text-lg truncate max-w-[150px]" title={visualIdentity?.app_name || 'CONECTSEAS'}>
+                  <h1 className="font-bold text-slate-800 dark:text-slate-100 leading-none text-lg truncate max-w-[150px]" title={visualIdentity?.app_name || 'CONECTSEAS'}>
                     {visualIdentity?.app_name || 'CONECTSEAS'}
                   </h1>
                   <p className="text-xs text-slate-500 mt-1 truncate max-w-[150px]" title={visualIdentity?.app_description || 'Governo do Amapá'}>
@@ -295,7 +297,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
             </div>
             <div className="flex items-center gap-1">
               {!isCollapsed && (
-                <button onClick={() => setIsCollapsed(true)} className="hidden lg:block p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
+                <button onClick={() => setIsCollapsed(true)} className="hidden lg:block p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400">
                   <ChevronLeft size={20} />
                 </button>
               )}
@@ -309,8 +311,8 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
           </div>
 
           {isCollapsed && (
-            <div className="hidden lg:flex justify-center py-2 border-b border-slate-100">
-              <button onClick={() => setIsCollapsed(false)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400">
+            <div className="hidden lg:flex justify-center py-2 border-b border-slate-100 dark:border-slate-700">
+              <button onClick={() => setIsCollapsed(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400">
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -345,8 +347,8 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                       }}
                       title={isCollapsed ? item.label : ''}
                       className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.path
-                        ? 'bg-blue-50 text-blue-600 font-medium'
-                        : 'text-slate-600 hover:bg-slate-50'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                         } ${isCollapsed ? 'justify-center' : ''}`}
                     >
                       <IconComponent size={20} />
@@ -359,7 +361,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
 
 
           {!isCollapsed && (
-            <div className="p-4 border-t border-slate-100">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700">
               <div className="bg-blue-600 rounded-2xl p-4 text-white relative overflow-hidden">
                 <div className="relative z-10">
                   <p className="text-xs opacity-80 mb-1 font-medium">Precisa de Ajuda?</p>
@@ -375,24 +377,24 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
             </div>
           )}
 
-          <div className="p-4 border-t border-slate-100">
+          <div className="p-4 border-t border-slate-100 dark:border-slate-700">
             <button
               onClick={() => {
                 setActiveTab('profile');
                 setTargetUserId(null);
               }}
               title={isCollapsed ? user.name : ""}
-              className={`flex items-center gap-3 w-full text-left hover:bg-slate-50 p-2 ${isCollapsed ? 'justify-center rounded-lg' : '-ml-2 rounded-xl'} transition-colors group`}
+              className={`flex items-center gap-3 w-full text-left hover:bg-slate-50 dark:hover:bg-slate-700 p-2 ${isCollapsed ? 'justify-center rounded-lg' : '-ml-2 rounded-xl'} transition-colors group`}
             >
               <img
                 src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
                 alt={user.name}
-                className="w-10 h-10 min-w-[40px] rounded-full border border-slate-200 group-hover:border-blue-200 transition-colors object-cover"
+                className="w-10 h-10 min-w-[40px] rounded-full border border-slate-200 dark:border-slate-700 group-hover:border-blue-200 dark:group-hover:border-blue-500 transition-colors object-cover"
               />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
-                  <p className="text-xs text-slate-500 truncate">{user.position}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.position}</p>
                 </div>
               )}
             </button>
@@ -400,7 +402,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
               <button
                 onClick={onLogout}
                 title={isCollapsed ? "Sair do Sistema" : ""}
-                className={`flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors ${isCollapsed ? '' : 'w-full justify-center'}`}
+                className={`flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors ${isCollapsed ? '' : 'w-full justify-center'}`}
               >
                 <LogOut size={16} />
                 {!isCollapsed && "Sair do Sistema"}
@@ -422,12 +424,12 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <MessengerProvider user={user}>
           {/* Header */}
-          <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
+          <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
             <div className="flex items-center gap-4 flex-1">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                 <Menu size={24} />
               </button>
-              <div className={`max-w-md w-full relative ${isMobileSearchOpen ? 'flex fixed inset-y-0 left-0 right-0 bg-white z-50 p-4 items-center animate-in slide-in-from-top duration-300' : 'hidden md:block'}`} ref={searchRef}>
+              <div className={`max-w-md w-full relative ${isMobileSearchOpen ? 'flex fixed inset-y-0 left-0 right-0 bg-white dark:bg-slate-800 z-50 p-4 items-center animate-in slide-in-from-top duration-300' : 'hidden md:block'}`} ref={searchRef}>
                 {isMobileSearchOpen && (
                   <button
                     onClick={() => {
@@ -455,7 +457,7 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                       setShowSearchOverlay(true);
                     }
                   }}
-                  className="w-full pl-10 pr-12 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                  className="w-full pl-10 pr-12 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 dark:text-slate-100 transition-all outline-none"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   {isSearching ? (
@@ -502,29 +504,37 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
             <div className="flex items-center gap-2 md:gap-4">
               <button
                 onClick={() => setIsMobileSearchOpen(true)}
-                className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+                className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
               >
                 <Search size={20} />
               </button>
 
               <MessengerButton />
 
+              <button
+                onClick={toggleTheme}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
+                title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
+              >
+                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} className="text-amber-400" />}
+              </button>
+
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className={`p-2 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-blue-600' : 'text-slate-500'}`}
+                  className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800 animate-pulse shadow-sm"></span>
                   )}
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                    <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                      <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                        <Bell size={16} className="text-blue-600" />
+                  <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+                        <Bell size={16} className="text-blue-600 dark:text-blue-400" />
                         Notificações
                       </h3>
                       {unreadCount > 0 && (
@@ -545,29 +555,29 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
                             <div
                               key={notif.id}
                               onClick={() => handleNotificationClick(notif)}
-                              className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors relative group ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                              className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors relative group ${!notif.is_read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                             >
                               {!notif.is_read && (
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 dark:bg-blue-400"></div>
                               )}
                               <div className="flex gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'mural_mention' ? 'bg-purple-100 text-purple-600' :
-                                  notif.type === 'drive_share' ? 'bg-blue-100 text-blue-600' :
-                                    notif.type === 'calendar_invite' ? 'bg-emerald-100 text-emerald-600' :
-                                      'bg-orange-100 text-orange-600'
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'mural_mention' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+                                  notif.type === 'drive_share' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                                    notif.type === 'calendar_invite' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                                      'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
                                   }`}>
                                   <Inbox size={14} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold text-slate-800 truncate">{notif.title}</p>
-                                  <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
-                                  <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{notif.title}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">{notif.message}</p>
+                                  <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400 dark:text-slate-500">
                                     <Clock size={10} />
                                     {formatTime(notif.created_at)}
                                   </div>
                                 </div>
                                 {!notif.is_read && (
-                                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-1"></div>
+                                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mt-1"></div>
                                 )}
                               </div>
                             </div>

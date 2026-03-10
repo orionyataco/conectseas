@@ -231,72 +231,72 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     const renderOverview = () => (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
                         <Users size={24} />
                     </div>
                     <div>
-                        <p className="text-sm text-slate-500 font-medium">Usuários Totais</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats.users}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Usuários Totais</p>
+                        <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.users}</h3>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center">
                         <CheckCircle2 size={24} />
                     </div>
                     <div>
-                        <p className="text-sm text-slate-500 font-medium">Usuários Ativos</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats.activeUsers}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Usuários Ativos</p>
+                        <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.activeUsers}</h3>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center">
                         <MessageSquare size={24} />
                     </div>
                     <div>
-                        <p className="text-sm text-slate-500 font-medium">Posts no Mural</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats.posts}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Posts no Mural</p>
+                        <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.posts}</h3>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
                         <Database size={24} />
                     </div>
                     <div>
-                        <p className="text-sm text-slate-500 font-medium">Arquivos no Drive</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats.files}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Arquivos no Drive</p>
+                        <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.files}</h3>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <BarChart3 className="text-blue-600" size={20} />
+            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <BarChart3 className="text-blue-600 dark:text-blue-400" size={20} />
                     Desempenho do Sistema
                 </h3>
-                <p className="text-slate-500 mb-6">O sistema está operando normalmente com 100% de disponibilidade nas últimas 24 horas.</p>
-                <div className="h-4 bg-slate-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 w-full"></div>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">O sistema está operando normalmente com 100% de disponibilidade nas últimas 24 horas.</p>
+                <div className="h-4 bg-slate-50 dark:bg-slate-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600 dark:bg-blue-500 w-full"></div>
                 </div>
             </div>
         </div>
     );
 
     const renderLDAP = () => (
-        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Globe className="text-indigo-600" size={20} />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Globe className="text-indigo-600 dark:text-indigo-400" size={20} />
                     Configuração de Rede (LDAP / Active Directory)
                 </h3>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-500">Habilitar LDAP</span>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Habilitar LDAP</span>
                     <button
                         onClick={() => {
                             const newValue = !settings.ldap_config.enabled;
                             setSettings({ ...settings, ldap_config: { ...settings.ldap_config, enabled: newValue } });
                         }}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${settings.ldap_config.enabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${settings.ldap_config.enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
                     >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.ldap_config.enabled ? 'right-1' : 'left-1'}`}></div>
                     </button>
@@ -305,52 +305,52 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
 
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity ${settings.ldap_config.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Host do Servidor</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Host do Servidor</label>
                     <input
                         type="text"
                         value={settings.ldap_config.host}
                         onChange={(e) => setSettings({ ...settings, ldap_config: { ...settings.ldap_config, host: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         placeholder="ldap.empresa.com"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Porta</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Porta</label>
                     <input
                         type="number"
                         value={settings.ldap_config.port}
                         onChange={(e) => setSettings({ ...settings, ldap_config: { ...settings.ldap_config, port: parseInt(e.target.value) } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         placeholder="389"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Base DN</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Base DN</label>
                     <input
                         type="text"
                         value={settings.ldap_config.baseDn}
                         onChange={(e) => setSettings({ ...settings, ldap_config: { ...settings.ldap_config, baseDn: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         placeholder="dc=empresa,dc=com"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Bind DN (Usuário Service)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Bind DN (Usuário Service)</label>
                     <input
                         type="text"
                         value={settings.ldap_config.bindDn}
                         onChange={(e) => setSettings({ ...settings, ldap_config: { ...settings.ldap_config, bindDn: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         placeholder="cn=admin,dc=empresa,dc=com"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Bind Password (Senha do Service)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Bind Password (Senha do Service)</label>
                     <input
                         type="password"
                         value={settings.ldap_config.bindPassword}
                         onChange={(e) => setSettings({ ...settings, ldap_config: { ...settings.ldap_config, bindPassword: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         placeholder="Senha do usuário de serviço LDAP"
                     />
                 </div>
@@ -410,22 +410,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                         <div className="space-y-2">
                             <p className="font-bold text-sm">Etapas do Teste:</p>
                             {ldapTestResult.steps.map((step: any, idx: number) => (
-                                <div key={idx} className={`p-3 rounded-lg ${step.status === 'success' ? 'bg-green-100' :
-                                    step.status === 'warning' ? 'bg-yellow-100' :
-                                        'bg-red-100'
+                                <div key={idx} className={`p-3 rounded-lg ${step.status === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                                    step.status === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                                        'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                                     }`}>
                                     <p className="font-bold text-sm">{idx + 1}. {step.step}</p>
                                     <p className="text-xs mt-1">{typeof step.message === 'string' ? step.message : JSON.stringify(step.message)}</p>
-                                    {step.bindDn && <p className="text-xs text-slate-600 mt-1">Bind DN: {typeof step.bindDn === 'string' ? step.bindDn : JSON.stringify(step.bindDn)}</p>}
-                                    {step.baseDn && <p className="text-xs text-slate-600 mt-1">Base DN: {typeof step.baseDn === 'string' ? step.baseDn : JSON.stringify(step.baseDn)}</p>}
+                                    {step.bindDn && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Bind DN: {typeof step.bindDn === 'string' ? step.bindDn : JSON.stringify(step.bindDn)}</p>}
+                                    {step.baseDn && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Base DN: {typeof step.baseDn === 'string' ? step.baseDn : JSON.stringify(step.baseDn)}</p>}
                                     {step.entries && step.entries.length > 0 && (
                                         <details className="mt-2">
                                             <summary className="text-xs font-bold cursor-pointer">Ver {step.entries.length} registros encontrados</summary>
                                             <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
                                                 {step.entries.map((entry: any, i: number) => (
-                                                    <div key={i} className="bg-white p-2 rounded text-xs">
-                                                        <p className="font-bold">{typeof entry.dn === 'string' ? entry.dn : JSON.stringify(entry.dn)}</p>
-                                                        <pre className="text-[10px] mt-1 overflow-x-auto">{JSON.stringify(entry.attributes, null, 2)}</pre>
+                                                    <div key={i} className="bg-white dark:bg-slate-800 p-2 rounded text-xs border border-slate-100 dark:border-slate-700">
+                                                        <p className="font-bold text-slate-800 dark:text-slate-100">{typeof entry.dn === 'string' ? entry.dn : JSON.stringify(entry.dn)}</p>
+                                                        <pre className="text-[10px] mt-1 overflow-x-auto text-slate-600 dark:text-slate-400">{JSON.stringify(entry.attributes, null, 2)}</pre>
                                                     </div>
                                                 ))}
                                             </div>
@@ -444,9 +444,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                 </div>
             )}
 
-            <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex gap-2 items-start">
-                <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
-                <p className="text-[11px] text-amber-700 leading-relaxed">
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30 flex gap-2 items-start">
+                <AlertCircle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={16} />
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
                     <strong>Importante:</strong> Após preencher os campos acima, clique em "Salvar Configurações LDAP" para aplicar as mudanças.
                     Verifique o console do navegador (F12) se houver erros.
                 </p>
@@ -455,55 +455,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     );
 
     const renderLoginUI = () => (
-        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Monitor className="text-blue-600" size={20} />
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Monitor className="text-blue-600 dark:text-blue-400" size={20} />
                 Personalização da Tela de Login
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Título da Tela</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Título da Tela</label>
                     <input
                         type="text"
                         value={settings.login_ui.title}
                         onChange={(e) => setSettings({ ...settings, login_ui: { ...settings.login_ui, title: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Subtítulo</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Subtítulo</label>
                     <input
                         type="text"
                         value={settings.login_ui.subtitle}
                         onChange={(e) => setSettings({ ...settings, login_ui: { ...settings.login_ui, subtitle: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-bold text-slate-700">Texto de Boas-vindas (Destaque)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Texto de Boas-vindas (Destaque)</label>
                     <input
                         type="text"
                         value={settings.login_ui.welcome_text}
                         onChange={(e) => setSettings({ ...settings, login_ui: { ...settings.login_ui, welcome_text: e.target.value } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-bold text-slate-700">Mensagem de Boas-vindas (Descrição)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Mensagem de Boas-vindas (Descrição)</label>
                     <textarea
                         value={settings.login_ui.description_text}
                         onChange={(e) => setSettings({ ...settings, login_ui: { ...settings.login_ui, description_text: e.target.value } })}
                         rows={3}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none text-slate-900 dark:text-slate-100"
                         placeholder="Digite a descrição que aparecerá abaixo do texto de boas-vindas..."
                     />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-bold text-slate-700 block">Imagem de Fundo da Tela de Login</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 block">Imagem de Fundo da Tela de Login</label>
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         {settings.login_ui.background_url && (
-                            <div className="relative group w-48 h-28 rounded-xl overflow-hidden border border-slate-200">
+                            <div className="relative group w-48 h-28 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
                                 <img
                                     src={settings.login_ui.background_url}
                                     className="w-full h-full object-cover"
@@ -549,7 +549,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                 />
                                 <label
                                     htmlFor="bg-upload"
-                                    className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-4 bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-200 transition-all text-slate-600 font-bold text-sm"
+                                    className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-4 bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400 font-bold text-sm"
                                 >
                                     <Upload size={20} />
                                     Selecionar Nova Imagem
@@ -571,8 +571,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                 </div>
 
                 {/* Opacity Control */}
-                <div className="space-y-3 md:col-span-2 pt-4 border-t border-slate-200">
-                    <label className="text-sm font-bold text-slate-700 block">
+                <div className="space-y-3 md:col-span-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 block">
                         Opacidade da Sobreposição (Overlay)
                     </label>
                     <div className="space-y-3">
@@ -589,9 +589,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                         overlay_opacity: parseInt(e.target.value)
                                     }
                                 })}
-                                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                             />
-                            <span className="text-sm font-bold text-slate-700 min-w-[60px] text-right">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 min-w-[60px] text-right">
                                 {settings.login_ui.overlay_opacity || 70}%
                             </span>
                         </div>
@@ -599,9 +599,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                             <span>Transparente</span>
                             <span>Opaco</span>
                         </div>
-                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 flex gap-2 items-start">
-                            <AlertCircle className="text-purple-600 shrink-0 mt-0.5" size={16} />
-                            <p className="text-[11px] text-purple-700 leading-relaxed">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-900/30 flex gap-2 items-start">
+                            <AlertCircle className="text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" size={16} />
+                            <p className="text-[11px] text-purple-700 dark:text-purple-300 leading-relaxed">
                                 <strong>Dica:</strong> Controla a transparência da camada escura sobre a imagem de fundo.
                                 Valores mais baixos deixam a imagem mais visível, valores mais altos escurecem mais.
                             </p>
@@ -666,16 +666,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
 
     const renderVisual = () => (
         <div className="space-y-6">
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Globe className="text-blue-600" size={20} />
+            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-8">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Globe className="text-blue-600 dark:text-blue-400" size={20} />
                     Identidade da Marca
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Nome do Sistema</label>
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Nome do Sistema</label>
                             <input
                                 type="text"
                                 value={settings.visual_identity.app_name}
@@ -683,13 +683,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     ...settings,
                                     visual_identity: { ...settings.visual_identity, app_name: e.target.value }
                                 })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-900 dark:text-slate-100"
                                 placeholder="Ex: CONECTSEAS"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Descrição / Subtítulo</label>
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Descrição / Subtítulo</label>
                             <input
                                 type="text"
                                 value={settings.visual_identity.app_description}
@@ -697,16 +697,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     ...settings,
                                     visual_identity: { ...settings.visual_identity, app_description: e.target.value }
                                 })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                                 placeholder="Ex: Governo do Amapá"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <label className="text-sm font-bold text-slate-700 block">Logo da Marca</label>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 block">Logo da Marca</label>
                         <div className="flex items-start gap-4">
-                            <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
                                 {settings.visual_identity.app_logo ? (
                                     <img
                                         src={settings.visual_identity.app_logo.startsWith('http') || settings.visual_identity.app_logo.startsWith('/') ? settings.visual_identity.app_logo : `/uploads/${settings.visual_identity.app_logo}`}
@@ -732,7 +732,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                 />
                                 <label
                                     htmlFor="brand-logo-upload"
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-slate-600 font-bold text-xs"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
                                 >
                                     <Upload size={14} />
                                     Alterar Logo
@@ -755,18 +755,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                 </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Paintbrush className="text-purple-600" size={20} />
+            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-8">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Paintbrush className="text-purple-600 dark:text-purple-400" size={20} />
                     Personalização de Cores (Tema)
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Cor Primária do Sistema</label>
-                            <p className="text-xs text-slate-500 mb-4">Escolha a cor que representará sua instituição em todo o portal.</p>
-                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Cor Primária do Sistema</label>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Escolha a cor que representará sua instituição em todo o portal.</p>
+                            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl">
                                 <input
                                     type="color"
                                     value={settings.theme_config.primary_color}
@@ -777,20 +777,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     className="w-16 h-16 rounded-xl cursor-pointer border-none bg-transparent"
                                 />
                                 <div className="flex-1">
-                                    <p className="text-sm font-mono font-bold text-slate-700 uppercase">{settings.theme_config.primary_color}</p>
-                                    <p className="text-[10px] text-slate-400">Esta cor será convertida em uma paleta completa automaticamente.</p>
+                                    <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">{settings.theme_config.primary_color}</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Esta cor será convertida em uma paleta completa automaticamente.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <label className="text-sm font-bold text-slate-700">Pré-visualização do Tema</label>
-                        <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 space-y-4" style={{ '--preview-primary': settings.theme_config.primary_color } as any}>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Pré-visualização do Tema</label>
+                        <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4" style={{ '--preview-primary': settings.theme_config.primary_color } as any}>
                             <div className="flex gap-2">
                                 <div className="w-8 h-8 rounded-lg shadow-sm" style={{ backgroundColor: settings.theme_config.primary_color }}></div>
-                                <div className="h-8 flex-1 bg-white rounded-lg border border-slate-200 flex items-center px-3">
-                                    <div className="w-20 h-2 bg-slate-100 rounded-full"></div>
+                                <div className="h-8 flex-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center px-3">
+                                    <div className="w-20 h-2 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
                                 </div>
                             </div>
                             <div className="h-10 w-full rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100" style={{ backgroundColor: settings.theme_config.primary_color }}>
@@ -815,29 +815,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     );
 
     const renderSecurity = () => (
-        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Lock className="text-red-600" size={20} />
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Lock className="text-red-600 dark:text-red-400" size={20} />
                 Políticas de Segurança e Convívio
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Tamanho Mínimo da Senha</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tamanho Mínimo da Senha</label>
                     <input
                         type="number"
                         value={settings.security_policy.min_password_length}
                         onChange={(e) => setSettings({ ...settings, security_policy: { ...settings.security_policy, min_password_length: parseInt(e.target.value) } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Expiração de Sessão (minutos)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Expiração de Sessão (minutos)</label>
                     <input
                         type="number"
                         value={settings.security_policy.session_timeout}
                         onChange={(e) => setSettings({ ...settings, security_policy: { ...settings.security_policy, session_timeout: parseInt(e.target.value) } })}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="flex items-center gap-3">
@@ -846,15 +846,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                         id="special_chars"
                         checked={settings.security_policy.require_special_chars}
                         onChange={(e) => setSettings({ ...settings, security_policy: { ...settings.security_policy, require_special_chars: e.target.checked } })}
-                        className="w-5 h-5 text-blue-600 rounded border-slate-300"
+                        className="w-5 h-5 text-blue-600 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
                     />
-                    <label htmlFor="special_chars" className="text-sm font-medium text-slate-700">Exigir caracteres especiais nas senhas</label>
+                    <label htmlFor="special_chars" className="text-sm font-medium text-slate-700 dark:text-slate-300">Exigir caracteres especiais nas senhas</label>
                 </div>
             </div>
 
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
-                <AlertCircle className="text-amber-600 shrink-0" size={20} />
-                <p className="text-xs text-amber-700 leading-relaxed">
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30 flex gap-3">
+                <AlertCircle className="text-amber-600 dark:text-amber-400 shrink-0" size={20} />
+                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
                     <strong>Regras de Convívio:</strong> Esta seção também aplica as diretrizes de comportamento automatizadas no Mural e na IA Assistant.
                 </p>
             </div>
@@ -873,30 +873,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     );
 
     const renderUploads = () => (
-        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Upload className="text-purple-600" size={20} />
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Upload className="text-purple-600 dark:text-purple-400" size={20} />
                 Gestão de Arquivos e Uploads
             </h3>
 
             <div className="space-y-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Tamanho Máximo de Arquivo (Bytes)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tamanho Máximo de Arquivo (Bytes)</label>
                     <div className="flex gap-4 items-center">
                         <input
                             type="number"
                             value={settings.upload_config.max_file_size}
                             onChange={(e) => setSettings({ ...settings, upload_config: { ...settings.upload_config, max_file_size: parseInt(e.target.value) } })}
-                            className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                         />
-                        <span className="text-sm font-bold text-slate-500">
+                        <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
                             ({(settings.upload_config.max_file_size / (1024 * 1024)).toFixed(0)} MB)
                         </span>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <label className="text-sm font-bold text-slate-700">Tipos de Arquivos Permitidos</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tipos de Arquivos Permitidos</label>
                     <div className="flex flex-wrap gap-2">
                         {['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.ms-excel'].map(type => (
                             <button
@@ -907,8 +907,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     setSettings({ ...settings, upload_config: { ...settings.upload_config, allowed_types: next } });
                                 }}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${(settings.upload_config.allowed_types || []).includes(type)
-                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-100 dark:shadow-blue-900/20'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                                     }`}
                             >
                                 {type.split('/')[1].toUpperCase()}
@@ -932,45 +932,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
     );
 
     const renderUsers = () => (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Users className="text-blue-600" size={20} />
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Users className="text-blue-600 dark:text-blue-400" size={20} />
                     Gerenciamento de Usuários
                 </h3>
-                <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-blue-600 rounded-full">
+                <span className="text-xs font-bold px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
                     {usersList.length} Usuários Registrados
                 </span>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>
-                        <tr className="bg-slate-50">
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Usuário</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Permissão</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cota (GB)</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
+                        <tr className="bg-slate-50 dark:bg-slate-900/50">
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Usuário</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Departamento</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cargo</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Permissão</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cota (GB)</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                         {usersList.map(user => (
-                            <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                            <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
                                             {user.avatar ? (
                                                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold">
+                                                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold">
                                                     {(typeof user.name === 'string' ? user.name : String(user.name)).charAt(0)}
                                                 </div>
                                             )}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-800">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
-                                            <p className="text-xs text-slate-500">@{user.username}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{typeof user.name === 'string' ? user.name : JSON.stringify(user.name)}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">@{user.username}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -997,7 +997,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                             }
                                         }}
                                         placeholder="N/A"
-                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                                     />
                                 </td>
                                 <td className="px-6 py-4">
@@ -1023,13 +1023,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                             }
                                         }}
                                         placeholder="N/A"
-                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                                     />
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={`text-[10px] font-extrabold px-2 py-1 rounded-md ${user.role === UserRole.ADMIN
-                                        ? 'bg-red-50 text-red-600 border border-red-100'
-                                        : 'bg-green-50 text-green-600 border border-green-100'
+                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30'
+                                        : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-900/30'
                                         }`}>
                                         {user.role}
                                     </span>
@@ -1059,9 +1059,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                                     }
                                                 }
                                             }}
-                                            className="w-16 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-slate-100"
                                         />
-                                        <span className="text-xs font-bold text-slate-400">GB</span>
+                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500">GB</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
@@ -1084,7 +1084,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                             }
                                         }}
                                         disabled={saving}
-                                        className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline disabled:opacity-50"
+                                        className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline disabled:opacity-50"
                                     >
                                         Alterar Permissão
                                     </button>
@@ -1187,14 +1187,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
 
     const renderSidebarUI = () => (
         <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <LayoutDashboard className="text-blue-600" size={20} />
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <LayoutDashboard className="text-blue-600 dark:text-blue-400" size={20} />
                             Gerenciamento da Barra Lateral
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">Configure botões, ícones e permissões da sidebar.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Configure botões, ícones e permissões da sidebar.</p>
                     </div>
                     <button
                         onClick={() => {
@@ -1208,9 +1208,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                     </button>
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-700">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                             <tr>
                                 <th className="px-6 py-4">Ordem</th>
                                 <th className="px-6 py-4">Item / Ícone</th>
@@ -1220,24 +1220,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {sidebarItems.map((item, index) => {
                                 const IconComponent = NAV_ICONS[item.icon] || Globe;
                                 return (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => handleMoveSidebarItem(item.id, 'up')}
                                                     disabled={index === 0}
-                                                    className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30"
+                                                    className="p-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-30"
                                                 >
                                                     <ChevronUp size={16} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleMoveSidebarItem(item.id, 'down')}
                                                     disabled={index === sidebarItems.length - 1}
-                                                    className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30"
+                                                    className="p-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-30"
                                                 >
                                                     <ChevronDown size={16} />
                                                 </button>
@@ -1245,40 +1245,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
+                                                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400">
                                                     <IconComponent size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
                                                         {item.label}
                                                         {item.open_in_iframe ? (
-                                                            <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-tighter">Iframe</span>
+                                                            <span className="text-[9px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-tighter">Iframe</span>
                                                         ) : null}
                                                     </p>
-                                                    <p className="text-[10px] text-slate-400 font-medium font-mono">{item.key}</p>
+                                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium font-mono">{item.key}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-xs font-medium text-slate-600 font-mono bg-slate-100 px-2 py-1 rounded">
+                                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
                                                 /{item.path}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full uppercase ${item.required_role === 'ADMIN' ? 'bg-amber-100 text-amber-700' :
-                                                item.required_role === 'USER' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-slate-100 text-slate-600'
+                                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full uppercase ${item.required_role === 'ADMIN' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
+                                                item.required_role === 'USER' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :
+                                                    'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                                 }`}>
                                                 {item.required_role || 'Todos'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             {item.is_active ? (
-                                                <span className="flex items-center gap-1.5 text-xs text-green-600 font-bold">
+                                                <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-bold">
                                                     <Eye size={14} /> Ativo
                                                 </span>
                                             ) : (
-                                                <span className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
+                                                <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold">
                                                     <EyeOff size={14} /> Inativo
                                                 </span>
                                             )}
@@ -1292,7 +1292,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                                         setEditingItem(item);
                                                         setShowSidebarModal(true);
                                                     }}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
                                                     title="Editar"
                                                 >
                                                     <Edit2 size={16} />
@@ -1304,7 +1304,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                                             e.stopPropagation();
                                                             handleDeleteSidebarItem(item.id);
                                                         }}
-                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
                                                         title="Excluir"
                                                     >
                                                         <Trash2 size={16} />
@@ -1319,9 +1319,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                     </table>
                 </div>
 
-                <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
-                    <AlertCircle className="text-amber-600 shrink-0" size={18} />
-                    <p className="text-xs text-amber-700 leading-relaxed">
+                <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30 flex gap-3">
+                    <AlertCircle className="text-amber-600 dark:text-amber-400 shrink-0" size={18} />
+                    <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
                         <strong>Nota:</strong> Itens marcados como <strong>Sistema</strong> não podem ser excluídos, mas você pode desativá-los ou mudar suas permissões e ícones.
                         As mudanças na barra lateral podem exigir um recarregamento da página para alguns usuários.
                     </p>
@@ -1357,13 +1357,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-800">Painel de Controle do Administrador</h2>
-                    <p className="text-slate-500">Configure o ecossistema para toda a instituição.</p>
+                    <h2 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Painel de Controle do Administrador</h2>
+                    <p className="text-slate-500 dark:text-slate-400">Configure o ecossistema para toda a instituição.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={fetchData}
-                        className="p-3 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                         <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                     </button>
@@ -1371,14 +1371,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
             </div>
 
             {success && (
-                <div className="p-4 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-3 animate-bounce">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-2xl border border-green-100 dark:border-green-900/30 flex items-center gap-3 animate-bounce">
                     <CheckCircle2 size={20} />
                     <span className="font-bold">{typeof success === 'string' ? success : JSON.stringify(success)}</span>
                 </div>
             )}
 
             {error && (
-                <div className="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 flex items-center gap-3">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-2xl border border-red-100 dark:border-red-900/30 flex items-center gap-3">
                     <AlertCircle size={20} />
                     <span className="font-bold">
                         {typeof error === 'string' ? error : JSON.stringify(error)}
@@ -1394,8 +1394,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id
-                                ? 'bg-white text-blue-600 font-bold shadow-sm border border-slate-200'
-                                : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'
+                                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold shadow-sm border border-slate-200 dark:border-slate-700'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 hover:text-slate-800 dark:hover:text-slate-100'
                                 }`}
                         >
                             {tab.icon}
@@ -1446,16 +1446,16 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl w-full max-w-lg border border-slate-100 dark:border-slate-700 overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                             {initialData ? 'Editar Item da Sidebar' : 'Novo Item da Sidebar'}
                         </h3>
-                        <p className="text-xs text-slate-500">Configure as propriedades do botão lateral.</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Configure as propriedades do botão lateral.</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-slate-400 dark:text-slate-500">
                         <Plus className="rotate-45" size={20} />
                     </button>
                 </div>
@@ -1463,44 +1463,44 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1 col-span-2">
-                            <label className="text-[10px] font-extrabold text-slate-500 uppercase">Identificador (Key)</label>
+                            <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Identificador (Key)</label>
                             <input
                                 type="text"
                                 value={formData.key}
                                 onChange={e => setFormData({ ...formData, key: e.target.value })}
                                 disabled={!!initialData}
                                 placeholder="ex: mural"
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium"
+                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium text-slate-900 dark:text-slate-100 disabled:opacity-50"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] font-extrabold text-slate-500 uppercase">Rótulo (Label)</label>
+                            <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Rótulo (Label)</label>
                             <input
                                 type="text"
                                 value={formData.label}
                                 onChange={e => setFormData({ ...formData, label: e.target.value })}
                                 placeholder="ex: Mural de Avisos"
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-900 dark:text-slate-100"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] font-extrabold text-slate-500 uppercase">Caminho (Path)</label>
+                            <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Caminho (Path)</label>
                             <input
                                 type="text"
                                 value={formData.path}
                                 onChange={e => setFormData({ ...formData, path: e.target.value })}
                                 placeholder="ex: mural"
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-mono"
+                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-mono text-slate-900 dark:text-slate-100"
                             />
                         </div>
 
                         <div className="space-y-1 col-span-2">
-                            <label className="text-[10px] font-extrabold text-slate-500 uppercase">Ícone</label>
-                            <div className="grid grid-cols-6 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-32 overflow-y-auto">
+                            <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Ícone</label>
+                            <div className="grid grid-cols-6 gap-2 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl max-h-32 overflow-y-auto">
                                 {Object.keys(iconLibrary).map(iconName => {
                                     const Icon = iconLibrary[iconName];
                                     return (
@@ -1508,7 +1508,7 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                                             key={iconName}
                                             type="button"
                                             onClick={() => setFormData({ ...formData, icon: iconName })}
-                                            className={`p-2 flex items-center justify-center rounded-lg transition-all ${formData.icon === iconName ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-400 hover:text-blue-600'
+                                            className={`p-2 flex items-center justify-center rounded-lg transition-all ${formData.icon === iconName ? 'bg-blue-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400'
                                                 }`}
                                             title={iconName}
                                         >
@@ -1520,11 +1520,11 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] font-extrabold text-slate-500 uppercase">Permissão</label>
+                            <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Permissão</label>
                             <select
                                 value={formData.required_role}
                                 onChange={e => setFormData({ ...formData, required_role: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm text-slate-900 dark:text-slate-100"
                             >
                                 <option value="">Todos</option>
                                 <option value={UserRole.ADMIN}>Apenas Admins</option>
@@ -1547,14 +1547,14 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                             </div>
                         </div>
 
-                        <div className="space-y-1 col-span-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+                        <div className="space-y-1 col-span-2 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <Monitor size={16} />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-blue-900">Abrir sistema em Iframe</span>
-                                    <span className="text-[10px] text-blue-600 font-medium">Mantém a barra lateral do ConnectSEAS visível</span>
+                                    <span className="text-sm font-bold text-blue-900 dark:text-blue-100">Abrir sistema em Iframe</span>
+                                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Mantém a barra lateral do ConnectSEAS visível</span>
                                 </div>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
@@ -1564,7 +1564,7 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                                     onChange={e => setFormData({ ...formData, open_in_iframe: e.target.checked })}
                                     className="sr-only peer"
                                 />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                     </div>
@@ -1573,7 +1573,7 @@ const SidebarModal: React.FC<SidebarModalProps> = ({ onClose, onSave, initialDat
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+                            className="flex-1 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors"
                         >
                             Cancelar
                         </button>

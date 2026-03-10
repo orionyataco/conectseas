@@ -271,6 +271,7 @@ const initDB = async () => {
         visibility TEXT DEFAULT 'public',
         color TEXT DEFAULT '#3B82F6',
         is_archived INTEGER DEFAULT 0,
+        drive_folder_id INTEGER,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
@@ -640,6 +641,14 @@ const initDB = async () => {
       )
     `);
     console.log('Tabela "messenger_messages" verificada/criada.');
+
+    // Migration: Add drive_folder_id to projects if missing
+    try {
+      await connection.query('ALTER TABLE projects ADD COLUMN drive_folder_id INTEGER');
+      console.log('Coluna "drive_folder_id" adicionada à tabela projects.');
+    } catch (e) {
+      // Column already exists — safe to ignore
+    }
 
     connection.release();
     console.log('✅ Banco de dados PostgreSQL inicializado com sucesso!');

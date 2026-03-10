@@ -40,13 +40,6 @@ router.get('/stats', adminMiddleware, async (req, res) => {
         const [byMonth] = await pool.query("SELECT EXTRACT(MONTH FROM created_at) as month, COUNT(*) as count FROM tectic_tickets GROUP BY month ORDER BY month");
         const [byYear] = await pool.query("SELECT EXTRACT(YEAR FROM created_at) as year, COUNT(*) as count FROM tectic_tickets GROUP BY year ORDER BY year");
 
-        const [byDept] = await pool.query(`
-            SELECT u.department, COUNT(t.id) as count 
-            FROM tectic_tickets t 
-            JOIN users u ON t.user_id = u.id 
-            GROUP BY u.department 
-            ORDER BY count DESC
-        `);
         const [byDeptWeek] = await pool.query(`
             SELECT u.department, COUNT(t.id) as count 
             FROM tectic_tickets t 
@@ -84,6 +77,36 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             LIMIT 5
         `);
 
+        const [topRequestersWeek] = await pool.query(`
+            SELECT u.name as requester_name, u.avatar as requester_avatar, COUNT(t.id) as count 
+            FROM tectic_tickets t 
+            JOIN users u ON t.user_id = u.id 
+            WHERE t.created_at >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY u.id, u.name, u.avatar 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
+
+        const [topRequestersMonth] = await pool.query(`
+            SELECT u.name as requester_name, u.avatar as requester_avatar, COUNT(t.id) as count 
+            FROM tectic_tickets t 
+            JOIN users u ON t.user_id = u.id 
+            WHERE t.created_at >= date_trunc('month', CURRENT_DATE)
+            GROUP BY u.id, u.name, u.avatar 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
+
+        const [topRequestersYear] = await pool.query(`
+            SELECT u.name as requester_name, u.avatar as requester_avatar, COUNT(t.id) as count 
+            FROM tectic_tickets t 
+            JOIN users u ON t.user_id = u.id 
+            WHERE t.created_at >= date_trunc('year', CURRENT_DATE)
+            GROUP BY u.id, u.name, u.avatar 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
+
         res.json({
             cards: {
                 total: total[0].count,
@@ -94,13 +117,15 @@ router.get('/stats', adminMiddleware, async (req, res) => {
             byWeekday,
             byMonth,
             byYear,
-            byDept,
             byDeptWeek,
             byDeptMonth,
             byDeptYear,
             categories,
             levels,
-            topResolvers
+            topResolvers,
+            topRequestersWeek,
+            topRequestersMonth,
+            topRequestersYear
         });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao buscar estatísticas' });
@@ -140,11 +165,9 @@ router.delete('/bulk', adminMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'IDs inválidos ou ausentes' });
         }
 
-        const placeholders = ids.map(() => '?').join(',');
-
         // Delete tickets (cascading comments if DB schema supports it, otherwise delete them too)
-        await pool.query(`DELETE FROM tectic_ticket_comments WHERE ticket_id IN (${placeholders})`, ids);
-        await pool.query(`DELETE FROM tectic_tickets WHERE id IN (${placeholders})`, ids);
+        await pool.query('DELETE FROM tectic_ticket_comments WHERE ticket_id IN (?)', [ids]);
+        await pool.query('DELETE FROM tectic_tickets WHERE id IN (?)', [ids]);
 
         res.json({ message: 'Chamados deletados com sucesso' });
     } catch (error) {
@@ -372,7 +395,7 @@ router.delete('/drive/:id', adminMiddleware, async (req, res) => {
 router.put('/drive/:id', adminMiddleware, async (req, res) => {
     const { original_name } = req.body;
     try {
-        await pool.query('UPDATE tectic_files SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [original_name, req.params.id]);
+        await pool.query('UPDATE tectic_files SET original_name = ? WHERE id = ?', [original_name, req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao renomear arquivo' });

@@ -413,8 +413,8 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
           const isCurrentToday = day.toDateString() === new Date().toDateString();
 
           return (
-            <div key={i} className={`border-r border-slate-100 flex flex-col ${isCurrentToday ? 'bg-blue-50/20' : ''}`}>
-              <div className="p-4 border-b border-slate-100 text-center">
+            <div key={i} className={`border-r border-slate-100 dark:border-slate-700 flex flex-col ${isCurrentToday ? 'bg-blue-50/20 dark:bg-blue-900/20' : ''}`}>
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700 text-center">
                 <span className="text-[10px] font-bold text-slate-400 block mb-1">{weekDays[i]}</span>
                 <span className={`text-lg font-bold ${isCurrentToday ? 'bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-slate-700'}`}>
                   {day.getDate()}
@@ -457,7 +457,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
             const dayEvents = date ? getEventsForDay(date) : [];
 
             return (
-              <div key={i} className={`border-r border-b border-slate-100 p-3 flex flex-col gap-2 min-h-[140px] ${day === null ? 'bg-slate-50/50' : ''}`}>
+              <div key={i} className={`border-r border-b border-slate-100 dark:border-slate-700 p-3 flex flex-col gap-2 min-h-[140px] ${day === null ? 'bg-slate-50/50 dark:bg-slate-900/20' : ''}`}>
                 {day !== null && (
                   <span className={`text-xs font-bold ${isToday(day) ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : 'text-slate-400'}`}>
                     {day}
@@ -510,9 +510,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                   const hasEvents = dayEvents.length > 0;
 
                   return (
-                    <div
-                      key={i}
-                      className={`aspect-square flex items-center justify-center rounded-sm text-[8px] ${hasEvents ? 'bg-blue-500 text-white font-bold' : 'text-slate-600'} cursor-pointer hover:bg-slate-100`}
+                  <div className={`aspect-square flex items-center justify-center rounded-sm text-[8px] ${hasEvents ? 'bg-blue-500 text-white font-bold' : 'text-slate-600 dark:text-slate-400'} cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700`}
                       onClick={() => {
                         setCurrentDate(new Date(currentDate.getFullYear(), m, d));
                         setViewType('day');
@@ -536,8 +534,8 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <header>
-          <h1 className="text-2xl font-bold text-slate-800">Calendário Institucional</h1>
-          <p className="text-slate-500">Gestão de agenda, eventos públicos e feriados do Estado do Amapá.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Calendário Institucional</h1>
+          <p className="text-slate-500 dark:text-slate-400">Gestão de agenda, eventos públicos e feriados do Estado do Amapá.</p>
         </header>
         <div className="flex gap-2">
         </div>
@@ -548,13 +546,13 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         <div className="space-y-6">
           <button
             onClick={openCreateModal}
-            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-blue-900/20 hover:bg-blue-700 transition-all"
           >
             <Plus size={20} />
             Criar Novo Evento
           </button>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Próximos Eventos</h3>
             <div className="space-y-3">
               {(() => {
@@ -595,7 +593,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
 
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Tipos de Eventos</h3>
             <div className="space-y-3">
               {[
@@ -607,7 +605,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
               ].map(cat => (
                 <div key={cat.type} className="flex items-center gap-3">
                   <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
-                  <span className="text-sm text-slate-600">{cat.label}</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">{cat.label}</span>
                 </div>
               ))}
             </div>
@@ -615,27 +613,27 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
         </div>
 
         {/* Main Grid */}
-        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm flex flex-col">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button onClick={goToToday} className="px-4 py-2 bg-slate-100 text-slate-800 text-sm font-bold rounded-xl">Hoje</button>
-              <div className="flex items-center gap-2 text-slate-400">
-                <ChevronLeft size={20} className="cursor-pointer hover:text-slate-800" onClick={previous} />
-                <ChevronRight size={20} className="cursor-pointer hover:text-slate-800" onClick={next} />
+              <button onClick={goToToday} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Hoje</button>
+              <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                <ChevronLeft size={20} className="cursor-pointer hover:text-slate-800 dark:hover:text-slate-200" onClick={previous} />
+                <ChevronRight size={20} className="cursor-pointer hover:text-slate-800 dark:hover:text-slate-200" onClick={next} />
               </div>
-              <h2 className="text-xl font-bold text-slate-800">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
                 {viewType === 'day' && `${currentDate.getDate()} de ${monthNames[currentDate.getMonth()]} de ${currentDate.getFullYear()}`}
                 {viewType === 'week' && `Semana de ${new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - currentDate.getDay()).getDate()} de ${monthNames[new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - currentDate.getDay()).getMonth()]}`}
                 {viewType === 'month' && `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
                 {viewType === 'year' && `${currentDate.getFullYear()}`}
               </h2>
             </div>
-            <div className="flex bg-slate-100 p-1 rounded-xl">
+            <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl">
               {(['day', 'week', 'month', 'year'] as const).map(v => (
                 <button
                   key={v}
                   onClick={() => setViewType(v)}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${viewType === v ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${viewType === v ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                 >
                   {v === 'day' ? 'Dia' : v === 'week' ? 'Semana' : v === 'month' ? 'Mês' : 'Ano'}
                 </button>
@@ -655,9 +653,9 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full shadow-xl flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
                 {editingEvent ? 'Editar Evento' : 'Criar Novo Evento'}
               </h2>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">
@@ -667,134 +665,134 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
 
             <div className="space-y-4 p-6 overflow-y-auto">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Título *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Nome do evento"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  rows={3}
-                  placeholder="Descrição do evento (opcional)"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Data *</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Título *</label>
                   <input
-                    type="date"
-                    value={formData.eventDate}
-                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
+                    placeholder="Nome do evento"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Data de Término</label>
-                  <input
-                    type="date"
-                    value={formData.eventEndDate}
-                    onChange={(e) => setFormData({ ...formData, eventEndDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none dark:text-slate-100"
+                    rows={3}
+                    placeholder="Descrição do evento (opcional)"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Hora de Início</label>
-                  <input
-                    type="time"
-                    value={formData.eventTime}
-                    onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Hora de Término</label>
-                  <input
-                    type="time"
-                    value={formData.eventEndTime}
-                    onChange={(e) => setFormData({ ...formData, eventEndTime: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-semibold text-slate-700">Link da Reunião (Online)</label>
-                  {formData.meetingLink && (
-                    <a
-                      href={formData.meetingLink.startsWith('http') ? formData.meetingLink : `https://${formData.meetingLink}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 font-bold flex items-center gap-1 hover:underline"
-                    >
-                      Testar Link <ChevronRight size={12} />
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="url"
-                  value={formData.meetingLink}
-                  onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="https://meet.google.com/..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo de Evento</label>
-                <select
-                  value={formData.eventType}
-                  onChange={(e) => setFormData({ ...formData, eventType: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="meeting">Reunião</option>
-                  <option value="holiday">Feriado</option>
-                  <option value="birthday">Aniversário</option>
-                  <option value="vacation">Férias</option>
-                  <option value="other">Outro</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Visibilidade</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Data *</label>
                     <input
-                      type="radio"
-                      name="visibility"
-                      checked={formData.visibility === 'public'}
-                      onChange={() => setFormData({ ...formData, visibility: 'public' })}
-                      className="text-blue-600 focus:ring-blue-500"
+                      type="date"
+                      value={formData.eventDate}
+                      onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
                     />
-                    <Eye size={16} className="text-slate-500" />
-                    <span className="text-sm text-slate-700">Público</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Data de Término</label>
                     <input
-                      type="radio"
-                      name="visibility"
-                      checked={formData.visibility === 'private'}
-                      onChange={() => setFormData({ ...formData, visibility: 'private' })}
-                      className="text-blue-600 focus:ring-blue-500"
+                      type="date"
+                      value={formData.eventEndDate}
+                      onChange={(e) => setFormData({ ...formData, eventEndDate: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
                     />
-                    <EyeOff size={16} className="text-slate-500" />
-                    <span className="text-sm text-slate-700">Privado</span>
-                  </label>
+                  </div>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Hora de Início</label>
+                    <input
+                      type="time"
+                      value={formData.eventTime}
+                      onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Hora de Término</label>
+                    <input
+                      type="time"
+                      value={formData.eventEndTime}
+                      onChange={(e) => setFormData({ ...formData, eventEndTime: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Link da Reunião (Online)</label>
+                    {formData.meetingLink && (
+                      <a
+                        href={formData.meetingLink.startsWith('http') ? formData.meetingLink : `https://${formData.meetingLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline"
+                      >
+                        Testar Link <ChevronRight size={12} />
+                      </a>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={formData.meetingLink}
+                    onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
+                    placeholder="https://meet.google.com/..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Tipo de Evento</label>
+                  <select
+                    value={formData.eventType}
+                    onChange={(e) => setFormData({ ...formData, eventType: e.target.value as any })}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
+                  >
+                    <option value="meeting">Reunião</option>
+                    <option value="holiday">Feriado</option>
+                    <option value="birthday">Aniversário</option>
+                    <option value="vacation">Férias</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Visibilidade</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="visibility"
+                        checked={formData.visibility === 'public'}
+                        onChange={() => setFormData({ ...formData, visibility: 'public' })}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <Eye size={16} className="text-slate-500 dark:text-slate-400" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Público</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="visibility"
+                        checked={formData.visibility === 'private'}
+                        onChange={() => setFormData({ ...formData, visibility: 'private' })}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <EyeOff size={16} className="text-slate-500 dark:text-slate-400" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Privado</span>
+                    </label>
+                  </div>
+                </div>
 
               {formData.visibility === 'private' && (
                 <div className="border-t border-slate-100 pt-4">
@@ -806,11 +804,11 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                       type="text"
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                       placeholder="Buscar usuário por nome..."
                     />
                     {userSearch && (
-                      <div className="absolute z-10 top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 max-h-44 overflow-y-auto">
+                      <div className="absolute z-10 top-full left-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg mt-1 max-h-44 overflow-y-auto">
                         {users
                           .filter(u =>
                             u.id.toString() !== user?.id?.toString() &&
@@ -825,10 +823,10 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                                 setSharedWith([...sharedWith, u.id.toString()]);
                                 setUserSearch('');
                               }}
-                              className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 text-left transition-colors"
+                              className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-left transition-colors"
                             >
                               <img src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}`} className="w-7 h-7 rounded-full" alt="" />
-                              <span className="text-sm text-slate-700 font-medium">{u.name}</span>
+                               <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">{u.name}</span>
                               {u.position && <span className="text-xs text-slate-400 ml-auto">{u.position}</span>}
                             </button>
                           ))
@@ -851,9 +849,9 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                         const found = users.find(u => u.id.toString() === id);
                         if (!found) return null;
                         return (
-                          <div key={id} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full pl-1 pr-3 py-1">
+                          <div key={id} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full pl-1 pr-3 py-1">
                             <img src={found.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}`} className="w-6 h-6 rounded-full" alt="" />
-                            <span className="text-xs text-blue-700 font-semibold">{found.name.split(' ')[0]}</span>
+                            <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">{found.name.split(' ')[0]}</span>
                             <button
                               type="button"
                               onClick={() => setSharedWith(sharedWith.filter(i => i !== id))}
@@ -872,7 +870,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
               )}
             </div>
 
-            <div className="flex gap-3 p-6 border-t border-slate-100 bg-white rounded-b-2xl">
+            <div className="flex gap-3 p-6 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-b-2xl">
               <button
                 onClick={editingEvent ? handleEditEvent : handleCreateEvent}
                 className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
@@ -885,7 +883,7 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                     handleDeleteEvent(editingEvent.id);
                     resetForm();
                   }}
-                  className="px-4 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                  className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                 >
                   <Trash2 size={18} />
                 </button>

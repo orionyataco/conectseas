@@ -2,7 +2,21 @@ import { Server } from 'socket.io';
 import pool from './db.js';
 
 let io;
-const connectedUsers = new Map(); // userId -> socketId
+const connectedUsers = new Map(); // userId -> Set of socketIds
+
+const updateActiveUsersLastSeen = async () => {
+    if (connectedUsers.size === 0) return;
+    try {
+        const userIds = Array.from(connectedUsers.keys());
+        await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id IN (?)', [userIds]);
+        // console.log(`Updated last_seen for active users: ${userIds.join(', ')}`);
+    } catch (error) {
+        console.error('Error updating active users last_seen:', error);
+    }
+};
+
+// Update last_seen for all connected users every 4 minutes
+setInterval(updateActiveUsersLastSeen, 4 * 60 * 1000);
 
 export const initSocket = (server) => {
     io = new Server(server, {
@@ -18,18 +32,23 @@ export const initSocket = (server) => {
         socket.on('authenticate', async (userId) => {
             if (userId) {
                 const numericUserId = Number(userId);
-                connectedUsers.set(numericUserId, socket.id);
+                
+                if (!connectedUsers.has(numericUserId)) {
+                    connectedUsers.set(numericUserId, new Set());
+                }
+                connectedUsers.get(numericUserId).add(socket.id);
+                
                 socket.userId = numericUserId;
 
                 // Join a room for this user to support multiple tabs/connections
                 socket.join(`user_${numericUserId}`);
 
-                console.log(`User ${numericUserId} authenticated on socket ${socket.id} and joined room user_${numericUserId}`);
+                console.log(`User ${numericUserId} authenticated on socket ${socket.id} (total sessions: ${connectedUsers.get(numericUserId).size})`);
 
-                // Update last_seen
+                // Update last_seen immediately on auth
                 await pool.query('UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?', [numericUserId]);
 
-                // Broadcast online status
+                // Always broadcast online status (frontend will handle deduplication if already online)
                 io.emit('user_online', numericUserId);
             }
         });
@@ -148,9 +167,17 @@ export const initSocket = (server) => {
 
         socket.on('disconnect', () => {
             if (socket.userId) {
-                connectedUsers.delete(socket.userId);
-                console.log(`User ${socket.userId} disconnected`);
-                io.emit('user_offline', socket.userId);
+                const userSockets = connectedUsers.get(socket.userId);
+                if (userSockets) {
+                    userSockets.delete(socket.id);
+                    if (userSockets.size === 0) {
+                        connectedUsers.delete(socket.userId);
+                        console.log(`User ${socket.userId} fully disconnected (all tabs closed)`);
+                        io.emit('user_offline', socket.userId);
+                    } else {
+                        console.log(`User ${socket.userId} closed one tab (remaining tabs: ${userSockets.size})`);
+                    }
+                }
             }
         });
     });

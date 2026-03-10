@@ -22,7 +22,7 @@ router.post('/posts', upload.array('attachments'), async (req, res) => {
         const postId = result.insertId;
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                const isImage = file.mimetype.startsWith('image/');
+                const isImage = file.mimetype.startsWith('image/') ? 1 : 0;
                 await pool.query(
                     'INSERT INTO post_attachments (post_id, filename, original_name, file_type, file_size, is_image) VALUES (?, ?, ?, ?, ?, ?)',
                     [postId, file.filename, file.originalname, file.mimetype, file.size, isImage]

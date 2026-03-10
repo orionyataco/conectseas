@@ -436,35 +436,35 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
       <aside className="lg:w-64 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 shrink-0">
         <button
           onClick={() => { setViewMode('all'); setCurrentFolder(null); setFolderHistory([]); }}
-          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'all' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'all' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
         >
           <HardDrive size={20} />
           Meu Drive
         </button>
         <button
           onClick={() => setViewMode('recent')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'recent' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'recent' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
         >
           <Clock size={20} />
           Recentes
         </button>
         <button
           onClick={() => setViewMode('shared')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'shared' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'shared' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
         >
           <UsersIcon size={20} />
           Compartilhados
         </button>
         <button
           onClick={() => setViewMode('favorites')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'favorites' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'favorites' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
         >
           <Star size={20} />
           Favoritos
         </button>
         <button
           onClick={() => setViewMode('trash')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'trash' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-100'}`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all whitespace-nowrap ${viewMode === 'trash' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
         >
           <Trash2 size={20} />
           Lixeira
@@ -474,13 +474,13 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
         {storageStats && (
           <div className="mt-auto pt-6 px-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Armazenamento</span>
-              <span className="text-[10px] font-bold text-slate-600">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider dark:text-slate-500">Armazenamento</span>
+              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
                 {Math.round((storageStats.used / storageStats.quota) * 100)}%
               </span>
             </div>
             {/* Progress Bar Container: Blue background (empty) */}
-            <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden">
               {/* Progress Bar: Red (filled) */}
               <div
                 className="h-full bg-red-500 rounded-full transition-all duration-500"
@@ -488,7 +488,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               />
             </div>
             <div className="mt-2">
-              <p className="text-[10px] text-slate-500 font-medium">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 {formatSize(storageStats.used)} de {formatSize(storageStats.quota)}
               </p>
             </div>
@@ -499,13 +499,13 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
       <div className="flex-1 space-y-6 flex flex-col min-w-0">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
               {viewMode === 'all' ? 'Meus Documentos' :
                 viewMode === 'recent' ? 'Arquivos Recentes' :
                   viewMode === 'shared' ? 'Compartilhados Comigo' :
                     viewMode === 'trash' ? 'Lixeira' : 'Meus Favoritos'}
             </h1>
-            <p className="text-slate-500">
+            <p className="text-slate-500 dark:text-slate-400">
               {viewMode === 'all' ? 'Gerencie seus arquivos e pastas.' :
                 viewMode === 'recent' ? 'Documentos acessados ou modificados recentemente.' :
                   viewMode === 'shared' ? 'Pastas e registros que outros usuários compartilharam com você.' :
@@ -521,7 +521,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 placeholder="Buscar..."
                 value={localSearchQuery}
                 onChange={(e) => setLocalSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64 transition-all"
+                className="pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 dark:text-slate-100 outline-none w-64 transition-all"
               />
             </div>
             {viewMode === 'all' && (
@@ -535,7 +535,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <button
                   onClick={() => setShowNewFolderModal(true)}
                   disabled={currentFolder !== null && (currentFolder as any).permission === 'READ'}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
                 >
                   <FolderIcon size={18} />
                   Nova Pasta
@@ -543,7 +543,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading || (currentFolder !== null && (currentFolder as any).permission === 'READ')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-70"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-100 dark:shadow-none disabled:opacity-70"
                 >
                   {uploading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -559,16 +559,16 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
         {/* Breadcrumbs & Navigation - Only in 'all' view */}
         {viewMode === 'all' && (
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center gap-2 text-sm overflow-x-auto">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 text-sm overflow-x-auto">
             {currentFolder && (
-              <button onClick={navigateUp} className="p-1 hover:bg-slate-100 rounded-lg mr-2">
-                <ArrowLeft size={18} className="text-slate-500" />
+              <button onClick={navigateUp} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg mr-2">
+                <ArrowLeft size={18} className="text-slate-500 dark:text-slate-400" />
               </button>
             )}
 
             <button
               onClick={() => navigateToBreadcrumb(-1)}
-              className={`flex items-center gap-2 font-semibold hover:text-blue-600 ${!currentFolder ? 'text-blue-600' : 'text-slate-600'}`}
+              className={`flex items-center gap-2 font-semibold hover:text-blue-600 dark:hover:text-blue-400 ${!currentFolder ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'}`}
             >
               <HardDrive size={18} />
               Meu Drive
@@ -579,7 +579,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <ChevronRight size={14} className="text-slate-400" />
                 <button
                   onClick={() => navigateToBreadcrumb(index + 1)}
-                  className="hover:text-blue-600 text-slate-600 font-medium whitespace-nowrap"
+                  className="hover:text-blue-600 dark:hover:text-blue-400 text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap"
                 >
                   {folder.name}
                 </button>
@@ -588,8 +588,8 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
             {currentFolder && (
               <>
-                <ChevronRight size={14} className="text-slate-400" />
-                <span className="font-bold text-slate-800 whitespace-nowrap">{currentFolder.name}</span>
+                <ChevronRight size={14} className="text-slate-400 dark:text-slate-500" />
+                <span className="font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{currentFolder.name}</span>
               </>
             )}
           </div>
@@ -597,7 +597,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
         {/* Content Grid */}
         <div
-          className={`flex-1 bg-white rounded-2xl border-2 p-6 shadow-sm min-h-[400px] transition-all relative ${isDragging ? 'border-dashed border-blue-500 bg-blue-50/50' : 'border-slate-200'}`}
+          className={`flex-1 bg-white dark:bg-slate-900 rounded-2xl border-2 p-6 shadow-sm min-h-[400px] transition-all relative ${isDragging ? 'border-dashed border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : 'border-slate-200 dark:border-slate-800'}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -615,9 +615,9 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             </div>
           ) : (viewMode === 'all' && folders.length === 0 && files.length === 0) || (viewMode !== 'all' && unifiedItems.length === 0) ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                <FolderIcon size={40} className="text-slate-300" />
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-4">
+              <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                <FolderIcon size={40} className="text-slate-300 dark:text-slate-600" />
               </div>
               <p>Nenhum item encontrado nesta visualização</p>
             </div>
@@ -628,15 +628,15 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <div
                   key={folder.id}
                   onDoubleClick={() => navigateToFolder(folder)}
-                  className="group relative p-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center text-center gap-3"
+                  className="group relative p-4 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-500 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center text-center gap-3"
                 >
                   <FolderIcon size={48} className={`group-hover:text-blue-500 fill-blue-100 ${folder.user_id != user?.id ? 'text-indigo-400' : 'text-blue-400'}`} />
                   <div className="flex items-center gap-1 w-full justify-center">
                     {folder.user_id != user?.id && <UsersIcon size={12} className="text-indigo-400" />}
-                    <span className="text-sm font-medium text-slate-700 truncate">{folder.name}</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{folder.name}</span>
                   </div>
 
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 rounded p-1 shadow-sm">
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 dark:bg-slate-800/90 rounded p-1 shadow-sm">
                     {folder.user_id == user?.id && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleFavorite(folder.id, 'folder', folder.is_favorite); }}
@@ -649,7 +649,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                     {folder.user_id == user?.id && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setRenamingItem({ id: folder.id, type: 'folder', currentName: folder.name }); setRenameValue(folder.name); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
                         title="Renomear"
                       >
                         <Plus className="rotate-45" size={14} />
@@ -658,7 +658,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                     {folder.user_id == user?.id && (
                       <button
                         onClick={(e) => { e.stopPropagation(); openShareModal(folder); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
                         title="Compartilhar"
                       >
                         <Share2 size={14} />
@@ -686,22 +686,22 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               {viewMode === 'all' && files.filter(f => (f.original_name || '').toLowerCase().includes((localSearchQuery || '').toLowerCase())).map(file => (
                 <div
                   key={file.id}
-                  className="group relative p-4 bg-white hover:shadow-md border border-slate-200 rounded-xl transition-all flex flex-col items-center justify-between text-center gap-3"
+                  className="group relative p-4 bg-white dark:bg-slate-800 hover:shadow-md dark:shadow-none border border-slate-200 dark:border-slate-700 rounded-xl transition-all flex flex-col items-center justify-between text-center gap-3"
                 >
                   <div
                     onClick={() => handleFileClick(file)}
-                    className="flex-1 flex items-center justify-center w-full bg-slate-50 rounded-lg py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                    className="flex-1 flex items-center justify-center w-full bg-slate-50 dark:bg-slate-900 rounded-lg py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     {getFileIcon(file.file_type)}
                   </div>
                   <div className="w-full">
-                    <p className="text-xs font-medium text-slate-700 truncate w-full mb-1" title={file.original_name}>
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate w-full mb-1" title={file.original_name}>
                       {file.original_name}
                     </p>
-                    <p className="text-[10px] text-slate-400">{formatSize(file.file_size)}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">{formatSize(file.file_size)}</p>
                   </div>
 
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 rounded p-1 shadow-sm">
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 dark:bg-slate-800/90 rounded p-1 shadow-sm">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleFavorite(file.id, 'file', file.is_favorite); }}
                       className={`p-1.5 rounded transition-colors ${file.is_favorite ? 'text-amber-500' : 'text-slate-400 hover:text-amber-500'}`}
@@ -719,7 +719,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                     </a>
                     <button
                       onClick={(e) => { e.stopPropagation(); setRenamingItem({ id: file.id, type: 'file', currentName: file.original_name }); setRenameValue(file.original_name); }}
-                      className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                      className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
                       title="Renomear"
                     >
                       <Plus className="rotate-45" size={14} />
@@ -749,11 +749,11 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <div
                   key={`${item.item_type}-${item.id}`}
                   onDoubleClick={() => item.item_type === 'folder' ? (setViewMode('all'), navigateToFolder(item)) : null}
-                  className="group relative p-4 bg-white hover:shadow-md border border-slate-200 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-between text-center gap-3"
+                  className="group relative p-4 bg-white dark:bg-slate-800 hover:shadow-md dark:shadow-none border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-between text-center gap-3"
                 >
                   <div
                     onClick={() => item.item_type === 'file' ? handleFileClick(item) : null}
-                    className={`flex-1 flex items-center justify-center w-full bg-slate-50 rounded-lg py-4 relative ${item.item_type === 'file' && item.file_type?.includes('image') ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`}
+                    className={`flex-1 flex items-center justify-center w-full bg-slate-50 dark:bg-slate-900 rounded-lg py-4 relative ${item.item_type === 'file' && item.file_type?.includes('image') ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors' : ''}`}
                   >
                     {item.item_type === 'folder' ? (
                       <FolderIcon size={48} className="text-blue-400 fill-blue-50" />
@@ -767,15 +767,15 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                     )}
                   </div>
                   <div className="w-full">
-                    <p className="text-xs font-semibold text-slate-700 truncate w-full mb-1" title={item.name || item.original_name}>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate w-full mb-1" title={item.name || item.original_name}>
                       {item.name || item.original_name}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">
                       {item.item_type === 'folder' ? 'Pasta' : formatSize(item.file_size)}
                     </p>
                   </div>
 
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 rounded p-1 shadow-sm">
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all bg-white/90 dark:bg-slate-800/90 rounded p-1 shadow-sm">
                     {viewMode === 'trash' ? (
                       <>
                         <button
@@ -830,21 +830,21 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
         {/* Modals relocated inside main content area to follow absolute positioning relative to container if needed, but fixed takes care of it */}
         {showNewFolderModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl animate-fadeIn">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Nova Pasta</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-xl animate-fadeIn border border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Nova Pasta</h3>
               <input
                 type="text"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="Nome da pasta"
                 autoFocus
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none mb-6"
+                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:text-slate-100 outline-none mb-6"
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowNewFolderModal(false)}
-                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200"
+                  className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   Cancelar
                 </button>
@@ -862,24 +862,24 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
         {showShareModal && sharingFolder && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl animate-fadeIn flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-xl animate-fadeIn flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-800">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Compartilhar Pasta</h3>
-                  <p className="text-sm text-slate-500">{sharingFolder.name}</p>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Compartilhar Pasta</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{sharingFolder.name}</p>
                 </div>
-                <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                  <X size={20} className="text-slate-400" />
+                <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                  <X size={20} className="text-slate-400 dark:text-slate-500" />
                 </button>
               </div>
 
               <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
                 {/* Search/Add User */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Adicionar novo usuário</label>
+                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Adicionar novo usuário</label>
                   <div className="relative">
                     <select
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                       onChange={(e) => {
                         if (e.target.value) {
                           handleShare(e.target.value, 'READ');
@@ -903,36 +903,36 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 <div className="flex-1 overflow-y-auto">
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pessoas com acesso</label>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs uppercase">
                           {user?.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-700">{user?.name} (Você)</p>
-                          <p className="text-xs text-slate-500">Proprietário</p>
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{user?.name} (Você)</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Proprietário</p>
                         </div>
                       </div>
                     </div>
 
                     {folderShares.map(share => (
-                      <div key={share.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div key={share.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                         <div className="flex items-center gap-3">
                           {share.user_avatar ? (
                             <img src={share.user_avatar} alt={share.user_name} className="w-8 h-8 rounded-full object-cover" />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold text-xs uppercase">
                               {share.user_name.charAt(0)}
                             </div>
                           )}
                           <div>
-                            <p className="text-sm font-semibold text-slate-700">{share.user_name}</p>
-                            <p className="text-xs text-slate-500">{share.user_email}</p>
+                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{share.user_name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{share.user_email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <select
-                            className="text-xs font-semibold bg-white border border-slate-200 rounded p-1 outline-none"
+                            className="text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 dark:text-slate-200 rounded p-1 outline-none"
                             value={share.permission}
                             onChange={(e) => handleShare(share.user_id.toString(), e.target.value as any)}
                           >
@@ -953,10 +953,10 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-slate-100">
+              <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="w-full py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                  className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Concluído
                 </button>
@@ -967,21 +967,21 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
 
         {renamingItem && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl animate-fadeIn">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Renomear {renamingItem.type === 'folder' ? 'Pasta' : 'Arquivo'}</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-xl animate-fadeIn border border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Renomear {renamingItem.type === 'folder' ? 'Pasta' : 'Arquivo'}</h3>
               <input
                 type="text"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
                 placeholder="Novo nome"
                 autoFocus
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none mb-6"
+                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none mb-6"
                 onKeyPress={(e) => e.key === 'Enter' && handleRename()}
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setRenamingItem(null)}
-                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-xl hover:bg-slate-200"
+                  className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   Cancelar
                 </button>

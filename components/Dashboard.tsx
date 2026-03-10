@@ -110,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           name: s.name,
           desc: s.description,
           url: s.url,
-          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w - 8 h - 8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')} ` }),
+          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w-8 h-8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')}` }),
           color: s.color,
           isSystem: true,
           iconName: s.icon_name,
@@ -133,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           name: s.name,
           desc: s.description,
           url: s.url,
-          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w - 8 h - 8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')} ` }),
+          icon: React.cloneElement(iconObj.icon as React.ReactElement, { className: `w-8 h-8 ${s.color?.replace('bg-', 'text-')?.replace('-50', '-500')}` }),
           color: s.color,
           isCustom: true,
           iconName: s.icon_name,
@@ -311,6 +311,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     try {
       if (sys.isSystem) {
+        await toggleSystemShortcutFavorite(sys.id, !sys.isFavorite);
+      } else {
         await toggleShortcutFavorite(sys.id, !sys.isFavorite);
       }
       queryClient.invalidateQueries({ queryKey: ['systemShortcuts'] });
@@ -367,19 +369,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const getUrgencyStyles = (urgency: string) => {
     switch (urgency) {
       case 'high': return {
-        container: 'bg-red-50 border-red-500',
-        iconBg: 'bg-red-100 text-red-600',
+        container: 'bg-red-50 dark:bg-slate-900 border-red-500',
+        iconBg: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
         gradient: 'from-red-400 to-red-600'
       };
       case 'medium': return {
-        container: 'bg-amber-50 border-amber-500',
-        iconBg: 'bg-amber-100 text-amber-600',
+        container: 'bg-amber-50 dark:bg-slate-900 border-amber-500',
+        iconBg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
         gradient: 'from-amber-400 to-orange-500'
       };
       case 'low':
       default: return {
-        container: 'bg-blue-50 border-blue-500',
-        iconBg: 'bg-blue-100 text-blue-600',
+        container: 'bg-blue-50 dark:bg-slate-900 border-blue-500',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
         gradient: 'from-blue-400 to-indigo-500'
       };
     }
@@ -391,13 +393,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     <div className="space-y-8 animate-fadeIn relative">
       <header className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Olá, {user?.name?.split(' ')[0] || 'Servidor'}</h1>
-          <p className="text-slate-500">Acesse seus sistemas e ferramentas administrativas com facilidade.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Olá, {user?.name?.split(' ')[0] || 'Servidor'}</h1>
+          <p className="text-slate-500 dark:text-slate-400">Acesse seus sistemas e ferramentas administrativas com facilidade.</p>
         </div>
         {user?.role === UserRole.ADMIN && (
           <button
             onClick={handleCreateWarning}
-            className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-300 transition-all"
+            className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 transition-all"
           >
             <Megaphone size={14} />
             Gerenciar Aviso
@@ -407,20 +409,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* Aviso Dinâmico */}
       {warning && (
-        <div className={`border-l-4 rounded-xl p-6 shadow-sm flex items-start gap-4 relative overflow-hidden ${urgencyStyles.container}`}>
+        <div className={`border-l-4 rounded-xl p-6 shadow-sm flex items-start gap-4 relative overflow-hidden ${urgencyStyles.container} dark:border-opacity-50`}>
           <div className={`p-3 rounded-full ${urgencyStyles.iconBg} relative z-10`}>
             {warning.urgency === 'high' ? <ShieldAlert size={24} /> : <Info size={24} />}
           </div>
           <div className="flex-1 relative z-10">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               {warning.title}
               {warning.target_audience !== 'all' && (
-                <span className="text-[10px] uppercase tracking-wider bg-white/50 px-2 py-0.5 rounded-full text-slate-600 border border-slate-200/50">
+                <span className="text-[10px] uppercase tracking-wider bg-white/50 dark:bg-black/50 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50">
                   {warning.target_audience === 'admin' ? 'Apenas Admins' : 'Apenas Servidores'}
                 </span>
               )}
             </h3>
-            <p className="text-sm text-slate-700 mt-1 leading-relaxed">
+            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
               {warning.message}
             </p>
           </div>
@@ -430,14 +432,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             <div className="relative z-20 flex flex-col gap-2">
               <button
                 onClick={handleEditWarning}
-                className="p-2 bg-white/50 hover:bg-white rounded-lg text-slate-600 hover:text-blue-600 transition-colors"
+                className="p-2 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 title="Editar Aviso"
               >
                 <Edit2 size={16} />
               </button>
               <button
                 onClick={(e) => handleDeleteWarning(e)}
-                className="p-2 bg-white/50 hover:bg-white rounded-lg text-slate-600 hover:text-red-600 transition-colors"
+                className="p-2 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 title="Excluir Aviso"
               >
                 <Trash2 size={16} />
@@ -452,10 +454,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       {/* Warning Management Modal */}
       {showWarningModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden scale-100 animate-slideUp">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                <Megaphone size={20} className="text-blue-600" />
+          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden scale-100 animate-slideUp border border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Megaphone size={20} className="text-blue-600 dark:text-blue-400" />
                 {editingWarningId ? 'Editar Aviso' : 'Novo Aviso'}
               </h3>
               <button onClick={() => setShowWarningModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
@@ -465,33 +467,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             <div className="p-6 space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Título do Aviso</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Título do Aviso</label>
                 <input
                   value={newWarning.title}
                   onChange={(e) => setNewWarning({ ...newWarning, title: e.target.value })}
                   placeholder="Ex: Manutenção no Sistema SIGRH"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Mensagem</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Mensagem</label>
                 <textarea
                   value={newWarning.message}
                   onChange={(e) => setNewWarning({ ...newWarning, message: e.target.value })}
                   placeholder="Descreva o aviso detalhadamente..."
                   rows={3}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none dark:text-slate-100"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Urgência / Cor</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Urgência / Cor</label>
                   <select
                     value={newWarning.urgency}
                     onChange={(e) => setNewWarning({ ...newWarning, urgency: e.target.value as any })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                   >
                     <option value="low">Baixa (Azul)</option>
                     <option value="medium">Média (Amarelo)</option>
@@ -500,11 +502,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Público Alvo</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Público Alvo</label>
                   <select
                     value={newWarning.targetAudience}
                     onChange={(e) => setNewWarning({ ...newWarning, targetAudience: e.target.value as any })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                   >
                     <option value="all">Todos</option>
                     <option value="servers">Apenas Servidores</option>
@@ -514,10 +516,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end">
+            <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-3 justify-end">
               <button
                 onClick={() => setShowWarningModal(false)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-white hover:border-slate-300 transition-all"
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold text-sm hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
               >
                 Cancelar
               </button>
@@ -538,42 +540,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         {/* Launcher */}
         <div className="xl:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-800">Meus Atalhos</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Meus Atalhos</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* System Shortcuts */}
             {systemShortcuts.map((sys, index) => (
               <a
-                key={`system - ${sys.name} -${index} `}
+                key={`system-${sys.name}-${index}`}
                 href={sys.url || '#'}
                 target="_blank"
-                className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group relative block"
+                className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-500 hover:shadow-lg transition-all group relative block"
               >
-                <div className={`${sys.color} w - 14 h - 14 rounded - xl flex items - center justify - center mb - 4 group - hover: scale - 110 transition - transform`}>
+                <div className={`${sys.color} dark:bg-blue-900/30 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   {sys.icon}
                 </div>
-                <h3 className="font-bold text-slate-800 text-lg">{sys.name}</h3>
-                <p className="text-sm text-slate-500 mt-1 leading-snug">{sys.desc}</p>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{sys.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug">{sys.desc}</p>
 
                 {user?.role === UserRole.ADMIN && (
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button
                       onClick={(e) => handleToggleFavorite(e, sys)}
-                      className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
+                      className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 opacity-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
                       title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                     >
                       <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
                     </button>
                     <button
                       onClick={(e) => handleEditShortcut(e, sys)}
-                      className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+                      className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-lg text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 opacity-0 group-hover:opacity-100 transition-all"
                       title="Editar Sistema"
                     >
                       <Edit2 size={12} />
                     </button>
                     <button
                       onClick={(e) => handleDeleteShortcut(e, { ...sys, isSystem: true })}
-                      className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-all"
                       title="Remover Sistema"
                     >
                       <Trash2 size={12} />
@@ -584,7 +586,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   <div className="absolute top-4 right-4">
                     <button
                       onClick={(e) => handleToggleFavorite(e, sys)}
-                      className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
+                      className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 opacity-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
                       title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                     >
                       <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
@@ -597,35 +599,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             {/* Custom Shortcuts */}
             {shortcuts.map((sys, index) => (
               <a
-                key={`custom - ${sys.name} -${index} `}
+                key={`custom-${sys.name}-${index}`}
                 href={sys.url || '#'}
                 target="_blank"
-                className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group relative block"
+                className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-500 hover:shadow-lg transition-all group relative block"
               >
-                <div className={`${sys.color} w - 14 h - 14 rounded - xl flex items - center justify - center mb - 4 group - hover: scale - 110 transition - transform`}>
+                <div className={`${sys.color} dark:bg-blue-900/30 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   {sys.icon}
                 </div>
-                <h3 className="font-bold text-slate-800 text-lg">{sys.name}</h3>
-                <p className="text-sm text-slate-500 mt-1 leading-snug">{sys.desc}</p>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{sys.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug">{sys.desc}</p>
 
                 <div className="absolute top-4 right-4 flex gap-2">
                   <button
                     onClick={(e) => handleToggleFavorite(e, sys)}
-                    className={`p - 1.5 rounded - lg transition - all ${sys.isFavorite ? 'bg-amber-50 text-amber-500 opacity-100' : 'bg-slate-50 text-slate-400 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'} `}
+                    className={`p-1.5 rounded-lg transition-all ${sys.isFavorite ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 opacity-100' : 'bg-slate-50 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100'}`}
                     title={sys.isFavorite ? "Remover dos Favoritos" : "Favoritar"}
                   >
                     <Star size={12} fill={sys.isFavorite ? "currentColor" : "none"} />
                   </button>
                   <button
                     onClick={(e) => handleEditShortcut(e, sys)}
-                    className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-lg text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 opacity-0 group-hover:opacity-100 transition-all"
                     title="Editar Atalho"
                   >
                     <Edit2 size={12} />
                   </button>
                   <button
                     onClick={(e) => handleDeleteShortcut(e, sys)}
-                    className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-all"
                     title="Remover Atalho"
                   >
                     <Trash2 size={12} />
@@ -636,9 +638,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             <button
               onClick={handleOpenNewShortcutModal}
-              className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all group flex flex-col items-center justify-center text-slate-400 hover:text-blue-500"
+              className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all group flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400"
             >
-              <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+              <div className="w-14 h-14 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform dark:border dark:border-slate-700">
                 <Plus size={24} />
               </div>
               <span className="font-semibold">Novo Atalho</span>
@@ -649,25 +651,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         {/* Sidebar widgets */}
         <div className="space-y-8">
           {/* Quick Note */}
-          <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+          <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <PenLine size={20} className="text-blue-500" />
-              <h2 className="text-lg font-bold text-slate-800">Bloco de Notas</h2>
+              <PenLine size={20} className="text-blue-500 dark:text-blue-400" />
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Bloco de Notas</h2>
             </div>
             <textarea
               value={note}
               onChange={handleNoteChange}
               placeholder="Escreva um lembrete rápido aqui..."
-              className="w-full h-40 bg-slate-50 border-none rounded-xl p-4 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full h-40 bg-slate-50 dark:bg-slate-900 border-none rounded-xl p-4 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
             />
             <p className="text-[10px] text-slate-400 mt-2 italic text-right">Salvo automaticamente</p>
           </section>
 
           {/* Lista de Tarefas */}
-          <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col h-[400px]">
+          <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 shadow-sm flex flex-col h-[400px]">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Lista de Tarefas</h2>
-              <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Lista de Tarefas</h2>
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-full">
                 {todos.filter(t => !t.completed).length} pendentes
               </span>
             </div>
@@ -678,7 +680,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
                 placeholder="Adicionar nova tarefa..."
-                className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
               />
               <button
                 type="submit"
@@ -691,8 +693,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
               {todos.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-60">
-                  <div className="p-3 bg-slate-50 rounded-full">
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-2 opacity-60">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-full">
                     <CheckCircle size={32} />
                   </div>
                   <p className="text-sm">Nenhuma tarefa pendente</p>
@@ -701,16 +703,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 todos.map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 bg-slate-50/30 hover:bg-slate-50 transition-colors group"
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group"
                   >
                     <button
                       onClick={() => handleToggleTodo(todo.id, todo.completed)}
                       className="flex items-center gap-3 flex-1 text-left"
                     >
-                      <div className={`p - 1 rounded - md transition - colors ${todo.completed ? 'bg-green-100 text-green-600' : 'bg-white border border-slate-200 text-transparent hover:border-blue-400'} `}>
+                      <div className={`p-1 rounded-md transition-colors ${todo.completed ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-transparent hover:border-blue-400'}`}>
                         <Check size={14} />
                       </div>
-                      <span className={`text - sm font - medium transition - all ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-700'} `}>
+                      <span className={`text-sm font-medium transition-all ${todo.completed ? 'text-slate-400 dark:text-slate-600 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                         {todo.text}
                       </span>
                     </button>
@@ -731,9 +733,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       {/* Add Shortcut Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden scale-100 animate-slideUp">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden scale-100 animate-slideUp border border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
                 {editingShortcutId ? 'Editar Atalho' : 'Novo Atalho'}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
@@ -743,58 +745,58 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             <div className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Nome do Atalho</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Nome do Atalho</label>
                 <input
                   type="text"
                   value={newShortcut.name}
                   onChange={(e) => setNewShortcut({ ...newShortcut, name: e.target.value })}
                   placeholder="Ex: Google, Portal RH"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">URL</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">URL</label>
                 <input
                   type="text"
                   value={newShortcut.url}
                   onChange={(e) => setNewShortcut({ ...newShortcut, url: e.target.value })}
                   placeholder="https://..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Descrição Curta</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Descrição Curta</label>
                 <input
                   type="text"
                   value={newShortcut.desc}
                   onChange={(e) => setNewShortcut({ ...newShortcut, desc: e.target.value })}
                   placeholder="Ex: Acesso a documentos externos"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:text-slate-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Ícone</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Ícone</label>
                 <div className="flex gap-2">
                   {availableIcons.map((ic) => (
                     <button
                       key={ic.name}
                       onClick={() => setNewShortcut({ ...newShortcut, iconName: ic.name })}
-                      className={`p - 3 rounded - xl border - 2 transition - all ${newShortcut.iconName === ic.name ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-slate-200'} `}
+                      className={`p-3 rounded-xl border-2 transition-all ${newShortcut.iconName === ic.name ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'}`}
                     >
-                      {React.cloneElement(ic.icon as React.ReactElement, { className: `w - 5 h - 5 ${newShortcut.iconName === ic.name ? 'text-blue-600' : 'text-slate-400'} ` })}
+                      {React.cloneElement(ic.icon as React.ReactElement, { className: `w-5 h-5 ${newShortcut.iconName === ic.name ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}` })}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end">
+            <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-3 justify-end">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-white hover:border-slate-300 transition-all"
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold text-sm hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
               >
                 Cancelar
               </button>

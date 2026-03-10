@@ -40,7 +40,8 @@ import {
   Link as LinkIcon,
   Globe,
   Cake,
-  Award as AwardIcon
+  Award as AwardIcon,
+  Download
 } from 'lucide-react';
 
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -57,6 +58,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const [isUrgent, setIsUrgent] = React.useState(false);
   const [likedPosts, setLikedPosts] = React.useState<number[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
+  const [previewItem, setPreviewItem] = React.useState<{ url: string; name: string } | null>(null);
 
   // Link preview state
   const [linkPreview, setLinkPreview] = React.useState<{ title: string | null; description: string | null; image: string | null; siteName: string | null; url: string } | null>(null);
@@ -369,7 +371,21 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
       rendered += `<br/><img src="${src}" alt="preview" class="rounded-xl max-w-full mt-2 mb-1 border border-slate-100" style="max-height:320px;object-fit:cover" />`;
     });
 
-    return <div dangerouslySetInnerHTML={{ __html: rendered }} />;
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: rendered }}
+        onDoubleClick={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'IMG') {
+            const img = target as HTMLImageElement;
+            setPreviewItem({
+              url: img.src,
+              name: img.alt || 'Imagem do Mural'
+            });
+          }
+        }}
+      />
+    );
   };
 
   const handleCreatePost = async () => {
@@ -563,15 +579,15 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Mural Interativo</h1>
+        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Mural Interativo</h1>
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-8 animate-fadeIn">
 
       {/* New Post Creator */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-visible relative z-30">
-        <div className="flex border-b border-slate-100 px-4 pt-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-30">
+        <div className="flex border-b border-slate-100 dark:border-slate-700 px-4 pt-4">
           <button
             onClick={() => setActiveTab('write')}
             className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 ${activeTab === 'write' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
@@ -592,14 +608,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
             {activeTab === 'write' ? (
               <>
                 <div className="flex items-center gap-1 mb-2">
-                  <button onClick={() => applyFormatting('**', '**')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Negrito"><Bold size={16} /></button>
-                  <button onClick={() => applyFormatting('*', '*')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Itálico"><Italic size={16} /></button>
-                  <button onClick={() => applyFormatting('__', '__')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Sublinhado"><Underline size={16} /></button>
-                  <button onClick={() => applyFormatting('~~', '~~')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Riscado"><Strikethrough size={16} /></button>
+                  <button onClick={() => applyFormatting('**', '**')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Negrito"><Bold size={16} /></button>
+                  <button onClick={() => applyFormatting('*', '*')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Itálico"><Italic size={16} /></button>
+                  <button onClick={() => applyFormatting('__', '__')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Sublinhado"><Underline size={16} /></button>
+                  <button onClick={() => applyFormatting('~~', '~~')} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Riscado"><Strikethrough size={16} /></button>
                   <div className="relative" ref={emojiPickerRef}>
                     <button
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`p-1.5 rounded transition-colors ${showEmojiPicker ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`}
+                      className={`p-1.5 rounded transition-colors ${showEmojiPicker ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400'}`}
                       title="Emojis"
                     >
                       <Smile size={16} />
@@ -609,7 +625,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                         <EmojiPicker
                           onEmojiClick={onEmojiClick}
                           autoFocusSearch={false}
-                          theme={Theme.LIGHT}
+                          theme={document.documentElement.classList.contains('dark') ? Theme.DARK : Theme.LIGHT}
                           width={300}
                           height={400}
                         />
@@ -628,16 +644,16 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       }
                     }}
                     placeholder="Escreva um novo comunicado ou circular... Use @ para mencionar alguém"
-                    className="w-full bg-transparent border-none outline-none resize-none min-h-[120px] text-slate-700 placeholder:text-slate-400"
+                    className="w-full bg-transparent border-none outline-none resize-none min-h-[120px] text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
                   />
 
                   {showMentionList && (
                     <div
-                      className="absolute z-50 bg-white rounded-xl shadow-xl border border-slate-200 w-64 max-h-48 overflow-y-auto animate-fadeIn"
+                      className="absolute z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 w-64 max-h-48 overflow-y-auto animate-fadeIn"
                       style={{ top: mentionPosition.top, left: mentionPosition.left }}
                     >
-                      <div className="p-2 border-b border-slate-100 bg-slate-50">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase">Mencionar usuário</p>
+                      <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Mencionar usuário</p>
                       </div>
                       <div className="p-1">
                         {users.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase())).length === 0 ? (
@@ -649,7 +665,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                               <button
                                 key={u.id}
                                 onClick={() => handleMentionSelect(u)}
-                                className="w-full flex items-center gap-3 p-2 hover:bg-blue-50 rounded-lg transition-colors text-left group"
+                                className="w-full flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-left group"
                               >
                                 <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-8 h-8 rounded-full" alt="" />
                                 <div>
@@ -666,7 +682,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
               </>
             ) : (
               <div className="min-h-[148px] text-slate-700 prose-sm max-w-none">
-                {newPostContent.trim() ? renderPostContent(newPostContent) : <p className="text-slate-400 italic">Nada para visualizar...</p>}
+                {newPostContent.trim() ? renderPostContent(newPostContent) : <p className="text-slate-400 dark:text-slate-500 italic">Nada para visualizar...</p>}
               </div>
             )}
           </div>
@@ -676,7 +692,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
         {(previewLoading || linkPreview) && (
           <div className="px-4 pb-3">
             {previewLoading ? (
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 animate-pulse flex items-center gap-3">
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/50 animate-pulse flex items-center gap-3">
                 <Globe size={20} className="text-slate-300" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3 bg-slate-200 rounded w-2/3" />
@@ -684,10 +700,10 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                 </div>
               </div>
             ) : linkPreview && (
-              <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30 relative">
+              <div className="border border-blue-200 dark:border-blue-900/40 rounded-xl overflow-hidden bg-blue-50/30 dark:bg-blue-900/20 relative">
                 <button
                   onClick={clearLinkPreview}
-                  className="absolute top-2 right-2 p-1 bg-white rounded-full text-slate-400 hover:text-red-500 shadow-sm z-10"
+                  className="absolute top-2 right-2 p-1 bg-white dark:bg-slate-700 rounded-full text-slate-400 hover:text-red-500 shadow-sm z-10"
                 >
                   <X size={14} />
                 </button>
@@ -708,12 +724,12 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       <LinkIcon size={10} />
                       {linkPreview.siteName || new URL(linkPreview.url).hostname}
                     </div>
-                    {linkPreview.title && <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 mb-1">{linkPreview.title}</p>}
-                    {linkPreview.description && <p className="text-xs text-slate-500 line-clamp-2">{linkPreview.description}</p>}
+                    {linkPreview.title && <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2 mb-1">{linkPreview.title}</p>}
+                    {linkPreview.description && <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{linkPreview.description}</p>}
                   </div>
                 </div>
 
-                <div className="border-t border-blue-100 px-3 py-2 bg-white flex items-center gap-4">
+                <div className="border-t border-blue-100 dark:border-blue-900/40 px-3 py-2 bg-white dark:bg-slate-800 flex items-center gap-4">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Incluir na postagem:</span>
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
@@ -722,7 +738,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       onChange={e => setIncludePreviewText(e.target.checked)}
                       className="rounded text-blue-600 w-3.5 h-3.5"
                     />
-                    <span className="text-xs text-slate-600 font-medium">Texto</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Texto</span>
                   </label>
                   {linkPreview.image && (
                     <label className="flex items-center gap-1.5 cursor-pointer">
@@ -732,7 +748,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                         onChange={e => setIncludePreviewImage(e.target.checked)}
                         className="rounded text-blue-600 w-3.5 h-3.5"
                       />
-                      <span className="text-xs text-slate-600 font-medium">Imagem</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Imagem</span>
                     </label>
                   )}
                 </div>
@@ -821,7 +837,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
             const eventColor = eventTypeColors[event.event_type] || eventTypeColors.other;
 
             return (
-              <article key={`event-${event.id}`} className="bg-white rounded-2xl border-2 border-dashed border-slate-200 shadow-sm overflow-hidden">
+              <article key={`event-${event.id}`} className="bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -830,15 +846,15 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-800">{event.author_name}</h4>
+                          <h4 className="font-bold text-slate-800 dark:text-slate-100">{event.author_name}</h4>
                           <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Evento</span>
                         </div>
-                        <p className="text-xs text-slate-500">{event.author_role} • {formatDate(event.created_at)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{event.author_role} • {formatDate(event.created_at)}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`${eventColor} border rounded-xl p-4 mb-4`}>
+                  <div className={`${eventColor} dark:bg-slate-900/40 dark:text-slate-100 border dark:border-slate-700 rounded-xl p-4 mb-4`}>
                     <h3 className="font-bold text-lg mb-2">{event.content}</h3>
                     {event.description && (
                       <p className="text-sm mb-3 opacity-80">{event.description}</p>
@@ -879,7 +895,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                     </div>
                   </div>
 
-                  <div className="text-xs text-slate-500 italic">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 italic">
                     💡 Este é um evento público do calendário institucional
                   </div>
                 </div>
@@ -890,19 +906,19 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
           // Render normal Post
           const post = item as Post;
           return (
-            <article key={`post-${post.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <article key={`post-${post.id}`} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <img src={post.author_avatar || `https://picsum.photos/seed/${post.author_name}/100`} className="w-10 h-10 rounded-full" alt={post.author_name} />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-slate-800">{post.author_name}</h4>
+                        <h4 className="font-bold text-slate-800 dark:text-slate-100">{post.author_name}</h4>
                         {!!post.is_urgent && (
-                          <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Urgente</span>
+                          <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Urgente</span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500">{post.author_role} • {formatDate(post.created_at)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{post.author_role} • {formatDate(post.created_at)}</p>
                     </div>
                   </div>
 
@@ -930,16 +946,16 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                 {editingPost === post.id ? (
                   <div className="mb-4 space-y-2">
                     <div className="flex items-center gap-1 mb-2">
-                      <button onClick={() => applyFormatting('**', '**', true)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Negrito"><Bold size={14} /></button>
-                      <button onClick={() => applyFormatting('*', '*', true)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Itálico"><Italic size={14} /></button>
-                      <button onClick={() => applyFormatting('__', '__', true)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Sublinhado"><Underline size={14} /></button>
-                      <button onClick={() => applyFormatting('~~', '~~', true)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Riscado"><Strikethrough size={14} /></button>
+                      <button onClick={() => applyFormatting('**', '**', true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Negrito"><Bold size={14} /></button>
+                      <button onClick={() => applyFormatting('*', '*', true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Itálico"><Italic size={14} /></button>
+                      <button onClick={() => applyFormatting('__', '__', true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Sublinhado"><Underline size={14} /></button>
+                      <button onClick={() => applyFormatting('~~', '~~', true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-400" title="Riscado"><Strikethrough size={14} /></button>
                     </div>
                     <textarea
                       ref={editTextareaRef}
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-xl resize-none min-h-[100px] focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl resize-none min-h-[100px] focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-300"
                     />
                     <div className="flex gap-2">
                       <button
@@ -957,7 +973,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-slate-700 leading-relaxed mb-4 whitespace-pre-wrap post-content">
+                  <div className="text-slate-700 dark:text-slate-200 leading-relaxed mb-4 whitespace-pre-wrap post-content">
                     {renderPostContent(post.content)}
                   </div>
                 )}
@@ -969,8 +985,12 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       <img
                         key={img.id}
                         src={`/uploads/${img.filename}`}
-                        className="w-full object-cover max-h-64"
+                        className="w-full object-cover max-h-64 cursor-pointer"
                         alt={img.original_name}
+                        onDoubleClick={() => setPreviewItem({
+                          url: `/uploads/${img.filename}`,
+                          name: img.original_name
+                        })}
                       />
                     ))}
                   </div>
@@ -984,15 +1004,15 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                         key={file.id}
                         href={`/uploads/${file.filename}`}
                         download={file.original_name}
-                        className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors"
+                        className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${file.file_type.includes('pdf') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                             <FileText size={20} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-800 truncate">{file.original_name}</p>
-                            <p className="text-[10px] text-slate-500">{formatFileSize(file.file_size)}</p>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{file.original_name}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">{formatFileSize(file.file_size)}</p>
                           </div>
                         </div>
                         <Paperclip size={16} className="text-slate-400" />
@@ -1028,9 +1048,9 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       <div key={comment.id} className="flex gap-3">
                         <img src={comment.author_avatar || `https://picsum.photos/seed/${comment.author_name}/50`} className="w-8 h-8 rounded-full" alt={comment.author_name} />
                         <div className="flex-1">
-                          <div className="bg-slate-50 rounded-xl p-3">
+                          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
                             <div className="flex items-center justify-between mb-1">
-                              <p className="text-xs font-bold text-slate-800">{comment.author_name}</p>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{comment.author_name}</p>
                               {user && (user.id === comment.user_id.toString() || user.role === 'ADMIN') && (
                                 <div className="flex gap-1">
                                   <button
@@ -1076,10 +1096,10 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-slate-700">{comment.content}</p>
+                               <p className="text-sm text-slate-700 dark:text-slate-300">{comment.content}</p>
                             )}
                           </div>
-                          <p className="text-[10px] text-slate-400 mt-1 ml-3">{formatDate(comment.created_at)}</p>
+                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 ml-3">{formatDate(comment.created_at)}</p>
                         </div>
                       </div>
                     ))}
@@ -1094,7 +1114,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                           onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
                           onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
                           placeholder="Escreva um comentário..."
-                          className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100"
                         />
                         <button
                           onClick={() => handleAddComment(post.id)}
@@ -1117,12 +1137,12 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
         {/* Sidebar Cards */}
         <aside className="lg:w-80 space-y-6">
           {/* Birthdays Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
-            <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-pink-50 to-white flex items-center gap-3">
-              <div className="p-2.5 bg-white text-pink-600 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-pink-50 to-white dark:from-pink-900/10 dark:to-slate-800 flex items-center gap-3">
+              <div className="p-2.5 bg-white dark:bg-slate-700 text-pink-600 dark:text-pink-400 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
                 <Cake size={20} />
               </div>
-              <h3 className="font-bold text-slate-800">Aniversariantes do Mês</h3>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100">Aniversariantes do Mês</h3>
             </div>
             <div className="p-4 space-y-4">
               {birthdayPeople.length > 0 ? (
@@ -1134,8 +1154,8 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       alt={u.name}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{u.nickname || u.name}</p>
-                      <p className="text-xs text-slate-500 font-medium">
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{u.nickname || u.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                         Dia {new Date(u.birth_date!).getUTCDate()}
                       </p>
                     </div>
@@ -1148,12 +1168,12 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
           </div>
 
           {/* Work Anniversaries Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
-            <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-yellow-50 to-white flex items-center gap-3">
-              <div className="p-2.5 bg-white text-yellow-600 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg transition-shadow overflow-hidden group">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-yellow-50 to-white dark:from-yellow-900/10 dark:to-slate-800 flex items-center gap-3">
+              <div className="p-2.5 bg-white dark:bg-slate-700 text-yellow-600 dark:text-yellow-400 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
                 <AwardIcon size={20} />
               </div>
-              <h3 className="font-bold text-slate-800">Tempo de Casa</h3>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100">Tempo de Casa</h3>
             </div>
             <div className="p-4 space-y-4">
               {workAnniversaries.length > 0 ? (
@@ -1165,8 +1185,8 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                       alt={item.user.name}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{item.user.nickname || item.user.name}</p>
-                      <p className="text-xs text-slate-500 font-medium">
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{item.user.nickname || item.user.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                         {item.years} {item.years === 1 ? 'ano' : 'anos'} de casa • Dia {new Date(item.user.appointment_date!).getUTCDate()}
                       </p>
                     </div>
@@ -1179,6 +1199,52 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
           </div>
         </aside>
       </div>
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <div
+          className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100] p-4 animate-fadeIn"
+          onClick={() => setPreviewItem(null)}
+        >
+          <div className="absolute top-4 right-4 flex gap-4 z-[110]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement('a');
+                link.href = previewItem.url;
+                link.download = previewItem.name;
+                link.click();
+              }}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Download"
+            >
+              <Download size={24} />
+            </button>
+            <button
+              onClick={() => setPreviewItem(null)}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Fechar"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div
+            className="w-full max-w-5xl h-[85vh] flex items-center justify-center bg-transparent rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewItem.url}
+              alt={previewItem.name}
+              className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+            />
+          </div>
+
+          <div className="mt-6 text-white text-center">
+            <h3 className="text-lg font-bold">{previewItem.name}</h3>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

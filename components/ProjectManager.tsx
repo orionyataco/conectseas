@@ -420,223 +420,169 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
         );
     }
 
-    if (selectedProject && view === 'kanban') {
-        return (
-            <div className="h-full flex flex-col">
-                {/* Header */}
-                <div className="bg-white border-b border-slate-200 p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setSelectedProject(null)}
-                                className="text-slate-600 hover:text-slate-900"
-                            >
-                                ← Voltar
-                            </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-slate-900">{selectedProject.name}</h1>
-                                <p className="text-sm text-slate-600">{selectedProject.description}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setShowNewTaskModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                            <Plus size={20} />
-                            Nova Tarefa
-                        </button>
+    const renderKanban = () => (
+        <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+            <header className="flex items-center justify-between p-4 border-b border-b-slate-200 dark:border-b-slate-800 shrink-0">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setSelectedProject(null)}
+                        className="text-slate-600 hover:text-slate-400 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    >
+                        ← Voltar
+                    </button>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{selectedProject?.name}</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Quadro de Tarefas</p>
                     </div>
                 </div>
 
-                {/* Kanban Board */}
-                <div className="flex-1 overflow-x-auto p-6">
-                    <div className="flex gap-4 h-full min-w-max">
-                        {[
-                            { key: 'todo', label: 'A Fazer', color: 'bg-slate-100' },
-                            { key: 'in_progress', label: 'Em Progresso', color: 'bg-blue-100' },
-                            { key: 'review', label: 'Em Revisão', color: 'bg-purple-100' },
-                            { key: 'done', label: 'Concluído', color: 'bg-green-100' }
-                        ].map(column => (
-                            <div
-                                key={column.key}
-                                className={`flex-1 min-w-[300px] flex flex-col rounded-xl transition-colors ${dragOverColumn === column.key ? 'bg-blue-50/50 ring-2 ring-blue-200' : ''}`}
-                                onDragOver={(e) => handleDragOver(e, column.key)}
-                                onDragEnter={(e) => handleDragEnter(e, column.key)}
-                                onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, column.key)}
-                            >
-                                <div className={`${column.color} rounded-t-xl p-4`}>
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold text-slate-900">{column.label}</h3>
-                                        <span className="bg-white px-2 py-1 rounded-full text-xs font-medium">
-                                            {tasksByStatus[column.key as keyof typeof tasksByStatus].length}
-                                        </span>
-                                    </div>
+                <button
+                    onClick={() => setShowNewTaskModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95"
+                >
+                    <Plus size={18} />
+                    Nova Tarefa
+                </button>
+            </header>
+
+            <div className="flex-1 overflow-x-auto p-6 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex gap-6 h-full min-h-[500px]">
+                    {[
+                        { id: 'todo', title: 'Pendente', count: tasks.filter(t => t.status === 'todo').length, color: 'bg-slate-100 dark:bg-slate-800' },
+                        { id: 'in_progress', title: 'Em Progresso', count: tasks.filter(t => t.status === 'in_progress').length, color: 'bg-blue-100 dark:bg-blue-900/30' },
+                        { id: 'review', title: 'Em Revisão', count: tasks.filter(t => t.status === 'review').length, color: 'bg-purple-100 dark:bg-purple-900/30' },
+                        { id: 'done', title: 'Concluído', count: tasks.filter(t => t.status === 'done').length, color: 'bg-green-100 dark:bg-green-900/30' }
+                    ].map(column => (
+                        <div
+                            key={column.id}
+                            className="flex flex-col w-80 shrink-0"
+                            onDragOver={(e) => handleDragOver(e, column.id)}
+                            onDrop={(e) => handleDrop(e, column.id)}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${column.id === 'todo' ? 'bg-slate-400' :
+                                        column.id === 'in_progress' ? 'bg-blue-500' :
+                                            column.id === 'review' ? 'bg-purple-500' : 'bg-green-500'}`} />
+                                    <h3 className="font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider text-xs">{column.title}</h3>
+                                    <span className="text-xs font-bold text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                                        {column.count}
+                                    </span>
                                 </div>
-                                <div
-                                    className={`flex-1 bg-slate-50/50 rounded-b-xl p-4 space-y-3 overflow-y-auto transition-colors ${dragOverColumn === column.key ? 'bg-blue-50/80' : ''}`}
-                                    onDragOver={(e) => handleDragOver(e, column.key)}
-                                    onDrop={(e) => handleDrop(e, column.key)}
-                                >
-                                    {tasksByStatus[column.key as keyof typeof tasksByStatus].map(task => (
-                                        <div
-                                            key={task.id}
-                                            id={`task-card-${task.id}`}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, task.id)}
-                                            onDragEnd={(e) => handleDragEnd(e, task.id)}
-                                            onDoubleClick={(e) => {
-                                                e.stopPropagation();
-                                                if (canEditTask(task)) {
-                                                    setEditingTask(task);
-                                                }
-                                            }}
-                                            className={`bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative ${draggedTaskId === task.id ? 'scale-95 shadow-inner' : ''}`}
-                                        >
-                                            <div className="flex items-start justify-between mb-2">
-                                                <h4 className="font-medium text-slate-900 flex-1">{task.title}</h4>
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setActiveDropdown(activeDropdown === task.id ? null : task.id);
-                                                        }}
-                                                        className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100"
-                                                    >
-                                                        <MoreVertical size={16} />
-                                                    </button>
-
-                                                    {activeDropdown === task.id && (
-                                                        <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-slate-200 z-10 py-1">
-                                                            {canEditTask(task) && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActiveDropdown(null);
-                                                                        setEditingTask(task);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                                                >
-                                                                    <Edit2 size={14} />
-                                                                    Editar
-                                                                </button>
-                                                            )}
-                                                            {canDeleteTask(task) && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActiveDropdown(null);
-                                                                        handleDeleteTask(task.id);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                    Excluir
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {task.description && (
-                                                <p className="text-sm text-slate-600 mb-3 line-clamp-2">{task.description}</p>
-                                            )}
-
-                                            {/* Subtasks List */}
-                                            {task.subtasks && task.subtasks.length > 0 && (
-                                                <div className="mb-3 space-y-1.5">
-                                                    {task.subtasks.map(subtask => (
-                                                        <div key={subtask.id} className="flex items-center gap-2 group">
-                                                            <div
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleToggleSubtask(subtask.id, !subtask.is_completed);
-                                                                }}
-                                                                className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${subtask.is_completed
-                                                                    ? 'bg-blue-500 border-blue-500 text-white'
-                                                                    : 'border-slate-300 hover:border-blue-500'
-                                                                    }`}
-                                                            >
-                                                                {subtask.is_completed && <CheckCircle2 size={10} />}
-                                                            </div>
-                                                            <span className={`text-xs ${subtask.is_completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                                                {subtask.title}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                                        {task.priority}
-                                                    </span>
-                                                    <div className="flex -space-x-2">
-                                                        {task.assignees && task.assignees.length > 0 ? (
-                                                            task.assignees.map(assignee => (
-                                                                assignee.avatar ? (
-                                                                    <img
-                                                                        key={assignee.id}
-                                                                        src={assignee.avatar}
-                                                                        alt={assignee.name}
-                                                                        className="w-6 h-6 rounded-full border-2 border-white"
-                                                                        title={assignee.name}
-                                                                    />
-                                                                ) : (
-                                                                    <div key={assignee.id} className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] text-blue-600 font-bold" title={assignee.name}>
-                                                                        {assignee.name.charAt(0)}
-                                                                    </div>
-                                                                )
-                                                            ))
-                                                        ) : (
-                                                            task.assigned_avatar && (
-                                                                <img
-                                                                    src={task.assigned_avatar}
-                                                                    alt={task.assigned_name || ''}
-                                                                    className="w-6 h-6 rounded-full border-2 border-white"
-                                                                />
-                                                            )
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                                    {task.comment_count > 0 && (
-                                                        <span className="flex items-center gap-1">
-                                                            <MessageSquare size={14} />
-                                                            {task.comment_count}
-                                                        </span>
-                                                    )}
-                                                    {task.attachment_count > 0 && (
-                                                        <span className="flex items-center gap-1">
-                                                            <Paperclip size={14} />
-                                                            {task.attachment_count}
-                                                        </span>
-                                                    )}
-                                                </div>
+                            </div>
+                            <div className="flex-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl p-4 space-y-3 overflow-y-auto">
+                                {tasksByStatus[column.id as keyof typeof tasksByStatus].map(task => (
+                                    <div
+                                        key={task.id}
+                                        id={`task-card-${task.id}`}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, task.id)}
+                                        onDragEnd={(e) => handleDragEnd(e, task.id)}
+                                        onDoubleClick={() => { setEditingTask(task); setShowNewTaskModal(true); }}
+                                        className="group bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-move active:scale-[0.98] relative"
+                                    >
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight group-hover:text-blue-600 transition-colors truncate">{task.title}</h4>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setEditingTask(task); setShowNewTaskModal(true); }}
+                                                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400"
+                                                >
+                                                    <Edit2 size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                                                    className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-slate-400 hover:text-red-600"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
 
-                {/* New/Edit Task Modal */}
-                {(showNewTaskModal || editingTask) && (
-                    <NewTaskModal
-                        onClose={() => {
-                            setShowNewTaskModal(false);
-                            setEditingTask(null);
-                        }}
-                        onSave={editingTask ? handleUpdateTask : handleCreateTask}
-                        users={allUsers}
-                        initialData={editingTask}
-                        isEditing={!!editingTask}
-                    />
-                )}
+                                        {task.description && (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 leading-relaxed">{task.description}</p>
+                                        )}
+
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                    {task.priority}
+                                                </span>
+                                                {task.due_date && (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-md">
+                                                        <CalendarIcon size={10} />
+                                                        {new Date(task.due_date).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex -space-x-2">
+                                                {task.assignees && task.assignees.slice(0, 2).map(assignee => (
+                                                    assignee.avatar ? (
+                                                        <img
+                                                            key={assignee.id}
+                                                            src={assignee.avatar}
+                                                            alt={assignee.name}
+                                                            className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800"
+                                                            title={assignee.name}
+                                                        />
+                                                    ) : (
+                                                        <div key={assignee.id} className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] text-blue-600 dark:text-blue-300 font-bold" title={assignee.name}>
+                                                            {assignee.name.charAt(0)}
+                                                        </div>
+                                                    )
+                                                ))}
+                                                {task.assignees && task.assignees.length > 2 && (
+                                                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 border-2 border-white dark:border-slate-800 flex items-center justify-center -ml-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">+{task.assignees.length - 2}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                                            {task.comment_count > 0 && (
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-md">
+                                                    <MessageSquare size={10} />
+                                                    {task.comment_count}
+                                                </span>
+                                            )}
+                                            {task.subtasks && task.subtasks.length > 0 && (
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-md">
+                                                    <CheckCircle2 size={10} />
+                                                    {task.subtasks.filter(s => s.is_completed).length}/{task.subtasks.length}
+                                                </span>
+                                            )}
+                                            {task.attachment_count > 0 && (
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-md">
+                                                    <Paperclip size={10} />
+                                                    {task.attachment_count}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+
+                </div>
             </div>
-        );
+            {(showNewTaskModal || editingTask) && (
+                <NewTaskModal
+                    onClose={() => {
+                        setShowNewTaskModal(false);
+                        setEditingTask(null);
+                    }}
+                    onSave={editingTask ? handleUpdateTask : handleCreateTask}
+                    users={allUsers}
+                    initialData={editingTask}
+                    isEditing={!!editingTask}
+                />
+            )}
+        </div>
+    );
+
+    if (selectedProject && view === 'kanban') {
+        return renderKanban();
     }
 
     return (
@@ -689,7 +635,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                 {filteredProjects.map(project => (
                     <div
                         key={project.id}
-                        className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                        className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow cursor-pointer"
                         onClick={() => {
                             setSelectedProject(project);
                             setView('kanban');
@@ -697,8 +643,8 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">{project.name}</h3>
-                                <p className="text-sm text-slate-600 line-clamp-2">{project.description}</p>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">{project.name}</h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{project.description}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div
@@ -711,20 +657,20 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                                             e.stopPropagation();
                                             setActiveDropdown(activeDropdown === project.id ? null : project.id);
                                         }}
-                                        className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100"
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
                                     >
                                         <MoreVertical size={16} />
                                     </button>
 
                                     {activeDropdown === project.id && (
-                                        <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-10 py-1">
+                                        <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 z-10 py-1">
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setActiveDropdown(null);
                                                     setEditingProject(project);
                                                 }}
-                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
                                             >
                                                 <Edit2 size={14} />
                                                 Editar
@@ -768,7 +714,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
+                        <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-4">
                             <span className="flex items-center gap-1">
                                 <Users size={16} />
                                 {project.member_count || 0}
@@ -792,8 +738,8 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                                         {project.owner_name?.charAt(0) || 'U'}
                                     </div>
                                 )}
-                                <span className="text-xs text-slate-600">
-                                    Criado por <span className="font-medium text-slate-900">{project.owner_name || 'Desconhecido'}</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-400">
+                                    Criado por <span className="font-medium text-slate-900 dark:text-slate-200">{project.owner_name || 'Desconhecido'}</span>
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -832,6 +778,20 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                     users={allUsers}
                     initialData={editingProject}
                     isEditing={!!editingProject}
+                />
+            )}
+
+            {/* New/Edit Task Modal */}
+            {(showNewTaskModal || editingTask) && (
+                <NewTaskModal
+                    onClose={() => {
+                        setShowNewTaskModal(false);
+                        setEditingTask(null);
+                    }}
+                    onSave={editingTask ? handleUpdateTask : handleCreateTask}
+                    users={allUsers}
+                    initialData={editingTask}
+                    isEditing={!!editingTask}
                 />
             )}
         </div>
@@ -913,12 +873,12 @@ const NewProjectModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-xl w-full p-6 my-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">{isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-xl max-w-xl w-full p-6 my-8 shadow-2xl border border-slate-200 dark:border-slate-800">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">{isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label htmlFor="projectName" className="block text-sm font-medium text-slate-700 mb-2">Nome do Projeto *</label>
+                        <label htmlFor="projectName" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome do Projeto *</label>
                         <input
                             id="projectName"
                             name="projectName"
@@ -926,7 +886,7 @@ const NewProjectModal: React.FC<{
                             required
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             placeholder="Ex: Novo Website"
                         />
                     </div>
@@ -938,7 +898,7 @@ const NewProjectModal: React.FC<{
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             placeholder="Descreva o objetivo do projeto"
                         />
                     </div>
@@ -951,7 +911,7 @@ const NewProjectModal: React.FC<{
                                 name="projectPriority"
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             >
                                 <option value="low">Baixa</option>
                                 <option value="medium">Média</option>
@@ -1064,7 +1024,7 @@ const NewProjectModal: React.FC<{
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             />
                         </div>
                         <div>
@@ -1075,7 +1035,7 @@ const NewProjectModal: React.FC<{
                                 type="date"
                                 value={formData.endDate}
                                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             />
                         </div>
                     </div>
@@ -1085,7 +1045,7 @@ const NewProjectModal: React.FC<{
                         <div className="space-y-2">
                             <label htmlFor="projectAttachments" className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
                                 <Paperclip size={18} className="text-slate-500" />
-                                <span className="text-sm text-slate-600 font-medium">Anexar arquivos</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Anexar arquivos</span>
                                 <input id="projectAttachments" name="projectAttachments" type="file" multiple onChange={handleFileChange} className="hidden" />
                             </label>
                             {attachments.length > 0 && (
@@ -1233,13 +1193,13 @@ const NewTaskModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-xl w-full p-6 my-8 shadow-2xl">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">{isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-xl max-w-xl w-full p-6 my-8 shadow-2xl border border-slate-200 dark:border-slate-800">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">{isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Título */}
                     <div>
-                        <label htmlFor="taskTitle" className="block text-sm font-medium text-slate-700 mb-2">Título *</label>
+                        <label htmlFor="taskTitle" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Título *</label>
                         <input
                             id="taskTitle"
                             name="taskTitle"
@@ -1247,28 +1207,28 @@ const NewTaskModal: React.FC<{
                             required
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Digite o título da tarefa"
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+                            placeholder="O que precisa ser feito?"
                         />
                     </div>
 
                     {/* Descrição */}
                     <div>
-                        <label htmlFor="taskDescription" className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
+                        <label htmlFor="taskDescription" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
                         <textarea
                             id="taskDescription"
                             name="taskDescription"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             placeholder="Descreva os detalhes da tarefa"
                         />
                     </div>
 
                     {/* Responsável com busca */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Responsável</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Responsável</label>
                         <div className="relative">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 {selectedUsers.map(user => (
@@ -1293,8 +1253,6 @@ const NewTaskModal: React.FC<{
                                 ))}
                             </div>
                             <div className="flex items-center gap-2">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transform translate-y-2 opacity-0" size={18} />
-                                {/* Adjusted Search Input */}
                                 <div className="relative w-full">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
@@ -1307,13 +1265,13 @@ const NewTaskModal: React.FC<{
                                             setShowUserDropdown(true);
                                         }}
                                         onFocus={() => setShowUserDropdown(true)}
-                                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                                         placeholder="Buscar usuário..."
                                     />
                                 </div>
                             </div>
                             {showUserDropdown && userSearch && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                     {filteredUsers.length > 0 ? (
                                         filteredUsers.map(user => (
                                             <button
@@ -1348,29 +1306,29 @@ const NewTaskModal: React.FC<{
                     {/* Prioridade e Prazo */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="taskPriority" className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
+                            <label htmlFor="taskPriority" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prioridade</label>
                             <select
                                 id="taskPriority"
                                 name="taskPriority"
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             >
-                                <option value="low">🟢 Baixa</option>
-                                <option value="medium">🟡 Média</option>
-                                <option value="high">🟠 Alta</option>
-                                <option value="urgent">🔴 Urgente</option>
+                                <option value="low" className="dark:bg-slate-800">🟢 Baixa</option>
+                                <option value="medium" className="dark:bg-slate-800">🟡 Média</option>
+                                <option value="high" className="dark:bg-slate-800">🟠 Alta</option>
+                                <option value="urgent" className="dark:bg-slate-800">🔴 Urgente</option>
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="taskDueDate" className="block text-sm font-medium text-slate-700 mb-2">Prazo</label>
+                            <label htmlFor="taskDueDate" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prazo</label>
                             <input
                                 id="taskDueDate"
                                 name="taskDueDate"
                                 type="date"
                                 value={formData.dueDate}
                                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             />
                         </div>
                     </div>
@@ -1379,7 +1337,7 @@ const NewTaskModal: React.FC<{
 
                     {/* Subtarefas */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Subtarefas</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subtarefas</label>
                         <div className="space-y-2">
                             <div className="flex gap-2">
                                 <input
@@ -1389,13 +1347,13 @@ const NewTaskModal: React.FC<{
                                     value={newSubtask}
                                     onChange={(e) => setNewSubtask(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubtask())}
-                                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                                     placeholder="Digite uma subtarefa e pressione Enter"
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddSubtask}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
+                                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-medium border border-slate-200 dark:border-slate-700"
                                 >
                                     <Plus size={20} />
                                 </button>
@@ -1424,9 +1382,9 @@ const NewTaskModal: React.FC<{
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Anexos</label>
                         <div className="space-y-2">
-                            <label htmlFor="taskAttachments" className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors">
+                            <label htmlFor="taskAttachments" className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors">
                                 <Paperclip size={18} className="text-slate-500" />
-                                <span className="text-sm text-slate-600">Clique para adicionar arquivos</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">Clique para adicionar arquivos</span>
                                 <input
                                     id="taskAttachments"
                                     name="taskAttachments"

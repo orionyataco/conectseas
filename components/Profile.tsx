@@ -199,7 +199,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {/* Header / Cover */}
                 <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative">
                     <div className="absolute top-4 right-4">
@@ -219,7 +219,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                     <div className="relative -mt-20 mb-6 flex flex-col md:flex-row items-end md:items-end gap-6">
                         {/* Avatar */}
                         <div className="relative group">
-                            <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg overflow-hidden bg-white">
+                            <div className="w-32 h-32 rounded-3xl border-4 border-white dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
                                 <img
                                     src={previewAvatar || (user.avatar ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : `/uploads/${user.avatar}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`)}
                                     alt={user.name}
@@ -235,10 +235,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                         </div>
 
                         <div className="flex-1 pb-2 text-center md:text-left flex flex-col">
-                            <h1 className="text-2xl font-bold text-slate-800 md:text-white md:mb-6 md:-translate-y-4">{user.name}</h1>
+                            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 md:text-white md:mb-6 md:-translate-y-4">{user.name}</h1>
                             <div className="md:translate-y-2">
-                                <p className="text-slate-500 font-medium">{user.role} - {user.position}</p>
-                                <p className="text-slate-400 text-sm">{user.department}</p>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium">{user.role} - {user.position}</p>
+                                <p className="text-slate-400 dark:text-slate-500 text-sm">{user.department}</p>
 
                                 {/* Vacation Button (only for own profile) */}
                             </div>
@@ -251,14 +251,14 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 flex items-center gap-2 animate-fadeIn">
+                        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-800 flex items-center gap-2 animate-fadeIn">
                             <X size={18} />
                             {error}
                         </div>
                     )}
 
                     {success && (
-                        <div className="mb-6 p-4 bg-green-50 text-green-600 rounded-xl border border-green-100 flex items-center gap-2 animate-fadeIn">
+                        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl border border-green-100 dark:border-green-800 flex items-center gap-2 animate-fadeIn">
                             <Save size={18} />
                             {success}
                         </div>
@@ -266,14 +266,14 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
 
                     {/* Vacation Message Display */}
                     {!!user.vacation_status && !!user.vacation_message && (
-                        <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl">
+                        <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl">
                             <div className="flex items-start gap-3">
-                                <div className="p-2 bg-blue-100 rounded-lg">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                                     <Plane size={24} className="text-blue-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-blue-900 mb-2 text-lg">Status de Férias Ativo</h3>
-                                    <p className="text-blue-700 whitespace-pre-wrap leading-relaxed">{user.vacation_message}</p>
+                                    <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-2 text-lg">Status de Férias Ativo</h3>
+                                    <p className="text-blue-700 dark:text-blue-300 whitespace-pre-wrap leading-relaxed">{user.vacation_message}</p>
                                     {(user.vacation_start_date || user.vacation_end_date) && (
                                         <div className="mt-3 flex items-center gap-2 text-sm text-blue-600">
                                             <Calendar size={14} />
@@ -294,7 +294,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Apelido/Nickname */}
                             {(isEditing || !!user.nickname) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <UserIcon size={16} className="text-blue-500" />
                                         Apelido (Como prefere ser chamado)
                                     </label>
@@ -305,10 +305,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={formData.nickname}
                                             onChange={handleInputChange}
                                             placeholder="Ex: Beto"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-lg text-slate-800">{user.nickname}</p>
+                                        <p className="text-lg text-slate-800 dark:text-slate-200">{user.nickname}</p>
                                     )}
                                 </div>
                             )}
@@ -316,7 +316,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Bio */}
                             {(isEditing || !!user.bio) && (
                                 <div className="space-y-2 md:col-span-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <FileText size={16} className="text-purple-500" />
                                         Sobre Mim (Bio)
                                     </label>
@@ -327,10 +327,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             onChange={handleInputChange}
                                             rows={3}
                                             placeholder="Conte um pouco sobre você..."
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-600 leading-relaxed">
+                                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                                             {user.bio}
                                         </p>
                                     )}
@@ -339,7 +339,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
 
                             {/* Email */}
                             <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                     <Mail size={16} className="text-slate-400" />
                                     Email Institucional
                                 </label>
@@ -350,10 +350,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         placeholder="Ex: joao@seas.ap.gov.br"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                     />
                                 ) : (
-                                    <p className="text-slate-800">
+                                    <p className="text-slate-800 dark:text-slate-200">
                                         {user.email}
                                     </p>
                                 )}
@@ -362,7 +362,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Matrícula */}
                             {(isEditing || !!user.registration_number) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <Hash size={16} className="text-orange-500" />
                                         Matrícula
                                     </label>
@@ -373,10 +373,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={formData.registrationNumber}
                                             onChange={handleInputChange}
                                             placeholder="000000"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-800 font-mono">{user.registration_number}</p>
+                                        <p className="text-slate-800 dark:text-slate-200 font-mono">{user.registration_number}</p>
                                     )}
                                 </div>
                             )}
@@ -384,7 +384,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Departamento */}
                             {(isEditing || user.department) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <Award size={16} className="text-blue-500" />
                                         Departamento
                                     </label>
@@ -395,10 +395,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={formData.department}
                                             onChange={handleInputChange}
                                             placeholder="Ex: Recursos Humanos"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-800">{user.department}</p>
+                                        <p className="text-slate-800 dark:text-slate-200">{user.department}</p>
                                     )}
                                 </div>
                             )}
@@ -406,7 +406,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Cargo */}
                             {(isEditing || user.position) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <Briefcase size={16} className="text-teal-500" />
                                         Cargo / Função
                                     </label>
@@ -417,10 +417,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={formData.position}
                                             onChange={handleInputChange}
                                             placeholder="Ex: Analista Administrativo"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-800">{user.position}</p>
+                                        <p className="text-slate-800 dark:text-slate-200">{user.position}</p>
                                     )}
                                 </div>
                             )}
@@ -428,7 +428,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Data de Nascimento */}
                             {(isEditing || user.birth_date) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <Calendar size={16} className="text-pink-500" />
                                         Data de Nascimento
                                     </label>
@@ -438,10 +438,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             name="birthDate"
                                             value={formData.birthDate ? formData.birthDate.split('T')[0] : ''}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-800">{formatDate(user.birth_date)}</p>
+                                        <p className="text-slate-800 dark:text-slate-200">{formatDate(user.birth_date)}</p>
                                     )}
                                 </div>
                             )}
@@ -449,7 +449,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                             {/* Data de Nomeação */}
                             {(isEditing || user.appointment_date) && (
                                 <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                                         <Award size={16} className="text-yellow-500" />
                                         Data de Admissão
                                     </label>
@@ -459,28 +459,28 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             name="appointmentDate"
                                             value={formData.appointmentDate ? formData.appointmentDate.split('T')[0] : ''}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-slate-100"
                                         />
                                     ) : (
-                                        <p className="text-slate-800">{formatDate(user.appointment_date)}</p>
+                                        <p className="text-slate-800 dark:text-slate-200">{formatDate(user.appointment_date)}</p>
                                     )}
                                 </div>
                             )}
                         </div>
 
                         {isEditing && isOwnProfile && (
-                            <div className="mt-8 p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center gap-4 text-center">
-                                <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
+                            <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center gap-4 text-center">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
                                     <Plane size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-slate-800">Gerenciar Férias</h4>
-                                    <p className="text-sm text-slate-500">Configure sua mensagem de ausência e período de descanso.</p>
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-100">Gerenciar Férias</h4>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Configure sua mensagem de ausência e período de descanso.</p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={handleOpenVacationModal}
-                                    className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm"
+                                    className="bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm"
                                 >
                                     <Plane size={18} />
                                     {user.vacation_status ? 'Ajustar Detalhes de Férias' : 'Configurar Férias'}
@@ -489,7 +489,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                         )}
 
                         {isEditing && (
-                            <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+                            <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -507,7 +507,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                         setPreviewAvatar(null);
                                         setAvatarFile(null);
                                     }}
-                                    className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors"
+                                    className="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
                                 >
                                     Cancelar
                                 </button>
@@ -533,30 +533,30 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
             {
                 showVacationModal && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="p-6 border-b border-slate-200">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800">
+                            <div className="p-6 border-b border-slate-200 dark:border-slate-800">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-100 rounded-lg">
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
                                             <Plane size={24} className="text-blue-600" />
                                         </div>
-                                        <h2 className="text-2xl font-bold text-slate-800">Status de Férias</h2>
+                                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Status de Férias</h2>
                                     </div>
                                     <button
                                         onClick={() => setShowVacationModal(false)}
-                                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                                     >
-                                        <X size={20} />
+                                        <X size={20} className="text-slate-400 dark:text-slate-500" />
                                     </button>
                                 </div>
                             </div>
 
                             <div className="p-6 space-y-6">
                                 {/* Vacation Status Toggle */}
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
                                     <div>
-                                        <h3 className="font-semibold text-slate-800">Ativar Status de Férias</h3>
-                                        <p className="text-sm text-slate-500">Exibir status de férias no seu perfil</p>
+                                        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Ativar Status de Férias</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Exibir status de férias no seu perfil</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
@@ -565,16 +565,16 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             onChange={(e) => setVacationData({ ...vacationData, vacationStatus: e.target.checked })}
                                             className="sr-only peer"
                                         />
-                                        <div className="w-14 h-7 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-14 h-7 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                 </div>
 
                                 {/* Vacation Message */}
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-semibold text-slate-700">
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                         Mensagem de Férias
                                     </label>
-                                    <p className="text-xs text-slate-500 mb-2">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                                         Personalize sua mensagem. Você pode usar emojis! 😊🏖️✈️🌴
                                     </p>
                                     <textarea
@@ -583,14 +583,14 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                         disabled={!vacationData.vacationStatus}
                                         rows={4}
                                         placeholder="Ex: Estou de férias até 20/02! Em caso de urgência, entre em contato com João. 🏖️"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100"
                                     />
                                 </div>
 
                                 {/* Date Range */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-slate-700">
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                             Data de Início (Opcional)
                                         </label>
                                         <input
@@ -598,11 +598,11 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={vacationData.vacationStartDate ? vacationData.vacationStartDate.split('T')[0] : ''}
                                             onChange={(e) => setVacationData({ ...vacationData, vacationStartDate: e.target.value })}
                                             disabled={!vacationData.vacationStatus}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100 placeholder:text-slate-400"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-slate-700">
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                             Data de Fim (Opcional)
                                         </label>
                                         <input
@@ -610,24 +610,24 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                             value={vacationData.vacationEndDate ? vacationData.vacationEndDate.split('T')[0] : ''}
                                             onChange={(e) => setVacationData({ ...vacationData, vacationEndDate: e.target.value })}
                                             disabled={!vacationData.vacationStatus}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100 placeholder:text-slate-400"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Publish to Mural Checkbox */}
                                 {vacationData.vacationStatus && (
-                                    <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                    <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
                                         <input
                                             type="checkbox"
                                             id="publishToMural"
                                             checked={vacationData.publishToMural}
                                             onChange={(e) => setVacationData({ ...vacationData, publishToMural: e.target.checked })}
-                                            className="mt-1 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
+                                            className="mt-1 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500"
                                         />
                                         <label htmlFor="publishToMural" className="flex-1 cursor-pointer">
-                                            <span className="font-semibold text-blue-900">Publicar também no Mural</span>
-                                            <p className="text-sm text-blue-700 mt-1">
+                                            <span className="font-semibold text-blue-900 dark:text-blue-100">Publicar também no Mural</span>
+                                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                                                 Criar uma publicação automática informando suas férias para todos os usuários
                                             </p>
                                         </label>
@@ -635,10 +635,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                                 )}
                             </div>
 
-                            <div className="p-6 border-t border-slate-200 flex items-center justify-end gap-3">
+                            <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
                                 <button
                                     onClick={() => setShowVacationModal(false)}
-                                    className="px-6 py-3 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl transition-colors"
+                                    className="px-6 py-3 text-slate-600 dark:text-slate-400 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                                 >
                                     Cancelar
                                 </button>

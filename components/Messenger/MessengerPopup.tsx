@@ -11,7 +11,7 @@ interface MessengerPopupProps {
 
 const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
     const { user } = useAuth();
-    const { openChat, unreadPerUser, setUnreadPerUser, clearUserUnread } = useMessenger();
+    const { socket, openChat, unreadPerUser, setUnreadPerUser, clearUserUnread } = useMessenger();
     const [groupedUsers, setGroupedUsers] = useState<Record<string, any[]>>({});
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -37,14 +37,47 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
         }
     }, [user, setUnreadPerUser]);
 
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUserStatusChange = (userId: number, isOnline: boolean) => {
+            setGroupedUsers(prev => {
+                const newState = { ...prev };
+                let found = false;
+                
+                for (const dept in newState) {
+                    newState[dept] = newState[dept].map(u => {
+                        if (Number(u.id) === Number(userId)) {
+                            found = true;
+                            return { ...u, isOnline };
+                        }
+                        return u;
+                    });
+                    if (found) break;
+                }
+                
+                return newState;
+            });
+        };
+
+        socket.on('user_online', (userId) => handleUserStatusChange(userId, true));
+        socket.on('user_offline', (userId) => handleUserStatusChange(userId, false));
+
+        return () => {
+            socket.off('user_online');
+            socket.off('user_offline');
+        };
+    }, [socket]);
+
     const filteredGroups = Object.entries(groupedUsers).reduce((acc, [dept, users]) => {
         const filtered = (users as any[]).filter(u => {
-            const name = u.name || '';
-            const dept = u.department || '';
-            const search = searchQuery || '';
-            const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) ||
-                dept.toLowerCase().includes(search.toLowerCase());
-            const matchesOnline = !showOnlineOnly || u.isOnline;
+            const nameStr = String(u.name || '').toLowerCase();
+            const deptStr = String(u.department || '').toLowerCase();
+            const searchStr = searchQuery.toLowerCase();
+            
+            const matchesSearch = nameStr.includes(searchStr) || deptStr.includes(searchStr);
+            const matchesOnline = !showOnlineOnly || !!u.isOnline;
+            
             return matchesSearch && matchesOnline;
         });
         if (filtered.length > 0) acc[dept] = filtered;
@@ -77,10 +110,15 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
                     <div className="flex items-center justify-between px-1">
                         <span className="text-[10px] font-bold text-slate-500 uppercase">Apenas Online</span>
                         <button
-                            onClick={() => setShowOnlineOnly(!showOnlineOnly)}
-                            className={`w-8 h-4 rounded-full relative transition-colors ${showOnlineOnly ? 'bg-blue-600' : 'bg-slate-300'}`}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowOnlineOnly(prev => !prev);
+                            }}
+                            className={`w-8 h-4 rounded-full relative transition-all duration-300 ${showOnlineOnly ? 'bg-blue-600' : 'bg-slate-300'}`}
                         >
-                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${showOnlineOnly ? 'left-[18px]' : 'left-0.5'}`}></div>
+                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${showOnlineOnly ? 'left-[18px]' : 'left-0.5'}`}></div>
                         </button>
                     </div>
                 </div>
@@ -108,7 +146,7 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
                                                 openChat(u);
                                                 onClose();
                                             }}
-                                            className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors flex items-center justify-between group"
+                                            className={`px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group ${!u.isOnline ? 'opacity-60' : ''}`}
                                         >
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 <div className="relative shrink-0">
