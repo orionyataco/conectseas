@@ -39,7 +39,7 @@ services:
     image: adminer:latest
     restart: always
     ports:
-      - "8084:8080"
+      - "8085:8080"
     networks:
       - local-network
 
