@@ -6,18 +6,12 @@ services:
       context: .
     image: conectseas-app:latest
     restart: always
+    env_file:
+      - .env.production
     ports:
       - "3102:3002"
     environment:
-      PORT: 3002
       DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_secret}
-      DB_NAME: ${DB_NAME:-conectseas}
-      DB_SSL: ${DB_SSL:-false}
-      JWT_SECRET: ${JWT_SECRET:-changeme_in_production}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -25,24 +19,21 @@ services:
       - ./server/uploads:/app/server/uploads
     networks:
       - local-network
-      - app-private
 
   db:
     image: postgres:16-alpine
     restart: always
-    environment:
-      POSTGRES_DB: ${DB_NAME:-conectseas}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_secret}
+    env_file:
+      - .env.production
     volumes:
-      - conectseas_postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
-      - app-private
+      - local-network
 
   adminer:
     image: adminer:latest
@@ -51,14 +42,8 @@ services:
       - "8085:8080"
     networks:
       - local-network
-      - app-private
-
-volumes:
-  conectseas_postgres_data:
 
 networks:
   local-network:
     external: true
-  app-private:
-    driver: bridge
-    internal: true
+
