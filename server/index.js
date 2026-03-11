@@ -41,7 +41,15 @@ const io = initSocket(server);
 const PORT = process.env.PORT || 3002;
 
 // Basic Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            "upgrade-insecure-requests": null,
+        },
+    },
+    crossOriginOpenerPolicy: false,
+    originAgentCluster: false,
+}));
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
