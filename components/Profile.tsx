@@ -16,6 +16,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
     const [fetching, setFetching] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [imageError, setImageError] = useState(false);
 
     const [formData, setFormData] = useState({
         nickname: '',
@@ -48,6 +49,7 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
         setSuccess(null);
         setPreviewAvatar(null);
         setAvatarFile(null);
+        setImageError(false);
         fetchUserProfile(idToFetch);
     }, [targetUserId, currentUser.id]);
 
@@ -221,9 +223,10 @@ const Profile: React.FC<ProfileProps> = ({ user: currentUser, targetUserId, onUp
                         <div className="relative group">
                             <div className="w-32 h-32 rounded-3xl border-4 border-white dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
                                 <img
-                                    src={previewAvatar || (user.avatar ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : `/uploads/${user.avatar}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`)}
+                                    src={previewAvatar || (!imageError && user.avatar ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : `/uploads/${user.avatar}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`)}
                                     alt={user.name}
                                     className="w-full h-full object-cover"
+                                    onError={() => setImageError(true)}
                                 />
                             </div>
                             {isEditing && (
