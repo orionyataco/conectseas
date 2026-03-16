@@ -50,6 +50,13 @@ export const initSocket = (server) => {
 
                 // Always broadcast online status (frontend will handle deduplication if already online)
                 io.emit('user_online', numericUserId);
+
+                // Join rooms for all projects the user is a member of
+                const [memberships] = await pool.query('SELECT project_id FROM project_members WHERE user_id = ?', [numericUserId]);
+                memberships.forEach(m => {
+                    socket.join(`project_${m.project_id}`);
+                    console.log(`User ${numericUserId} joined project room: project_${m.project_id}`);
+                });
             }
         });
 
@@ -179,6 +186,17 @@ export const initSocket = (server) => {
                     }
                 }
             }
+        });
+
+        // Add explicit project join/leave if needed
+        socket.on('join_project', (projectId) => {
+            socket.join(`project_${projectId}`);
+            console.log(`Socket ${socket.id} explicitly joined project_${projectId}`);
+        });
+
+        socket.on('leave_project', (projectId) => {
+            socket.leave(`project_${projectId}`);
+            console.log(`Socket ${socket.id} left project_${projectId}`);
         });
     });
 

@@ -3,6 +3,7 @@ import pool from '../db.js';
 import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
 import { sendNotification } from '../services/notificationService.js';
+import { getIO } from '../socket.js';
 
 const router = express.Router();
 
@@ -35,7 +36,8 @@ async function assertProjectOwnerOrManager(projectId, userId, res) {
         return false;
     }
     const { owner_id, role } = rows[0];
-    if (owner_id !== userId && role !== 'owner' && role !== 'manager') {
+    console.log('[DEBUG assertProjectOwnerOrManager]', { owner_id, userId, role, owner_type: typeof owner_id, user_type: typeof userId, match: String(owner_id) === String(userId) });
+    if (String(owner_id) !== String(userId) && role !== 'owner' && role !== 'manager') {
         res.status(403).json({ error: 'Não autorizado (requer permissão de gestor ou dono)' });
         return false;
     }
@@ -178,7 +180,8 @@ router.delete('/:id', async (req, res) => {
     try {
         const [projects] = await pool.query('SELECT owner_id FROM projects WHERE id = ?', [id]);
         if (projects.length === 0) return res.status(404).json({ error: 'Projeto não encontrado' });
-        if (projects[0].owner_id !== requesterId && requesterRole !== 'ADMIN') {
+        console.log('[DEBUG deleteProject]', { owner_id: projects[0].owner_id, requesterId, requesterRole, match: String(projects[0].owner_id) === String(requesterId) });
+        if (String(projects[0].owner_id) !== String(requesterId) && requesterRole !== 'ADMIN') {
             return res.status(403).json({ error: 'Não autorizado' });
         }
         await pool.query('DELETE FROM projects WHERE id = ?', [id]);
@@ -337,19 +340,25 @@ router.get('/:id/tasks', async (req, res) => {
 
         const [tasks] = await pool.query(`
             SELECT t.*, u1.name as assigned_name, u1.avatar as assigned_avatar, u2.name as creator_name,
-                (SELECT COUNT(*) FROM task_comments WHERE task_id = t.id) as comment_count,
-                (SELECT COUNT(*) FROM task_attachments WHERE task_id = t.id) as attachment_count,
+                COUNT(DISTINCT tc.id) as comment_count,
+                COUNT(DISTINCT ta.id) as attachment_count,
                 COALESCE((SELECT json_agg(json_build_object(
                     'id', f.id, 
                     'name', f.original_name, 
                     'type', f.file_type, 
                     'size', f.file_size,
                     'path', '/uploads/' || f.filename
-                )) FROM task_attachments ta JOIN user_files f ON ta.file_id = f.id WHERE ta.task_id = t.id), '[]'::json) as attachments,
-                COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta JOIN users u ON ta.user_id = u.id WHERE ta.task_id = t.id), '[]'::json) as assignees,
+                )) FROM task_attachments ta2 JOIN user_files f ON ta2.file_id = f.id WHERE ta2.task_id = t.id), '[]'::json) as attachments,
+                COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar)) FROM task_assignees ta3 JOIN users u ON ta3.user_id = u.id WHERE ta3.task_id = t.id), '[]'::json) as assignees,
                 COALESCE((SELECT json_agg(json_build_object('id', ts.id, 'title', ts.title, 'is_completed', ts.is_completed)) FROM task_subtasks ts WHERE ts.task_id = t.id), '[]'::json) as subtasks
-            FROM project_tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id JOIN users u2 ON t.created_by = u2.id
-            WHERE t.project_id = ? ORDER BY t.order_index ASC, t.created_at DESC
+            FROM project_tasks t 
+            LEFT JOIN users u1 ON t.assigned_to = u1.id 
+            JOIN users u2 ON t.created_by = u2.id
+            LEFT JOIN task_comments tc ON t.id = tc.task_id
+            LEFT JOIN task_attachments ta ON t.id = ta.task_id
+            WHERE t.project_id = ? 
+            GROUP BY t.id, u1.name, u1.avatar, u2.name
+            ORDER BY t.order_index ASC, t.created_at DESC
         `, [id]);
         // pg retorna JSON já parseado como objeto JS — sem necessidade de JSON.parse
         res.json(tasks.map(t => ({ ...t, assignees: t.assignees || [], subtasks: t.subtasks || [], attachments: t.attachments || [] })));
@@ -397,6 +406,10 @@ router.post('/:id/tasks', upload.array('attachments'), async (req, res) => {
 
         const [result] = await pool.query('INSERT INTO project_tasks (project_id, title, description, assigned_to, created_by, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title, description, mainAssignee, createdBy, status || 'todo', priority || 'medium', finalDueDate]);
         const taskId = result.insertId;
+
+        // Broadcast update to all project members
+        const io = getIO();
+        io.to(`project_${id}`).emit('project_task_updated', { projectId: id, action: 'create', taskId });
 
         if (Array.isArray(parsedAssignees)) {
             for (const userId of parsedAssignees) {
@@ -503,6 +516,10 @@ router.patch('/tasks/:id/status', async (req, res) => {
         }
         await pool.query(`UPDATE project_tasks SET status = ?, order_index = ?, completed_at = ${status === 'done' ? 'CURRENT_TIMESTAMP' : 'NULL'}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, orderIndex, id]);
         res.json({ success: true });
+
+        // Broadcast update to all project members
+        const io = getIO();
+        io.to(`project_${taskRows[0].project_id}`).emit('project_task_updated', { projectId: taskRows[0].project_id, action: 'status_change', taskId: id, status });
     } catch (error) {
         console.error('Error updating task status:', error);
         res.status(500).json({ error: 'Erro ao atualizar status da tarefa' });
@@ -521,8 +538,13 @@ router.delete('/tasks/:id', async (req, res) => {
             const ok = await assertProjectOwnerOrManager(taskRows[0].project_id, requesterId, res);
             if (!ok) return;
         }
+        const projectId = taskRows[0].project_id;
         await pool.query('DELETE FROM project_tasks WHERE id = ?', [id]);
         res.json({ success: true });
+
+        // Broadcast update to all project members
+        const io = getIO();
+        io.to(`project_${projectId}`).emit('project_task_updated', { projectId, action: 'delete', taskId: id });
     } catch (error) {
         console.error('Error deleting task:', error);
         res.status(500).json({ error: 'Erro ao deletar tarefa' });
@@ -533,8 +555,17 @@ router.patch('/subtasks/:id/toggle', async (req, res) => {
     const { id } = req.params;
     const { is_completed } = req.body;
     try {
+        // Need project_id to broadcast
+        const [taskRows] = await pool.query('SELECT project_id FROM project_tasks WHERE id = (SELECT task_id FROM task_subtasks WHERE id = ?)', [id]);
+        const projectId = taskRows[0]?.project_id;
+
         await pool.query('UPDATE task_subtasks SET is_completed = ? WHERE id = ?', [is_completed ? 1 : 0, id]);
         res.json({ success: true });
+
+        if (projectId) {
+            const io = getIO();
+            io.to(`project_${projectId}`).emit('project_task_updated', { projectId, action: 'subtask_toggle', subtaskId: id });
+        }
     } catch (error) {
         console.error('Error toggling subtask:', error);
         res.status(500).json({ error: 'Erro ao atualizar subtarefa' });

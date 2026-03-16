@@ -643,12 +643,30 @@ const initDB = async () => {
     console.log('Tabela "messenger_messages" verificada/criada.');
 
     // Migration: Add drive_folder_id to projects if missing
-    try {
+    const [colCheck] = await connection.query(
+      "SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'drive_folder_id'"
+    );
+    if (colCheck.length === 0) {
       await connection.query('ALTER TABLE projects ADD COLUMN drive_folder_id INTEGER');
       console.log('Coluna "drive_folder_id" adicionada à tabela projects.');
-    } catch (e) {
-      // Column already exists — safe to ignore
     }
+
+    // Criar índices para chaves estrangeiras visando melhor performance
+    console.log('Criando índices de banco de dados para chaves estrangeiras...');
+    const indexQueries = [
+      'CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts (user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_post_attachments_post_id ON post_attachments (post_id)',
+      'CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes (post_id)',
+      'CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments (post_id)',
+      'CREATE INDEX IF NOT EXISTS idx_project_tasks_project_id ON project_tasks (project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments (task_id)',
+      'CREATE INDEX IF NOT EXISTS idx_task_attachments_task_id ON task_attachments (task_id)'
+    ];
+
+    for (const q of indexQueries) {
+      await connection.query(q);
+    }
+    console.log('Índices de banco de dados verificados/criados.');
 
     connection.release();
     console.log('✅ Banco de dados PostgreSQL inicializado com sucesso!');

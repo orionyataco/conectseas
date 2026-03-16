@@ -233,6 +233,7 @@ export interface TecticTicket {
   technician_name?: string;
   resolved_by?: number;
   resolver_name?: string;
+  resolver_avatar?: string;
   comments?: TecticComment[];
 }
 

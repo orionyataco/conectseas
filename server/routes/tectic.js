@@ -33,7 +33,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
     try {
         const [total] = await pool.query('SELECT COUNT(*) as count FROM tectic_tickets');
         const [active] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE status NOT IN ('Resolvido', 'Cancelado')");
-        const [resolved] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE status = 'Resolvido'");
+        const [resolved] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE status = 'Resolvido' AND resolved_at >= CURRENT_DATE");
         const [urgent] = await pool.query("SELECT COUNT(*) as count FROM tectic_tickets WHERE priority IN ('Alta', 'Crítica') AND status != 'Resolvido'");
 
         const [byWeekday] = await pool.query("SELECT EXTRACT(DOW FROM created_at) as day, COUNT(*) as count FROM tectic_tickets GROUP BY day ORDER BY day");
@@ -136,7 +136,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
 router.get('/tickets', async (req, res) => {
     try {
         let query = `
-            SELECT t.*, u.name as requester_name, u.avatar as requester_avatar, u.department as requester_dept, a.name as technician_name, r.name as resolver_name
+            SELECT t.*, u.name as requester_name, u.avatar as requester_avatar, u.department as requester_dept, a.name as technician_name, r.name as resolver_name, r.avatar as resolver_avatar
             FROM tectic_tickets t
             JOIN users u ON t.user_id = u.id
             LEFT JOIN users a ON t.assigned_to = a.id
@@ -183,7 +183,7 @@ router.delete('/bulk', adminMiddleware, async (req, res) => {
 router.get('/tickets/:id', async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT t.*, u.name as requester_name, u.avatar as requester_avatar, u.email as requester_email, u.department as requester_dept, a.name as technician_name, r.name as resolver_name
+            SELECT t.*, u.name as requester_name, u.avatar as requester_avatar, u.email as requester_email, u.department as requester_dept, a.name as technician_name, r.name as resolver_name, r.avatar as resolver_avatar
             FROM tectic_tickets t
             JOIN users u ON t.user_id = u.id
             LEFT JOIN users a ON t.assigned_to = a.id

@@ -40,6 +40,7 @@ import {
     getUsers,
     toggleSubtask
 } from '../services/api';
+import { useMessenger } from './Messenger/MessengerContext';
 
 interface ProjectManagerProps {
     user: User;
@@ -61,6 +62,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
     const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+    const { socket } = useMessenger();
 
     // Permission helpers
     const getCurrentUserRole = () => {
@@ -150,6 +152,25 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
             loadProjectDetails(selectedProject.id);
         }
     }, [selectedProject]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleProjectUpdate = (data: any) => {
+            console.log('[Socket] Project update received:', data);
+            if (selectedProject && data.projectId === selectedProject.id) {
+                loadProjectDetails(selectedProject.id);
+            } else {
+                loadProjects();
+            }
+        };
+
+        socket.on('project_task_updated', handleProjectUpdate);
+
+        return () => {
+            socket.off('project_task_updated', handleProjectUpdate);
+        };
+    }, [socket, selectedProject?.id]);
 
     const loadProjects = async () => {
         try {
@@ -891,7 +912,7 @@ const NewProjectModal: React.FC<{
                         />
                     </div>
                     <div>
-                        <label htmlFor="projectDescription" className="block text-sm font-medium text-slate-700 mb-2">Descrição</label>
+                        <label htmlFor="projectDescription" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
                         <textarea
                             id="projectDescription"
                             name="projectDescription"
@@ -905,7 +926,7 @@ const NewProjectModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="projectPriority" className="block text-sm font-medium text-slate-700 mb-2">Prioridade</label>
+                            <label htmlFor="projectPriority" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prioridade</label>
                             <select
                                 id="projectPriority"
                                 name="projectPriority"
@@ -920,13 +941,13 @@ const NewProjectModal: React.FC<{
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="projectStatus" className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <label htmlFor="projectStatus" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status</label>
                             <select
                                 id="projectStatus"
                                 name="projectStatus"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             >
                                 <option value="active">Ativo</option>
                                 <option value="on_hold">Pausado</option>
@@ -937,13 +958,13 @@ const NewProjectModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="projectVisibility" className="block text-sm font-medium text-slate-700 mb-2">Visibilidade</label>
+                            <label htmlFor="projectVisibility" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Visibilidade</label>
                             <select
                                 id="projectVisibility"
                                 name="projectVisibility"
                                 value={formData.visibility}
                                 onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
                             >
                                 <option value="public">Público</option>
                                 <option value="private">Privado (Somente equipe selecionada)</option>
@@ -953,7 +974,7 @@ const NewProjectModal: React.FC<{
 
                     {formData.visibility === 'private' && (
                         <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-700">Selecionar Equipe</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Selecionar Equipe</label>
                             <div className="relative">
                                 <div className="flex flex-wrap gap-2 mb-2">
                                     {selectedMembers.map(id => {

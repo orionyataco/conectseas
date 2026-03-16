@@ -191,13 +191,32 @@ router.get('/feed', async (req, res) => {
     try {
         const [posts] = await pool.query(`
             SELECT p.id, p.user_id, 'post' as type, p.content, p.created_at, u.name as author_name, u.position as author_role, u.avatar as author_avatar, p.is_urgent,
-                   (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as like_count,
-                   (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) as comment_count
-            FROM posts p JOIN users u ON p.user_id = u.id
+                   COUNT(DISTINCT pl.id) as like_count,
+                   COUNT(DISTINCT pc.id) as comment_count
+            FROM posts p 
+            JOIN users u ON p.user_id = u.id
+            LEFT JOIN post_likes pl ON p.id = pl.post_id
+            LEFT JOIN post_comments pc ON p.id = pc.post_id
+            GROUP BY p.id, p.user_id, p.content, p.created_at, u.name, u.position, u.avatar, p.is_urgent
         `);
-        for (let post of posts) {
-            const [attachments] = await pool.query('SELECT * FROM post_attachments WHERE post_id = ? ORDER BY id', [post.id]);
-            post.attachments = attachments;
+
+        if (posts.length > 0) {
+            const postIds = posts.map(p => p.id);
+            // Fetch all attachments for these posts in one query
+            const [allAttachments] = await pool.query('SELECT * FROM post_attachments WHERE post_id IN (?) ORDER BY id', [postIds]);
+            
+            // Group attachments by post_id in memory
+            const attachmentsByPost = allAttachments.reduce((acc, attachment) => {
+                if (!acc[attachment.post_id]) {
+                    acc[attachment.post_id] = [];
+                }
+                acc[attachment.post_id].push(attachment);
+                return acc;
+            }, {});
+
+            for (let post of posts) {
+                post.attachments = attachmentsByPost[post.id] || [];
+            }
         }
         const [events] = await pool.query(`
             SELECT DISTINCT e.id, e.user_id, 'event' as type, e.title as content, e.description, e.event_date, e.event_end_date, e.event_time, e.event_end_time, e.event_type, e.meeting_link, e.created_at, u.name as author_name, u.position as author_role, u.avatar as author_avatar

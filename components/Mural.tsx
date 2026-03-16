@@ -41,7 +41,9 @@ import {
   Globe,
   Cake,
   Award as AwardIcon,
-  Download
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -59,6 +61,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
   const [likedPosts, setLikedPosts] = React.useState<number[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
   const [previewItem, setPreviewItem] = React.useState<{ url: string; name: string } | null>(null);
+  const [previewGallery, setPreviewGallery] = React.useState<{ items: { url: string; name: string }[]; currentIndex: number } | null>(null);
 
   // Link preview state
   const [linkPreview, setLinkPreview] = React.useState<{ title: string | null; description: string | null; image: string | null; siteName: string | null; url: string } | null>(null);
@@ -145,6 +148,22 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Keyboard navigation for image gallery
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!previewGallery) return;
+      if (e.key === 'ArrowLeft') {
+        setPreviewGallery(prev => prev ? { ...prev, currentIndex: Math.max(0, Math.min(prev.currentIndex - 1, prev.items.length - 1)) } : null);
+      } else if (e.key === 'ArrowRight') {
+        setPreviewGallery(prev => prev ? { ...prev, currentIndex: Math.max(0, Math.min(prev.currentIndex + 1, prev.items.length - 1)) } : null);
+      } else if (e.key === 'Escape') {
+        setPreviewGallery(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [previewGallery]);
 
   // Mutations
   const createPostMutation = useMutation({
@@ -378,10 +397,26 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
           const target = e.target as HTMLElement;
           if (target.tagName === 'IMG') {
             const img = target as HTMLImageElement;
-            setPreviewItem({
-              url: img.src,
-              name: img.alt || 'Imagem do Mural'
-            });
+            const container = target.closest('.post-content');
+            if (container) {
+              const allImages = Array.from(container.querySelectorAll('img'));
+              const items = allImages.map(imgEl => ({
+                url: imgEl.src,
+                name: imgEl.alt || 'Imagem do Mural'
+              }));
+              const clickedIndex = allImages.indexOf(img);
+              if (items.length > 0) {
+                setPreviewGallery({
+                  items,
+                  currentIndex: clickedIndex !== -1 ? clickedIndex : 0
+                });
+              }
+            } else {
+              setPreviewItem({
+                url: img.src,
+                name: img.alt || 'Imagem do Mural'
+              });
+            }
           }
         }}
       />
@@ -987,10 +1022,19 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                         src={`/uploads/${img.filename}`}
                         className="w-full object-cover max-h-64 cursor-pointer"
                         alt={img.original_name}
-                        onDoubleClick={() => setPreviewItem({
-                          url: `/uploads/${img.filename}`,
-                          name: img.original_name
-                        })}
+                        onDoubleClick={() => {
+                          const images = post.attachments?.filter(a => a.is_image).map(a => ({
+                            url: `/uploads/${a.filename}`,
+                            name: a.original_name
+                          })) || [];
+                          const currentIndex = images.findIndex(i => i.url === `/uploads/${img.filename}`);
+                          if (images.length > 0) {
+                            setPreviewGallery({
+                              items: images,
+                              currentIndex: Math.max(0, currentIndex)
+                            });
+                          }
+                        }}
                       />
                     ))}
                   </div>
@@ -1242,6 +1286,85 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
 
           <div className="mt-6 text-white text-center">
             <h3 className="text-lg font-bold">{previewItem.name}</h3>
+          </div>
+        </div>
+      )}
+
+      {/* Gallery Modal */}
+      {previewGallery && previewGallery.items.length > 0 && (
+        <div
+          className="fixed inset-0 bg-black/95 flex flex-col items-center justify-center z-[100] p-4 animate-fadeIn user-select-none"
+          onClick={() => setPreviewGallery(null)}
+        >
+          <div className="absolute top-4 right-4 flex gap-4 z-[110]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement('a');
+                link.href = previewGallery.items[previewGallery.currentIndex].url;
+                link.download = previewGallery.items[previewGallery.currentIndex].name;
+                link.click();
+              }}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Download"
+            >
+              <Download size={24} />
+            </button>
+            <button
+              onClick={() => setPreviewGallery(null)}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              title="Fechar"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div
+            className="w-full max-w-6xl h-[85vh] flex items-center justify-center bg-transparent rounded-lg overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Gallery Navigation Controls */}
+            {previewGallery.items.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewGallery(prev => prev ? { ...prev, currentIndex: Math.max(0, prev.currentIndex - 1) } : null);
+                  }}
+                  disabled={previewGallery.currentIndex === 0}
+                  className="absolute left-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed z-[110]"
+                  title="Anterior (Seta Esquerda)"
+                >
+                  <ChevronLeft size={32} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewGallery(prev => prev ? { ...prev, currentIndex: Math.min(prev.items.length - 1, prev.currentIndex + 1) } : null);
+                  }}
+                  disabled={previewGallery.currentIndex === previewGallery.items.length - 1}
+                  className="absolute right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed z-[110]"
+                  title="Próxima (Seta Direita)"
+                >
+                  <ChevronRight size={32} />
+                </button>
+              </>
+            )}
+
+            <img
+              src={previewGallery.items[previewGallery.currentIndex].url}
+              alt={previewGallery.items[previewGallery.currentIndex].name}
+              className="max-w-full max-h-full object-contain shadow-2xl rounded-lg select-none"
+            />
+          </div>
+
+          <div className="mt-6 text-white text-center">
+            <h3 className="text-lg font-bold">{previewGallery.items[previewGallery.currentIndex].name}</h3>
+            {previewGallery.items.length > 1 && (
+              <p className="text-sm text-slate-400 mt-1 font-medium">
+                {previewGallery.currentIndex + 1} de {previewGallery.items.length}
+              </p>
+            )}
           </div>
         </div>
       )}

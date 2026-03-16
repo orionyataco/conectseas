@@ -992,7 +992,7 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                                 <td className="px-8 py-6">
                                     {ticket.status === 'Resolvido' ? (
                                         <div className="flex items-center gap-2">
-                                            <img src={`https://ui-avatars.com/api/?name=${ticket.resolver_name || 'TI'}`} className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                                            <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name || 'TI'}`} className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
                                             <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{ticket.resolver_name || 'Técnico'}</span>
                                         </div>
                                     ) : (
@@ -1173,7 +1173,7 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                             <section>
                                 <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Resolvido por</h4>
                                 <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-100 dark:border-green-800/50 shadow-sm">
-                                    <img src={`https://ui-avatars.com/api/?name=${ticket.resolver_name}`} className="w-12 h-12 rounded-full border border-white dark:border-slate-700" alt="" />
+                                    <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name}`} className="w-12 h-12 rounded-full border border-white dark:border-slate-700" alt="" />
                                     <div>
                                         <p className="font-bold text-green-800 dark:text-green-100">{ticket.resolver_name}</p>
                                         <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">Técnico Responsável</p>
@@ -1217,7 +1217,12 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                 {/* Right: Timeline/Chat */}
                 <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
                     <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Histórico e Interações</h3>
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Histórico e Interações</h3>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+                                Aberto em {new Date(ticket.created_at).toLocaleString('pt-BR')}
+                            </p>
+                        </div>
                         <div className="flex gap-2">
                             {['Aberto', 'Em Atendimento', 'Pendente'].map(s => (
                                 <button
