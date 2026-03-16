@@ -263,22 +263,24 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user || !e.target.files || e.target.files.length === 0) return;
 
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    if (currentFolder) {
-      formData.append('folderId', currentFolder.id.toString());
-    }
-
+    const filesToUpload = Array.from(e.target.files) as File[];
     setUploading(true);
+
     try {
-      await api.post('/drive/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      for (const file of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentFolder) {
+          formData.append('folderId', currentFolder.id.toString());
+        }
+        await api.post('/drive/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
       fetchContent();
       fetchStorageStats();
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      console.error('Failed to upload files:', error);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -568,6 +570,7 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
               <>
                 <input
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   onChange={handleFileUpload}
                   className="hidden"
