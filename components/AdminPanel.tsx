@@ -1065,29 +1065,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button
-                                        onClick={async () => {
-                                            const newRole = user.role === UserRole.ADMIN ? UserRole.USER : UserRole.ADMIN;
-                                            if (confirm(`Deseja alterar as permissões de ${user.name} para ${newRole}?`)) {
-                                                try {
-                                                    setSaving(true);
-                                                    const { updateUserRole } = await import('../services/api');
-                                                    await updateUserRole(user.id, newRole);
-                                                    setUsersList(usersList.map(u => u.id === user.id ? { ...u, role: newRole } : u));
-                                                    setSuccess('Permissão atualizada!');
-                                                    setTimeout(() => setSuccess(''), 3000);
-                                                } catch (err) {
-                                                    setError('Erro ao atualizar permissão.');
-                                                } finally {
-                                                    setSaving(false);
+                                    <div className="flex items-center justify-end gap-3">
+                                        <button
+                                            onClick={async () => {
+                                                const newRole = user.role === UserRole.ADMIN ? UserRole.USER : UserRole.ADMIN;
+                                                if (confirm(`Deseja alterar as permissões de ${user.name} para ${newRole}?`)) {
+                                                    try {
+                                                        setSaving(true);
+                                                        const { updateUserRole } = await import('../services/api');
+                                                        await updateUserRole(user.id, newRole);
+                                                        setUsersList(usersList.map(u => u.id === user.id ? { ...u, role: newRole } : u));
+                                                        setSuccess('Permissão atualizada!');
+                                                        setTimeout(() => setSuccess(''), 3000);
+                                                    } catch (err) {
+                                                        setError('Erro ao atualizar permissão.');
+                                                    } finally {
+                                                        setSaving(false);
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                        disabled={saving}
-                                        className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline disabled:opacity-50"
-                                    >
-                                        Alterar Permissão
-                                    </button>
+                                            }}
+                                            disabled={saving}
+                                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline disabled:opacity-50"
+                                        >
+                                            Alterar Permissão
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm(`ATENÇÃO: Deseja realmente excluir permanentemente o usuário ${user.name} E TODOS os seus registros (posts, arquivos, chamados, etc)? Esta ação é irreversível!`)) {
+                                                    try {
+                                                        setSaving(true);
+                                                        const { deleteAdminUser } = await import('../services/api');
+                                                        await deleteAdminUser(user.id);
+                                                        setUsersList(usersList.filter(u => u.id !== user.id));
+                                                        setSuccess('Usuário e todos os seus registros foram excluídos com sucesso.');
+                                                        setTimeout(() => setSuccess(''), 5000);
+                                                    } catch (err: any) {
+                                                        const errorMsg = err.response?.data?.error || 'Erro ao excluir usuário.';
+                                                        setError(errorMsg);
+                                                    } finally {
+                                                        setSaving(false);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={saving}
+                                            className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                            title="Excluir Usuário Permanentemente"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

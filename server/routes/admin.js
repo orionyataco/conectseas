@@ -241,6 +241,73 @@ router.put('/users/:id/position', async (req, res) => {
     }
 });
 
+// Delete user and all related records
+router.delete('/users/:id', async (req, res) => {
+    const { id } = req.params;
+
+    // Prevent deleting itself
+    if (String(id) === String(req.user.id)) {
+        return res.status(400).json({ error: 'Você não pode excluir sua própria conta aqui.' });
+    }
+
+    try {
+        console.log(`[ADMIN] Solicitando exclusão total do usuário ${id}`);
+
+        // Inicia a sequência de deleção (idealmente em transação, mas o pool.query é limitado no db.js atual)
+        // Usamos uma sequência que respeita dependências se possível, embora sem FK cascade ativado
+
+        // 1. Mural
+        await pool.query('DELETE FROM post_likes WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM post_comments WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM post_attachments WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)', [id]);
+        await pool.query('DELETE FROM posts WHERE user_id = ?', [id]);
+
+        // 2. Calendário
+        await pool.query('DELETE FROM event_shares WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM calendar_events WHERE user_id = ?', [id]);
+
+        // 3. Drive (TEC-Drive)
+        await pool.query('DELETE FROM user_files WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM folder_shares WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM user_folders WHERE user_id = ?', [id]);
+
+        // 4. Projetos
+        await pool.query('DELETE FROM project_members WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM task_assignees WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM task_comments WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM task_subtasks WHERE task_id IN (SELECT id FROM project_tasks WHERE created_by = ?)', [id]);
+        await pool.query('DELETE FROM project_tasks WHERE created_by = ? OR assigned_to = ?', [id, id]);
+        await pool.query('DELETE FROM projects WHERE owner_id = ?', [id]);
+
+        // 5. ServiceDesk
+        await pool.query('DELETE FROM tectic_ticket_comments WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM tectic_tickets WHERE user_id = ? OR assigned_to = ? OR resolved_by = ?', [id, id, id]);
+        await pool.query('DELETE FROM tectic_files WHERE uploaded_by = ?', [id]);
+
+        // 6. Mensagens e Notificações
+        await pool.query('DELETE FROM messenger_messages WHERE sender_id = ? OR receiver_id = ?', [id, id]);
+        await pool.query('DELETE FROM notifications WHERE user_id = ?', [id]);
+
+        // 7. Dashboard e Geral
+        await pool.query('DELETE FROM todos WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM user_notes WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM user_shortcuts WHERE user_id = ?', [id]);
+
+        // 8. O Usuário em si
+        const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        console.log(`[ADMIN] Usuário ${id} excluído com sucesso.`);
+        res.json({ success: true, message: 'Usuário e todos os seus registros foram removidos permanentemente.' });
+    } catch (error) {
+        console.error(`Erro ao excluir usuário ${id}:`, error);
+        res.status(500).json({ error: 'Erro interno ao processar a exclusão total do usuário.' });
+    }
+});
+
 // LDAP Test
 router.post('/ldap/test', async (req, res) => {
     try {

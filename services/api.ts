@@ -527,6 +527,16 @@ export const getAdminUsers = async () => {
     }
 };
 
+export const deleteAdminUser = async (userId: number) => {
+    try {
+        const response = await api.delete(`/admin/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error deleting user ${userId}:`, error);
+        throw error;
+    }
+};
+
 export const updateUserRole = async (userId: number, role: string) => {
     try {
         const response = await api.put(`/admin/users/${userId}/role`, { role });

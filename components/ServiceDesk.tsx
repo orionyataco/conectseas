@@ -18,6 +18,7 @@ import {
     Eye,
     Send,
     Bot,
+    MessageSquare,
     Download,
     FileText,
     Settings,
@@ -66,9 +67,12 @@ const ServiceDesk: React.FC = () => {
     const [lastSeenTicketId, setLastSeenTicketId] = useState<number | null>(null);
 
     const playAlert = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.warn('Erro ao reproduzir áudio:', e));
+        // Usando um som de "ding" mais limpo e curto
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'); 
+        audio.volume = 0.6;
+        audio.play().catch(e => {
+            console.warn('Bloqueio de áudio pelo navegador. Interaja com a página primeiro.', e);
+        });
     };
 
     useEffect(() => {
@@ -159,8 +163,17 @@ const ServiceDesk: React.FC = () => {
 
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => setIsSoundEnabled(!isSoundEnabled)}
-                        className={`p-2.5 rounded-xl transition-all ${isSoundEnabled ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'} hover:scale-105 active:scale-95`}
+                        onClick={() => {
+                            const newStatus = !isSoundEnabled;
+                            setIsSoundEnabled(newStatus);
+                            if (newStatus) {
+                                playAlert();
+                                toast.success('Notificações sonoras ativadas!', { icon: '🔊' });
+                            } else {
+                                toast.error('Notificações sonoras desativadas', { icon: '🔇' });
+                            }
+                        }}
+                        className={`p-2.5 rounded-xl transition-all ${isSoundEnabled ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'} hover:scale-105 active:scale-95 shadow-sm`}
                         title={isSoundEnabled ? 'Desativar som de alerta' : 'Ativar som de alerta'}
                     >
                         {isSoundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
@@ -797,8 +810,20 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
     const [filter, setFilter] = useState('Todos');
     const [selectedTickets, setSelectedTickets] = useState<number[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const filteredTickets = filter === 'Todos' ? tickets : tickets.filter(t => t.status === filter);
+    const filteredTickets = tickets.filter(t => {
+        const matchesStatus = filter === 'Todos' || t.status === filter;
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery ||
+            t.id.toString().includes(q) ||
+            (t.requester_name || '').toLowerCase().includes(q) ||
+            (t.requester_dept || '').toLowerCase().includes(q) ||
+            (t.title || '').toLowerCase().includes(q) ||
+            (t.priority || '').toLowerCase().includes(q) ||
+            (t.resolver_name || '').toLowerCase().includes(q);
+        return matchesStatus && matchesSearch;
+    });
 
     const toggleSelectAll = () => {
         if (selectedTickets.length === filteredTickets.length) {
@@ -860,6 +885,8 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                         <input
                             type="text"
                             placeholder="Buscar por ID, usuário..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500 dark:text-slate-100 dark:placeholder:text-slate-500"
                         />
                     </div>
@@ -1086,48 +1113,72 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-6xl h-full md:h-[90vh] md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-slate-200 dark:border-slate-800">
-                {/* Left: Info */}
-                <div className="w-full md:w-1/3 bg-slate-50 dark:bg-slate-800/50 p-6 md:p-10 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col gap-6 md:gap-8 overflow-y-auto">
-                    <div>
-                        <button onClick={onClose} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 mb-6 font-bold flex items-center gap-2">
-                            Sair do Dossiê
-                        </button>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-2">#{ticket.id} - {ticket.title}</h2>
-                        <StatusBadge status={ticket.status} />
+            <div className="bg-white dark:bg-slate-900 w-full max-w-6xl h-full md:h-[92vh] md:rounded-[4rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-slate-200 dark:border-slate-800 transition-all duration-300">
+                {/* Left: Info (Main Focus) */}
+                <div className="w-full md:w-[62%] bg-slate-50 dark:bg-slate-900 p-6 md:p-10 overflow-y-auto border-r border-slate-100 dark:border-slate-800 custom-scrollbar">
+                    <div className="flex flex-col mb-8">
+                        <div className="flex items-center gap-3 mb-3">
+                            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] inline-block py-1 px-3 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">Dossiê de Suporte</span>
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 mb-4 leading-tight tracking-tight italic">
+                            #{ticket.id} - {ticket.title}
+                        </h2>
+                        <div className="flex items-center flex-wrap gap-4">
+                            <StatusBadge status={ticket.status} />
+                            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden sm:block" />
+                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <button 
+                                    onClick={() => handleUpdateStatus('Aberto')} 
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticket.status === 'Aberto' ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-md' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                                >
+                                    Aberto
+                                </button>
+                                <button 
+                                    onClick={() => handleUpdateStatus('Em Atendimento')} 
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticket.status === 'Em Atendimento' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}
+                                >
+                                    Atendimento
+                                </button>
+                                <button 
+                                    onClick={() => handleUpdateStatus('Pendente')} 
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ticket.status === 'Pendente' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30' : 'text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/40'}`}
+                                >
+                                    Pendente
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         <section>
-                            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Solicitante</h4>
-                            <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-12 h-12 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                            <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Solicitante</h4>
+                            <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full">
+                                <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm" alt="" />
                                 <div>
-                                    <p className="font-bold text-slate-800 dark:text-slate-100">{ticket.requester_name}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{ticket.requester_email}</p>
-                                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1">{ticket.requester_dept}</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">{ticket.requester_name}</p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{ticket.requester_email} • <span className="font-black text-blue-600 dark:text-blue-400">{ticket.requester_dept}</span></p>
                                 </div>
                             </div>
                         </section>
 
                         <section>
-                            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Descrição do Problema</h4>
-                            <div className="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">{ticket.description}</p>
+                            <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Descrição do Problema</h4>
+                            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">{ticket.description}</p>
                             </div>
                         </section>
 
                         <section>
-                            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Classificação Técnica</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-center flex flex-col items-center">
-                                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Categoria</label>
+                            <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Classificação Técnica</h4>
+                            <div className="flex flex-wrap gap-3">
+                                <div className="p-3 md:p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-start shadow-sm w-fit min-w-[150px]">
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1 tracking-wider">Categoria</label>
                                     <select
                                         value={ticket.category}
                                         onChange={(e) => {
                                             updateTecticTicket(ticket.id, { category: e.target.value }).then(onUpdate);
                                         }}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer hover:border-blue-300 dark:hover:border-blue-500"
+                                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[13px] font-black focus:ring-0 outline-none cursor-pointer pr-4"
                                     >
                                         <option>Hardware</option>
                                         <option>Software</option>
@@ -1137,14 +1188,14 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                                         <option>Outros</option>
                                     </select>
                                 </div>
-                                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-center flex flex-col items-center">
-                                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Prioridade</label>
+                                <div className="p-3 md:p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-start shadow-sm w-fit min-w-[150px]">
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1 tracking-wider">Prioridade</label>
                                     <select
                                         value={ticket.priority}
                                         onChange={(e) => {
                                             updateTecticTicket(ticket.id, { priority: e.target.value }).then(onUpdate);
                                         }}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300 dark:hover:border-blue-500"
+                                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[13px] font-black focus:ring-0 outline-none cursor-pointer pr-4"
                                     >
                                         <option>Baixa</option>
                                         <option>Média</option>
@@ -1152,18 +1203,18 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                                         <option>Crítica</option>
                                     </select>
                                 </div>
-                                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-center flex flex-col items-center">
-                                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Nível</label>
+                                <div className="p-3 md:p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-start shadow-sm w-fit min-w-[240px]">
+                                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1 tracking-wider">Nível de Suporte</label>
                                     <select
                                         value={ticket.support_level}
                                         onChange={(e) => {
                                             updateTecticTicket(ticket.id, { support_level: e.target.value }).then(onUpdate);
                                         }}
-                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 text-xs font-black rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 transition-all outline-none text-center appearance-none cursor-pointer hover:border-blue-300 dark:hover:border-blue-500"
+                                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[13px] font-black focus:ring-0 outline-none cursor-pointer pr-4"
                                     >
-                                        <option>L1</option>
-                                        <option>L2</option>
-                                        <option>L3</option>
+                                        <option>L1 - Suporte Básico</option>
+                                        <option>L2 - Suporte Especializado</option>
+                                        <option>L3 - Engenharia / Especialista</option>
                                     </select>
                                 </div>
                             </div>
@@ -1171,12 +1222,12 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
 
                         {ticket.status === 'Resolvido' && ticket.resolver_name && (
                             <section>
-                                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Resolvido por</h4>
-                                <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-100 dark:border-green-800/50 shadow-sm">
-                                    <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name}`} className="w-12 h-12 rounded-full border border-white dark:border-slate-700" alt="" />
+                                <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Resolvido por</h4>
+                                <div className="flex items-center gap-4 p-4 bg-green-50/50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800/20 shadow-sm w-full">
+                                    <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name}`} className="w-10 h-10 rounded-full border border-white dark:border-slate-700 shadow-sm" alt="" />
                                     <div>
-                                        <p className="font-bold text-green-800 dark:text-green-100">{ticket.resolver_name}</p>
-                                        <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">Técnico Responsável</p>
+                                        <p className="text-sm font-bold text-green-900 dark:text-green-100 leading-tight">{ticket.resolver_name}</p>
+                                        <p className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.15em] mt-0.5">Técnico Responsável</p>
                                     </div>
                                 </div>
                             </section>
@@ -1214,45 +1265,57 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                     )}
                 </div>
 
-                {/* Right: Timeline/Chat */}
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
-                    <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Histórico e Interações</h3>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
-                                Aberto em {new Date(ticket.created_at).toLocaleString('pt-BR')}
-                            </p>
+                {/* Right: Timeline/Chat (Complementary) */}
+                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-l border-slate-100 dark:border-slate-800">
+                    <div className="p-8 md:p-12 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl shadow-inner">
+                                <MessageSquare size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none mb-1">Histórico</h3>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic">Interações Técnicas</p>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            {['Aberto', 'Em Atendimento', 'Pendente'].map(s => (
-                                <button
-                                    key={s}
-                                    onClick={() => handleUpdateStatus(s)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${ticket.status === s ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                >
-                                    {s}
-                                </button>
-                            ))}
-                        </div>
+                        <button 
+                            onClick={onClose} 
+                            className="bg-white dark:bg-slate-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-slate-400 px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-md border border-slate-100 dark:border-slate-700 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest group"
+                        >
+                            <Plus className="rotate-45 group-hover:rotate-135 transition-transform text-red-500 group-hover:text-white" size={18} />
+                            Sair
+                        </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-slate-50/30 dark:bg-slate-800/10">
+                    <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 bg-white dark:bg-slate-900 custom-scrollbar">
                         {ticket.comments?.map((c, i) => (
-                            <div key={i} className={`flex gap-4 ${c.user_role === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
-                                <img src={c.user_avatar} className="w-9 h-9 rounded-full shadow-sm border border-slate-100 dark:border-slate-700" alt="" />
-                                <div className={`max-w-[80%] flex flex-col ${c.user_role === 'ADMIN' ? 'items-end' : ''}`}>
-                                    <div className={`p-4 rounded-2xl shadow-sm border ${c.is_internal ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 italic dark:text-amber-200' :
-                                        c.user_role === 'ADMIN' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/10' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 dark:text-slate-200'
-                                        }`}>
-                                        {c.is_internal && <span className="block text-[8px] font-bold uppercase mb-2 dark:text-amber-400">Comentário Interno</span>}
-                                        <p className="text-sm leading-relaxed">{c.comment}</p>
+                            <div key={i} className={`flex gap-5 ${c.user_role === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
+                                <div className="flex-shrink-0">
+                                    <div className="p-1 rounded-full border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                        <img src={c.user_avatar || `https://ui-avatars.com/api/?name=${c.user_name}`} className="w-12 h-12 rounded-full border-2 border-white dark:border-slate-800 shadow-inner" alt="" />
                                     </div>
-                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-bold uppercase tracking-wider">
-                                        {c.user_name} • {new Date(c.created_at).toLocaleString()}
-                                    </span>
+                                </div>
+                                <div className={`max-w-[85%] flex flex-col ${c.user_role === 'ADMIN' ? 'items-end' : 'items-start'}`}>
+                                    <div className={`p-6 rounded-[2.5rem] shadow-sm border ${c.is_internal ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40 italic text-amber-900 dark:text-amber-200 rounded-tr-none' :
+                                        c.user_role === 'ADMIN' ? 'bg-slate-900 dark:bg-blue-600 text-white border-slate-800 dark:border-blue-500 shadow-xl shadow-slate-900/10 dark:shadow-blue-900/20 rounded-tr-none' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 dark:text-slate-100 shadow-sm rounded-tl-none'
+                                        }`}>
+                                        {c.is_internal && <div className="flex items-center gap-2 mb-3"><Bot size={16} className="text-amber-600" /><span className="text-[9px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Canal Interno SEAS</span></div>}
+                                        <p className="text-[13.5px] font-medium leading-relaxed break-words whitespace-pre-wrap">{c.comment}</p>
+                                    </div>
+                                    <div className={`mt-3 flex items-center gap-3 px-4 ${c.user_role === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-slate-200">{c.user_name}</span>
+                                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{new Date(c.created_at).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
+                        {(!ticket.comments || ticket.comments.length === 0) && (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 py-32">
+                                <div className="p-10 rounded-full bg-slate-50 dark:bg-slate-800/50 mb-8 border border-slate-100 dark:border-slate-800 border-dashed animate-pulse">
+                                    <MessageSquare size={80} className="opacity-10" />
+                                </div>
+                                <p className="text-xl font-black italic tracking-tight opacity-40 text-center max-w-[280px]">Inicie uma conversa ou registre uma nota técnica.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
