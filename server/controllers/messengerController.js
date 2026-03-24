@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import ogs from 'open-graph-scraper';
 
 export const getMessengerUsers = async (req, res) => {
     try {
@@ -80,5 +81,33 @@ export const getUnreadCount = async (req, res) => {
     } catch (error) {
         console.error('Error fetching unread count:', error);
         res.status(500).json({ error: 'Erro ao buscar contagem de mensagens pendentes' });
+    }
+};
+
+export const getLinkPreview = async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+
+    try {
+        const options = { url, timeout: 5000 };
+        const { result, error } = await ogs(options);
+
+        if (error) {
+            console.error('Erro ao buscar preview:', result);
+            return res.status(400).json({ error: 'Não foi possível buscar a prévia do link' });
+        }
+
+        const previewData = {
+            title: result.ogTitle || result.twitterTitle || '',
+            description: result.ogDescription || result.twitterDescription || '',
+            image: result.ogImage?.[0]?.url || result.twitterImage?.[0]?.url || '',
+            url: result.ogUrl || url,
+            siteName: result.ogSiteName || ''
+        };
+
+        res.json(previewData);
+    } catch (error) {
+        console.error('Erro ao buscar preview (catch):', error);
+        res.status(500).json({ error: 'Erro interno ao buscar prévia' });
     }
 };

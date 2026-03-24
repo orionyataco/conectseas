@@ -1058,5 +1058,10 @@ export const updateLastSeen = async () => {
     return response.data;
 };
 
+export const getLinkPreview = async (url: string) => {
+    const response = await api.get(`/messenger/link-preview?url=${encodeURIComponent(url)}`);
+    return response.data;
+};
+
 export default api;
 

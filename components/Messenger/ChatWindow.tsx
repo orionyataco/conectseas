@@ -4,6 +4,7 @@ import { useMessenger } from './MessengerContext';
 import { getMessageHistory } from '../../services/api';
 import { User } from '../../types';
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import LinkPreview from './LinkPreview';
 
 interface ChatWindowProps {
     user: User;
@@ -207,6 +208,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
         setNewMessage(prev => prev + emojiData.emoji);
     };
 
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    const renderMessageWithLinks = (text: string) => {
+        if (!text) return null;
+        
+        const parts = text.split(urlRegex);
+        const matches = text.match(urlRegex) || [];
+        
+        return (
+            <>
+                {parts.map((part, index) => {
+                    if (urlRegex.test(part)) {
+                        return (
+                            <a 
+                                key={index} 
+                                href={part} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="underline hover:no-underline font-medium break-all"
+                            >
+                                {part}
+                            </a>
+                        );
+                    }
+                    return <span key={index}>{part}</span>;
+                })}
+                {matches.length > 0 && <LinkPreview url={matches[0]} />}
+            </>
+        );
+    };
+
     if (isMinimized) {
         return (
             <div className="w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-t-xl shadow-lg cursor-pointer" onClick={onToggleMinimize}>
@@ -297,7 +329,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-700'
                                     }`}
                             >
-                                <p className="leading-relaxed">{msg.message}</p>
+                                <div className="leading-relaxed break-words">
+                                    {renderMessageWithLinks(msg.message)}
+                                </div>
                                 <div className={`flex items-center gap-1 mt-1 opacity-60 ${Number(msg.sender_id) === Number(user.id) ? 'justify-end' : 'justify-start'}`}>
                                     <span className="text-[9px]">
                                         {msg.is_edited ? '(Editado) ' : ''}{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
