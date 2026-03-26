@@ -1063,5 +1063,10 @@ export const getLinkPreview = async (url: string) => {
     return response.data;
 };
 
+export const saveFileToDrive = async (data: { fileName: string, fileUrl: string, fileType: string, fileSize: number, folderId?: number }) => {
+    const response = await api.post('/messenger/save-to-drive', data);
+    return response.data;
+};
+
 export default api;
 

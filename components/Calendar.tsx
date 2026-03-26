@@ -825,7 +825,14 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                               }}
                               className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-left transition-colors"
                             >
-                              <img src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}`} className="w-7 h-7 rounded-full" alt="" />
+                              <img 
+                                src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}`} 
+                                className="w-7 h-7 rounded-full" 
+                                alt="" 
+                                onError={(e) => {
+                                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`;
+                                }}
+                              />
                                <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">{u.name}</span>
                               {u.position && <span className="text-xs text-slate-400 ml-auto">{u.position}</span>}
                             </button>
@@ -850,7 +857,14 @@ const Calendar: React.FC<CalendarProps> = ({ user, searchContext, onClearContext
                         if (!found) return null;
                         return (
                           <div key={id} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full pl-1 pr-3 py-1">
-                            <img src={found.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}`} className="w-6 h-6 rounded-full" alt="" />
+                            <img 
+                              src={found.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}`} 
+                              className="w-6 h-6 rounded-full" 
+                              alt="" 
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(found.name)}&background=random`;
+                              }}
+                            />
                             <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">{found.name.split(' ')[0]}</span>
                             <button
                               type="button"

@@ -961,7 +961,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSettingsChange }) => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
                                             {user.avatar ? (
-                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                                <img 
+                                                    src={user.avatar} 
+                                                    alt={typeof user.name === 'string' ? user.name : "User"} 
+                                                    className="w-full h-full object-cover" 
+                                                    onError={(e) => {
+                                                        const nameParam = typeof user.name === 'string' ? encodeURIComponent(user.name) : 'User';
+                                                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${nameParam}&background=random`;
+                                                    }}
+                                                />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold">
                                                     {(typeof user.name === 'string' ? user.name : String(user.name)).charAt(0)}

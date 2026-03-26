@@ -388,8 +388,12 @@ const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, setTarge
             >
               <img
                 src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-                alt={user.name}
+                alt={typeof user.name === 'string' ? user.name : "User"}
                 className="w-10 h-10 min-w-[40px] rounded-full border border-slate-200 dark:border-slate-700 group-hover:border-blue-200 dark:group-hover:border-blue-500 transition-colors object-cover"
+                onError={(e) => {
+                  const nameParam = typeof user.name === 'string' ? encodeURIComponent(user.name) : 'User';
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${nameParam}&background=random`;
+                }}
               />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">

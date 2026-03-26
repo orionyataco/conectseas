@@ -1,5 +1,11 @@
 import pool from '../db.js';
 import ogs from 'open-graph-scraper';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const getMessengerUsers = async (req, res) => {
     try {
@@ -109,5 +115,56 @@ export const getLinkPreview = async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar preview (catch):', error);
         res.status(500).json({ error: 'Erro interno ao buscar prévia' });
+    }
+};
+
+export const uploadMessengerFile = async (req, res) => {
+    const userId = req.user.id;
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+
+    try {
+        const fileData = {
+            url: `/uploads/${file.filename}`,
+            name: file.originalname,
+            type: file.mimetype,
+            size: file.size
+        };
+        res.json(fileData);
+    } catch (error) {
+        console.error('Erro ao processar upload no messenger:', error);
+        res.status(500).json({ error: 'Erro ao processar upload' });
+    }
+};
+
+export const saveMessengerFileToDrive = async (req, res) => {
+    const userId = req.user.id;
+    const { fileName, fileUrl, fileType, fileSize, folderId } = req.body;
+
+    if (!fileUrl) return res.status(400).json({ error: 'URL do arquivo é obrigatória' });
+
+    try {
+        // fileUrl is usually /uploads/filename
+        const filename = path.basename(fileUrl);
+        const sourcePath = path.join(__dirname, '../uploads', filename);
+        const newFilename = `${Date.now()}-${filename}`;
+        const destPath = path.join(__dirname, '../uploads', newFilename);
+        
+        try {
+            await fs.copyFile(sourcePath, destPath);
+        } catch (cpErr) {
+            console.error('Erro ao copiar arquivo:', cpErr);
+            throw cpErr;
+        }
+        
+        await pool.query(
+            'INSERT INTO user_files (user_id, folder_id, filename, original_name, file_type, file_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+            [userId, folderId || null, newFilename, fileName, fileType, fileSize]
+        );
+
+        res.json({ success: true, message: 'Arquivo salvo no seu drive com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao salvar arquivo no drive:', error);
+        res.status(500).json({ error: 'Erro ao salvar arquivo no drive' });
     }
 };

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
+import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2, Check, CheckCheck, Paperclip, Download, HardDrive, File as FileIcon } from 'lucide-react';
 import { useMessenger } from './MessengerContext';
-import { getMessageHistory } from '../../services/api';
+import { getMessageHistory, saveFileToDrive } from '../../services/api';
 import { User } from '../../types';
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import LinkPreview from './LinkPreview';
+import toast from 'react-hot-toast';
 
 interface ChatWindowProps {
     user: User;
@@ -22,9 +23,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
     const [isLoading, setIsLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+    // Resizing state
+    const [size, setSize] = useState({ width: 320, height: 450 });
+    const [isResizing, setIsResizing] = useState(false);
+    const chatRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -208,6 +216,108 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
         setNewMessage(prev => prev + emojiData.emoji);
     };
 
+    const handleFileClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !socket) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/messenger/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.url) {
+                const messageData = {
+                    sender_id: user.id,
+                    receiver_id: contact.id,
+                    message: '',
+                    file_url: data.url,
+                    file_name: data.name,
+                    file_type: data.type,
+                    file_size: data.size,
+                    created_at: new Date().toISOString()
+                };
+                socket.emit('send_message', messageData);
+                setMessages(prev => [...prev, { ...messageData, id: Date.now() }]);
+                setTimeout(scrollToBottom, 50);
+            }
+        } catch (error) {
+            console.error('Erro no upload:', error);
+            toast.error('Erro ao enviar arquivo');
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleSaveToDrive = async (msg: any) => {
+        try {
+            await saveFileToDrive({
+                fileName: msg.file_name,
+                fileUrl: msg.file_url,
+                fileType: msg.file_type,
+                fileSize: msg.file_size
+            });
+            toast.success('Arquivo salvo no seu diretório!');
+        } catch (error) {
+            toast.error('Erro ao salvar no diretório');
+        }
+    };
+
+    const startResizing = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing || !chatRef.current) return;
+            
+            const newWidth = Math.max(300, window.innerWidth - e.clientX);
+            const newHeight = Math.max(300, window.innerHeight - e.clientY);
+            
+            // Adjust based on fixed positioning from bottom right
+            // We want to calculate how far the mouse is from the bottom right corner
+            // but the chat is pinned to bottom right.
+            // Simplified: use delta or direct mouse position relative to window
+            const rect = chatRef.current.getBoundingClientRect();
+            const width = window.innerWidth - e.clientX;
+            const height = window.innerHeight - e.clientY;
+            
+            setSize({
+                width: Math.min(600, Math.max(300, width)),
+                height: Math.min(800, Math.max(350, height))
+            });
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing]);
+
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
     const renderMessageWithLinks = (text: string) => {
@@ -247,8 +357,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                         <div className="relative shrink-0">
                             <img
                                 src={contact.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(contact.name)}&background=random`}
-                                alt={contact.name}
+                                alt={typeof contact.name === 'string' ? contact.name : "Contact"}
                                 className="w-6 h-6 rounded-full object-cover border border-white/20"
+                                onError={(e) => {
+                                    const nameParam = typeof contact.name === 'string' ? encodeURIComponent(contact.name) : 'Contact';
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${nameParam}&background=random`;
+                                }}
                             />
                             {contact.isOnline && (
                                 <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border-2 border-blue-600"></div>
@@ -270,15 +384,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
     }
 
     return (
-        <div className="w-80 h-[450px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+        <div 
+            ref={chatRef}
+            style={{ width: `${size.width}px`, height: `${size.height}px` }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 relative"
+        >
+            {/* Resize Handle */}
+            <div 
+                className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-50 hover:bg-blue-500/10 rounded-tl-2xl"
+                onMouseDown={startResizing}
+            ></div>
             {/* Header */}
             <div className="p-4 border-b border-slate-100 bg-blue-600 text-white rounded-t-2xl flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
                         <img
                             src={contact.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(contact.name)}&background=random`}
-                            alt={contact.name}
+                            alt={typeof contact.name === 'string' ? contact.name : "Contact"}
                             className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                            onError={(e) => {
+                                const nameParam = typeof contact.name === 'string' ? encodeURIComponent(contact.name) : 'Contact';
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${nameParam}&background=random`;
+                            }}
                         />
                         {contact.isOnline && (
                             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-blue-600"></div>
@@ -330,7 +457,42 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                                     }`}
                             >
                                 <div className="leading-relaxed break-words">
-                                    {renderMessageWithLinks(msg.message)}
+                                    {msg.file_url ? (
+                                        <div className="flex flex-col gap-2 p-1 min-w-[150px]">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="p-2 bg-white/20 rounded-lg">
+                                                    <FileIcon size={20} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold truncate text-[11px]">{msg.file_name}</p>
+                                                    <p className="text-[9px] opacity-70">{(msg.file_size / 1024).toFixed(1)} KB</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <a 
+                                                    href={msg.file_url} 
+                                                    download={msg.file_name}
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-[10px] font-bold"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    <Download size={12} />
+                                                    Baixar
+                                                </a>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSaveToDrive(msg);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-[10px] font-bold"
+                                                >
+                                                    <HardDrive size={12} />
+                                                    Salvar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        renderMessageWithLinks(msg.message)
+                                    )}
                                 </div>
                                 <div className={`flex items-center gap-1 mt-1 opacity-60 ${Number(msg.sender_id) === Number(user.id) ? 'justify-end' : 'justify-start'}`}>
                                     <span className="text-[9px]">
@@ -377,6 +539,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                     >
                         <Smile size={20} />
                     </button>
+                    <button
+                        type="button"
+                        onClick={handleFileClick}
+                        disabled={isUploading}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all disabled:opacity-50"
+                        title="Anexar arquivo"
+                    >
+                        {isUploading ? <Loader2 size={20} className="animate-spin" /> : <Paperclip size={20} />}
+                    </button>
+                    <input 
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
                     <input
                         type="text"
                         value={newMessage}

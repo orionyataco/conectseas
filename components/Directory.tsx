@@ -962,7 +962,14 @@ const Directory: React.FC<DirectoryProps> = ({ user, searchContext, onClearConte
                       <div key={share.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                         <div className="flex items-center gap-3">
                           {share.user_avatar ? (
-                            <img src={share.user_avatar} alt={share.user_name} className="w-8 h-8 rounded-full object-cover" />
+                            <img 
+                              src={share.user_avatar} 
+                              alt={share.user_name} 
+                              className="w-8 h-8 rounded-full object-cover" 
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(share.user_name)}&background=random`;
+                              }}
+                            />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold text-xs uppercase">
                               {share.user_name.charAt(0)}

@@ -631,6 +631,10 @@ const initDB = async () => {
         sender_id INTEGER NOT NULL,
         receiver_id INTEGER NOT NULL,
         message TEXT NOT NULL,
+        file_url TEXT,
+        file_name TEXT,
+        file_type TEXT,
+        file_size BIGINT,
         is_read INTEGER DEFAULT 0,
         is_edited INTEGER DEFAULT 0,
         is_deleted INTEGER DEFAULT 0,
@@ -641,6 +645,15 @@ const initDB = async () => {
       )
     `);
     console.log('Tabela "messenger_messages" verificada/criada.');
+
+    // Migration: Add file columns to messenger_messages
+    const [msgColCheck] = await connection.query(
+      "SELECT 1 FROM information_schema.columns WHERE table_name = 'messenger_messages' AND column_name = 'file_url'"
+    );
+    if (msgColCheck.length === 0) {
+      await connection.query('ALTER TABLE messenger_messages ADD COLUMN file_url TEXT, ADD COLUMN file_name TEXT, ADD COLUMN file_type TEXT, ADD COLUMN file_size BIGINT');
+      console.log('Colunas de arquivo adicionadas à tabela messenger_messages.');
+    }
 
     // Migration: Add drive_folder_id to projects if missing
     const [colCheck] = await connection.query(

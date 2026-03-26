@@ -638,7 +638,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
         </div>
 
         <div className="p-4 flex gap-4">
-          <img src={user?.avatar || 'https://picsum.photos/seed/me/100'} className="w-12 h-12 rounded-full" alt="avatar" />
+          <img 
+            src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Me')}&background=random`} 
+            className="w-12 h-12 rounded-full" 
+            alt="avatar"
+            onError={(e) => {
+              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Me')}&background=random`;
+            }}
+          />
           <div className="flex-1 space-y-2">
             {activeTab === 'write' ? (
               <>
@@ -702,7 +709,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                                 onClick={() => handleMentionSelect(u)}
                                 className="w-full flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-left group"
                               >
-                                <img src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`} className="w-8 h-8 rounded-full" alt="" />
+                                <img 
+                                  src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`} 
+                                  className="w-8 h-8 rounded-full" 
+                                  alt="" 
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`;
+                                  }}
+                                />
                                 <div>
                                   <p className="text-sm font-bold text-slate-700 group-hover:text-blue-700">{u.name}</p>
                                   <p className="text-[10px] text-slate-400">{u.role}</p>
@@ -945,7 +959,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <img src={post.author_avatar || `https://picsum.photos/seed/${post.author_name}/100`} className="w-10 h-10 rounded-full" alt={post.author_name} />
+                    <img 
+                      src={post.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author_name)}&background=random`} 
+                      className="w-10 h-10 rounded-full" 
+                      alt={post.author_name} 
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author_name)}&background=random`;
+                      }}
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-slate-800 dark:text-slate-100">{post.author_name}</h4>
@@ -1090,7 +1111,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                   <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                     {comments[post.id]?.map(comment => (
                       <div key={comment.id} className="flex gap-3">
-                        <img src={comment.author_avatar || `https://picsum.photos/seed/${comment.author_name}/50`} className="w-8 h-8 rounded-full" alt={comment.author_name} />
+                        <img 
+                          src={comment.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author_name)}&background=random`} 
+                          className="w-8 h-8 rounded-full" 
+                          alt={comment.author_name} 
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author_name)}&background=random`;
+                          }}
+                        />
                         <div className="flex-1">
                           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
                             <div className="flex items-center justify-between mb-1">
@@ -1150,7 +1178,14 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
 
                     {/* Add Comment */}
                     <div className="flex gap-3 pt-2">
-                      <img src={user?.avatar || 'https://picsum.photos/seed/me/50'} className="w-8 h-8 rounded-full" alt="avatar" />
+                      <img 
+                        src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Me')}&background=random`} 
+                        className="w-8 h-8 rounded-full" 
+                        alt="avatar"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Me')}&background=random`;
+                        }}
+                      />
                       <div className="flex-1 flex gap-2">
                         <input
                           type="text"

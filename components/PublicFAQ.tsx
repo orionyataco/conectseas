@@ -99,7 +99,14 @@ const PublicFAQ: React.FC = () => {
                                     </div>
                                     <div className="mt-8 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <img src={`https://ui-avatars.com/api/?name=${article.author_name}`} className="w-8 h-8 rounded-full border border-slate-200" alt="" />
+                                            <img 
+                                                src={article.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(article.author_name)}&background=random`} 
+                                                className="w-8 h-8 rounded-full border border-slate-200" 
+                                                alt="" 
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(article.author_name)}&background=random`;
+                                                }}
+                                            />
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Autor</p>
                                                 <p className="text-xs font-bold text-slate-800">{article.author_name}</p>

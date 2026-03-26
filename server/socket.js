@@ -61,22 +61,26 @@ export const initSocket = (server) => {
         });
 
         socket.on('send_message', async (data) => {
-            const { sender_id, receiver_id, message } = data;
+            const { sender_id, receiver_id, message, file_url, file_name, file_type, file_size } = data;
             const numericSenderId = Number(sender_id);
             const numericReceiverId = Number(receiver_id);
 
             try {
                 // Save to database
                 const [result] = await pool.query(
-                    'INSERT INTO messenger_messages (sender_id, receiver_id, message) VALUES (?, ?, ?)',
-                    [numericSenderId, numericReceiverId, message]
+                    'INSERT INTO messenger_messages (sender_id, receiver_id, message, file_url, file_name, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [numericSenderId, numericReceiverId, message || '', file_url || null, file_name || null, file_type || null, file_size || null]
                 );
 
                 const newMessage = {
                     id: result.insertId,
                     sender_id: numericSenderId,
                     receiver_id: numericReceiverId,
-                    message,
+                    message: message || '',
+                    file_url: file_url || null,
+                    file_name: file_name || null,
+                    file_type: file_type || null,
+                    file_size: file_size || null,
                     created_at: new Date().toISOString(),
                     is_read: 0
                 };

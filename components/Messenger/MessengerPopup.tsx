@@ -152,8 +152,12 @@ const MessengerPopup: React.FC<MessengerPopupProps> = ({ onClose }) => {
                                                 <div className="relative shrink-0">
                                                     <img
                                                         src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`}
-                                                        alt={u.name}
+                                                        alt={typeof u.name === 'string' ? u.name : "User"}
                                                         className="w-8 h-8 rounded-full object-cover border border-slate-100"
+                                                        onError={(e) => {
+                                                            const nameParam = typeof u.name === 'string' ? encodeURIComponent(u.name) : 'User';
+                                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${nameParam}&background=random`;
+                                                        }}
                                                     />
                                                     {u.isOnline && (
                                                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>

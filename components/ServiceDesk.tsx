@@ -359,7 +359,14 @@ const KnowledgeBase = () => {
                             </p>
                         </div>
                         <div className="flex items-center gap-2 pt-4 border-t border-slate-50 dark:border-slate-800 mt-auto relative z-10 pointer-events-none">
-                            <img src={`https://ui-avatars.com/api/?name=${article.author_name}`} className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                            <img 
+                                src={article.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(article.author_name)}&background=random`} 
+                                className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" 
+                                alt="" 
+                                onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(article.author_name)}&background=random`;
+                                }}
+                            />
                             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{article.author_name}</span>
                         </div>
                     </div>
@@ -398,7 +405,14 @@ const KnowledgeBase = () => {
                         </div>
                         <div className="p-8 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between mt-auto">
                             <div className="flex items-center gap-3">
-                                <img src={`https://ui-avatars.com/api/?name=${selectedArticle.author_name}`} className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-700 shadow-sm" alt="" />
+                                <img 
+                                  src={selectedArticle.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedArticle.author_name)}&background=random`} 
+                                  className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-700 shadow-sm" 
+                                  alt="" 
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedArticle.author_name)}&background=random`;
+                                  }}
+                                />
                                 <div>
                                     <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">{selectedArticle.author_name}</p>
                                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">{new Date(selectedArticle.created_at).toLocaleString('pt-BR')}</p>
@@ -929,7 +943,14 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                                 <StatusBadge status={ticket.status} />
                             </div>
                             <div className="flex items-center gap-3 mb-4">
-                                <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                                <img 
+                                  src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`} 
+                                  className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700" 
+                                  alt="" 
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`;
+                                  }}
+                                />
                                 <div>
                                     <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{ticket.requester_name}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">{ticket.requester_dept || 'N/A'}</p>
@@ -998,7 +1019,14 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                                 </td>
                                 <td className="px-8 py-6">
                                     <div className="flex items-center gap-3">
-                                        <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                                        <img 
+                                          src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`} 
+                                          className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700" 
+                                          alt="" 
+                                          onError={(e) => {
+                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`;
+                                          }}
+                                        />
                                         <div>
                                             <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{ticket.requester_name}</p>
                                         </div>
@@ -1019,7 +1047,14 @@ const TicketManagement: React.FC<{ tickets: TecticTicket[], loading: boolean, on
                                 <td className="px-8 py-6">
                                     {ticket.status === 'Resolvido' ? (
                                         <div className="flex items-center gap-2">
-                                            <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name || 'TI'}`} className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" alt="" />
+                                            <img 
+                                              src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.resolver_name || 'TI')}&background=random`} 
+                                              className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700" 
+                                              alt="" 
+                                              onError={(e) => {
+                                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.resolver_name || 'TI')}&background=random`;
+                                              }}
+                                            />
                                             <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{ticket.resolver_name || 'Técnico'}</span>
                                         </div>
                                     ) : (
@@ -1153,7 +1188,14 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                         <section>
                             <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Solicitante</h4>
                             <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full">
-                                <img src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${ticket.requester_name}`} className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm" alt="" />
+                                <img 
+                                    src={ticket.requester_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`} 
+                                    className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm" 
+                                    alt="" 
+                                    onError={(e) => {
+                                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.requester_name)}&background=random`;
+                                    }}
+                                />
                                 <div>
                                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">{ticket.requester_name}</p>
                                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{ticket.requester_email} • <span className="font-black text-blue-600 dark:text-blue-400">{ticket.requester_dept}</span></p>
@@ -1224,7 +1266,14 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                             <section>
                                 <h4 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Resolvido por</h4>
                                 <div className="flex items-center gap-4 p-4 bg-green-50/50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800/20 shadow-sm w-full">
-                                    <img src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${ticket.resolver_name}`} className="w-10 h-10 rounded-full border border-white dark:border-slate-700 shadow-sm" alt="" />
+                                    <img 
+                                        src={ticket.resolver_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.resolver_name)}&background=random`} 
+                                        className="w-10 h-10 rounded-full border border-white dark:border-slate-700 shadow-sm" 
+                                        alt="" 
+                                        onError={(e) => {
+                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.resolver_name)}&background=random`;
+                                        }}
+                                    />
                                     <div>
                                         <p className="text-sm font-bold text-green-900 dark:text-green-100 leading-tight">{ticket.resolver_name}</p>
                                         <p className="text-[9px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.15em] mt-0.5">Técnico Responsável</p>
@@ -1274,7 +1323,17 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                             </div>
                             <div>
                                 <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none mb-1">Histórico</h3>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic">Interações Técnicas</p>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest italic mb-2">Interações Técnicas</p>
+                                <div className="flex flex-col gap-0.5 mt-1">
+                                    <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium">
+                                        Criado em: <span className="font-bold text-slate-700 dark:text-slate-300">{new Date(ticket.created_at).toLocaleString('pt-BR')}</span>
+                                    </p>
+                                    {ticket.resolved_at && (
+                                        <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium">
+                                            Resolvido em: <span className="font-bold text-slate-700 dark:text-slate-300">{new Date(ticket.resolved_at).toLocaleString('pt-BR')}</span>
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <button 
@@ -1291,7 +1350,14 @@ const TicketDossierModal: React.FC<{ ticket: TecticTicket, onClose: () => void, 
                             <div key={i} className={`flex gap-5 ${c.user_role === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
                                 <div className="flex-shrink-0">
                                     <div className="p-1 rounded-full border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-                                        <img src={c.user_avatar || `https://ui-avatars.com/api/?name=${c.user_name}`} className="w-12 h-12 rounded-full border-2 border-white dark:border-slate-800 shadow-inner" alt="" />
+                                        <img 
+                                            src={c.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.user_name)}&background=random`} 
+                                            className="w-12 h-12 rounded-full border-2 border-white dark:border-slate-800 shadow-inner" 
+                                            alt="" 
+                                            onError={(e) => {
+                                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.user_name)}&background=random`;
+                                            }}
+                                        />
                                     </div>
                                 </div>
                                 <div className={`max-w-[85%] flex flex-col ${c.user_role === 'ADMIN' ? 'items-end' : 'items-start'}`}>

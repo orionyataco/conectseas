@@ -753,6 +753,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ user }) => {
                                         src={project.owner_avatar}
                                         alt={project.owner_name}
                                         className="w-6 h-6 rounded-full border border-slate-200"
+                                        onError={(e) => {
+                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(project.owner_name || 'U')}&background=random`;
+                                        }}
                                     />
                                 ) : (
                                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
@@ -1017,7 +1020,13 @@ const NewProjectModal: React.FC<{
                                                         className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2 border-b last:border-0"
                                                     >
                                                         {u.avatar ? (
-                                                            <img src={u.avatar} className="w-6 h-6 rounded-full" />
+                                                            <img 
+                                                                src={u.avatar} 
+                                                                className="w-6 h-6 rounded-full" 
+                                                                onError={(e) => {
+                                                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=random`;
+                                                                }}
+                                                            />
                                                         ) : (
                                                             <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px]">
                                                                 {u.name.charAt(0)}
@@ -1254,9 +1263,16 @@ const NewTaskModal: React.FC<{
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 {selectedUsers.map(user => (
                                     <div key={user.id} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-full border border-blue-200">
-                                        {user.avatar ? (
-                                            <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full" />
-                                        ) : (
+                                                {user.avatar ? (
+                                                    <img 
+                                                        src={user.avatar} 
+                                                        alt={user.name} 
+                                                        className="w-5 h-5 rounded-full" 
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=random`;
+                                                        }}
+                                                    />
+                                                ) : (
                                             <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-semibold">
                                                 {user.name.charAt(0)}
                                             </div>
@@ -1301,9 +1317,16 @@ const NewTaskModal: React.FC<{
                                                 onClick={() => handleUserSelect(user)}
                                                 className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-100 last:border-b-0"
                                             >
-                                                {user.avatar ? (
-                                                    <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
-                                                ) : (
+                                                    {user.avatar ? (
+                                                        <img 
+                                                            src={user.avatar} 
+                                                            alt={user.name} 
+                                                            className="w-8 h-8 rounded-full" 
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=random`;
+                                                            }}
+                                                        />
+                                                    ) : (
                                                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
                                                         {user.name.charAt(0)}
                                                     </div>
