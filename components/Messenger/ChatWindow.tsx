@@ -3,7 +3,7 @@ import { X, Send, Smile, Loader2, Minus, Maximize2, Pencil, Trash2, Check, Check
 import { useMessenger } from './MessengerContext';
 import { getMessageHistory, saveFileToDrive } from '../../services/api';
 import { User } from '../../types';
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import EmojiPicker, { Theme, EmojiClickData, EmojiStyle } from 'emoji-picker-react';
 import LinkPreview from './LinkPreview';
 import toast from 'react-hot-toast';
 
@@ -526,6 +526,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, contact, isMinimized, onC
                             onEmojiClick={onEmojiClick}
                             autoFocusSearch={false}
                             theme={Theme.LIGHT}
+                            emojiStyle={EmojiStyle.NATIVE}
                             width={300}
                             height={400}
                         />

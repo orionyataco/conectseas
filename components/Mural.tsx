@@ -46,7 +46,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import EmojiPicker, { Theme, EmojiClickData, EmojiStyle } from 'emoji-picker-react';
 
 interface MuralProps {
   user: User | null;
@@ -668,6 +668,7 @@ const Mural: React.FC<MuralProps> = ({ user }) => {
                           onEmojiClick={onEmojiClick}
                           autoFocusSearch={false}
                           theme={document.documentElement.classList.contains('dark') ? Theme.DARK : Theme.LIGHT}
+                          emojiStyle={EmojiStyle.NATIVE}
                           width={300}
                           height={400}
                         />
