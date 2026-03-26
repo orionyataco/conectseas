@@ -45,6 +45,13 @@ const PORT = process.env.PORT || 3002;
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
+            "default-src": ["'self'"],
+            "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+            "img-src": ["'self'", "data:", "blob:", "https://cdn.jsdelivr.net", "https://ui-avatars.com", "https://images.unsplash.com"],
+            "connect-src": ["'self'", "ws:", "wss:"],
+            "media-src": ["'self'", "blob:"],
             "upgrade-insecure-requests": null,
         },
     },
