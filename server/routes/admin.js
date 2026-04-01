@@ -3,6 +3,7 @@ import pool from '../db.js';
 import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
 import adminMiddleware from '../middleware/admin.js';
+import { deleteFileFromDisk, deleteMultipleFilesFromDisk } from '../services/fileService.js';
 
 const router = express.Router();
 
@@ -253,7 +254,37 @@ router.delete('/users/:id', async (req, res) => {
     try {
         console.log(`[ADMIN] Solicitando exclusão total do usuário ${id}`);
 
-        // Inicia a sequência de deleção (idealmente em transação, mas o pool.query é limitado no db.js atual)
+        // ANTES DE DELETAR DOS BANCO, PRECISAMOS COLETAR E DELETAR ARQUIVOS FÍSICOS
+        const filesToDelete = [];
+
+        // 0. Avatar do usuário
+        const [userAvatar] = await pool.query('SELECT avatar FROM users WHERE id = ?', [id]);
+        if (userAvatar[0]?.avatar && userAvatar[0].avatar.startsWith('/uploads/')) {
+            filesToDelete.push(userAvatar[0].avatar);
+        }
+
+        // 1. Arquivos do Mural (Anexos de posts do usuário)
+        const [muralFiles] = await pool.query('SELECT filename FROM post_attachments WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)', [id]);
+        muralFiles.forEach(f => filesToDelete.push(f.filename));
+
+        // 2. Arquivos do Drive (TEC-Drive)
+        const [driveFiles] = await pool.query('SELECT filename FROM user_files WHERE user_id = ?', [id]);
+        driveFiles.forEach(f => filesToDelete.push(f.filename));
+
+        // 3. Arquivos do Tectic (Suporte)
+        const [tecticFiles] = await pool.query('SELECT file_path FROM tectic_files WHERE uploaded_by = ?', [id]);
+        tecticFiles.forEach(f => filesToDelete.push(f.file_path));
+
+        // 4. Arquivos do Messenger
+        const [msgFiles] = await pool.query('SELECT file_url FROM messenger_messages WHERE (sender_id = ? OR receiver_id = ?) AND file_url LIKE "/uploads/%"', [id, id]);
+        msgFiles.forEach(f => filesToDelete.push(f.file_url));
+
+        // Efetuar a deleção física
+        if (filesToDelete.length > 0) {
+            await deleteMultipleFilesFromDisk([...new Set(filesToDelete)]); // usar Set para evitar duplicatas
+        }
+
+        // Inicia a sequência de deleção (mantendo a lógica original do banco)
         // Usamos uma sequência que respeita dependências se possível, embora sem FK cascade ativado
 
         // 1. Mural

@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../db.js';
 import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
+import { deleteFileFromDisk } from '../services/fileService.js';
 
 const router = express.Router();
 
@@ -64,6 +65,12 @@ router.put('/:id', [authMiddleware, upload.single('avatar')], async (req, res) =
         if (position !== undefined) { updates.push('position = ?'); params.push(position); }
 
         if (avatarPath) {
+            // Se um novo avatar foi enviado, deletar o antigo do disco para economizar espaço
+            const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [id]);
+            const oldAvatar = currentUser[0]?.avatar;
+            if (oldAvatar && oldAvatar.startsWith('/uploads/')) {
+                await deleteFileFromDisk(oldAvatar);
+            }
             updates.push('avatar = ?');
             params.push(avatarPath);
         }

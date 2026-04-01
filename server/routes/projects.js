@@ -4,6 +4,7 @@ import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
 import { sendNotification } from '../services/notificationService.js';
 import { getIO } from '../socket.js';
+import { deleteMultipleFilesFromDisk } from '../services/fileService.js';
 
 const router = express.Router();
 
@@ -184,6 +185,30 @@ router.delete('/:id', async (req, res) => {
         if (String(projects[0].owner_id) !== String(requesterId) && requesterRole !== 'ADMIN') {
             return res.status(403).json({ error: 'Não autorizado' });
         }
+        // Antes de deletar o projeto, precisamos encontrar todos os arquivos (user_files) associados a ele e suas tarefas
+        // para deletá-los fisicamente e do banco (liberando quota)
+        const [filesToDelete] = await pool.query(`
+            SELECT DISTINCT uf.id, uf.filename 
+            FROM user_files uf
+            WHERE uf.id IN (
+                SELECT file_id FROM project_attachments WHERE project_id = ?
+                UNION
+                SELECT file_id FROM task_attachments ta JOIN project_tasks pt ON ta.task_id = pt.id WHERE pt.project_id = ?
+            )
+        `, [id, id]);
+
+        if (filesToDelete && filesToDelete.length > 0) {
+            const fileIds = filesToDelete.map(f => f.id);
+            const filenames = filesToDelete.map(f => f.filename);
+            
+            // Deletar fisicamente
+            await deleteMultipleFilesFromDisk(filenames);
+            
+            // Deletar do banco (isso vai cascade para project_attachments e task_attachments se necessário, 
+            // embora o projeto inteiro vá ser deletado logo depois)
+            await pool.query('DELETE FROM user_files WHERE id IN (?)', [fileIds]);
+        }
+
         await pool.query('DELETE FROM projects WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {
@@ -539,6 +564,19 @@ router.delete('/tasks/:id', async (req, res) => {
             if (!ok) return;
         }
         const projectId = taskRows[0].project_id;
+
+        // Buscar arquivos físicos da tarefa para apagar antes de remover a tarefa
+        const [filesToDelete] = await pool.query('SELECT uf.id, uf.filename FROM task_attachments ta JOIN user_files uf ON ta.file_id = uf.id WHERE ta.task_id = ?', [id]);
+        
+        if (filesToDelete && filesToDelete.length > 0) {
+            const fileIds = filesToDelete.map(f => f.id);
+            const filenames = filesToDelete.map(f => f.filename);
+            
+            // Deletar fisicamente e do banco
+            await deleteMultipleFilesFromDisk(filenames);
+            await pool.query('DELETE FROM user_files WHERE id IN (?)', [fileIds]);
+        }
+
         await pool.query('DELETE FROM project_tasks WHERE id = ?', [id]);
         res.json({ success: true });
 

@@ -3,6 +3,7 @@ import pool from '../db.js';
 import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
 import { processMentions } from '../services/notificationService.js';
+import { deleteMultipleFilesFromDisk } from '../services/fileService.js';
 
 const router = express.Router();
 
@@ -69,6 +70,13 @@ router.delete('/posts/:id', async (req, res) => {
         if (requesterRole !== 'ADMIN' && posts[0].user_id !== requesterId) {
             return res.status(403).json({ error: 'Não autorizado' });
         }
+
+        // Deletar arquivos físicos dos anexos vinculados a este post
+        const [attachments] = await pool.query('SELECT filename FROM post_attachments WHERE post_id = ?', [id]);
+        if (attachments && attachments.length > 0) {
+            await deleteMultipleFilesFromDisk(attachments.map(a => a.filename));
+        }
+
         await pool.query('DELETE FROM posts WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (error) {

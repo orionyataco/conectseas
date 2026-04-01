@@ -3,6 +3,7 @@ import pool from '../db.js';
 import upload from '../middleware/upload.js';
 import authMiddleware from '../middleware/auth.js';
 import { sendNotification } from '../services/notificationService.js';
+import { deleteFileFromDisk, deleteMultipleFilesFromDisk } from '../services/fileService.js';
 
 const router = express.Router();
 
@@ -109,7 +110,30 @@ router.delete('/folders/:id', async (req, res) => {
         const [folders] = await pool.query('SELECT user_id FROM user_folders WHERE id = ?', [id]);
         if (folders.length === 0) return res.status(404).json({ error: 'Pasta não encontrada' });
         if (folders[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
-        await pool.query('DELETE FROM user_folders WHERE id = ?', [id]);
+
+        // Antes de apagar a pasta, precisamos apagar todos os arquivos dentro dela (e recursivamente se houver subpastas)
+        // Para simplificar, vou buscar todos os arquivos que têm esta pasta como ancestral, ou apenas um nível.
+        // O sistema parece usar parent_id. 
+        
+        async function deleteFolderContents(folderId) {
+            // 1. Apagar arquivos desta pasta
+            const [files] = await pool.query('SELECT filename FROM user_files WHERE folder_id = ?', [folderId]);
+            if (files.length > 0) {
+                await deleteMultipleFilesFromDisk(files.map(f => f.filename));
+                await pool.query('DELETE FROM user_files WHERE folder_id = ?', [folderId]);
+            }
+            
+            // 2. Apagar subpastas recursivamente
+            const [subfolders] = await pool.query('SELECT id FROM user_folders WHERE parent_id = ?', [folderId]);
+            for (const sf of subfolders) {
+                await deleteFolderContents(sf.id);
+            }
+
+            // 3. Apagar a pasta em si do banco
+            await pool.query('DELETE FROM user_folders WHERE id = ?', [folderId]);
+        }
+
+        await deleteFolderContents(id);
         res.json({ success: true });
     } catch (error) {
         console.error('Erro ao deletar pasta:', error);
@@ -184,17 +208,7 @@ router.delete('/files/:id', async (req, res) => {
         if (files.length === 0) return res.status(404).json({ error: 'Arquivo não encontrado' });
         if (files[0].user_id != userId) return res.status(403).json({ error: 'Não autorizado' });
 
-        const fs = await import('fs/promises');
-        const path = await import('path');
-        const { fileURLToPath } = await import('url');
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-
-        try {
-            await fs.unlink(path.join(__dirname, '../../uploads', files[0].filename));
-        } catch (fsErr) {
-            console.warn('Physical file not found or could not be deleted:', fsErr.message);
-        }
+        await deleteFileFromDisk(files[0].filename);
 
         await pool.query('DELETE FROM user_files WHERE id = ?', [id]);
         res.json({ success: true });
