@@ -118,11 +118,53 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
     }
 });
 
+// Helper function to cleanup notifications
+async function cleanupNotifications(userId = null) {
+    try {
+        if (userId) {
+            // Se um userId for fornecido, limpa as lidas mantendo apenas as 3 últimas para esse usuário
+            await pool.query(`
+                DELETE FROM notifications 
+                WHERE user_id = ? 
+                AND is_read = 1 
+                AND id NOT IN (
+                    SELECT id FROM (
+                        SELECT id FROM notifications 
+                        WHERE user_id = ? AND is_read = 1 
+                        ORDER BY created_at DESC LIMIT 3
+                    ) tmp
+                )
+            `, [userId, userId]);
+        } else {
+            // Limpeza global periódica: Apaga lidas com mais de 30 dias
+            await pool.query("DELETE FROM notifications WHERE is_read = 1 AND created_at < NOW() - INTERVAL '30 days'");
+            
+            // Garante um limite global de 50 notificações por usuário (mesmo não lidas) para performance
+            await pool.query(`
+                DELETE FROM notifications 
+                WHERE id NOT IN (
+                    SELECT id FROM (
+                        SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) as rn
+                        FROM notifications
+                    ) tmp
+                    WHERE rn <= 50
+                )
+            `);
+        }
+    } catch (error) {
+        console.error('Erro na limpeza de notificações:', error);
+    }
+}
+
 app.put('/api/notifications/:id/read', authMiddleware, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
     try {
         await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', [id, userId]);
+        
+        // Aciona limpeza para manter apenas as 3 últimas lidas
+        await cleanupNotifications(userId);
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Error marking notification as read:', error);
@@ -134,6 +176,10 @@ app.put('/api/notifications/read-all', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     try {
         await pool.query('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId]);
+        
+        // Aciona limpeza para manter apenas as 3 últimas lidas
+        await cleanupNotifications(userId);
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Error marking all notifications as read:', error);
@@ -183,4 +229,9 @@ app.use((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
+    
+    // Inicia rotina de limpeza global a cada 6 horas
+    setInterval(() => cleanupNotifications(), 6 * 60 * 60 * 1000);
+    // Executa uma vez no início após 1 minuto para não pesar no boot
+    setTimeout(() => cleanupNotifications(), 60000);
 });

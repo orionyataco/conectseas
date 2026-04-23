@@ -11,8 +11,8 @@ export async function testLDAPConnection(ldapConfig) {
             });
         }
 
-        const port = ldapConfig.port || 389;
-        const protocol = port === 636 ? 'ldaps' : 'ldap';
+        const port = ldapConfig.port || 636;
+        const protocol = (port === 636 || ldapConfig.useTls) ? 'ldaps' : 'ldap';
         const url = `${protocol}://${ldapConfig.host}:${port}`;
 
         console.log(`[LDAP TEST] Connecting to: ${url}`);
@@ -25,7 +25,7 @@ export async function testLDAPConnection(ldapConfig) {
 
         if (protocol === 'ldaps') {
             clientOptions.tlsOptions = {
-                rejectUnauthorized: false
+                rejectUnauthorized: process.env.LDAP_REJECT_UNAUTHORIZED === 'false' ? false : true
             };
         }
 

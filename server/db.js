@@ -15,7 +15,7 @@ const pgPool = new Pool({
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } : undefined
 });
 
 pgPool.on('error', (err) => {
@@ -46,36 +46,50 @@ const pool = {
       return val;
     });
 
+    let convertedSql = '';
     let flatParams = [];
     let paramIndex = 1;
     let paramsCursor = 0;
+    let inString = false;
+    let quoteChar = '';
 
-    // Expande ? para $1, $2, $3... Se for um array no param (ex: IN(?)), expande para $1, $2
-    let convertedSql = trimmed;
-    const parts = trimmed.split('?');
-    if (parts.length - 1 !== normalizedParams.length && !normalizedParams.some(Array.isArray)) {
-      // Fallback or warning if params count doesn't match and no arrays are involved
-      // This is a simple check, since array expansion changes the count
-    }
-
-    convertedSql = '';
-    for (let i = 0; i < parts.length - 1; i++) {
-      const val = normalizedParams[paramsCursor++];
-      convertedSql += parts[i];
-      if (Array.isArray(val)) {
-        if (val.length === 0) {
-          convertedSql += 'NULL';
-        } else {
-          const placeholders = val.map(() => `$${paramIndex++}`).join(', ');
-          convertedSql += placeholders;
-          flatParams.push(...val);
+    for (let i = 0; i < trimmed.length; i++) {
+      const char = trimmed[i];
+      if (inString) {
+        convertedSql += char;
+        if (char === quoteChar) {
+          // Verifica se é uma aspa escapada (ex: '')
+          if (i + 1 < trimmed.length && trimmed[i + 1] === quoteChar) {
+            convertedSql += trimmed[i + 1];
+            i++;
+          } else {
+            inString = false;
+          }
         }
       } else {
-        convertedSql += `$${paramIndex++}`;
-        flatParams.push(val);
+        if (char === "'" || char === '"') {
+          inString = true;
+          quoteChar = char;
+          convertedSql += char;
+        } else if (char === '?') {
+          const val = normalizedParams[paramsCursor++];
+          if (Array.isArray(val)) {
+            if (val.length === 0) {
+              convertedSql += 'NULL';
+            } else {
+              const placeholders = val.map(() => `$${paramIndex++}`).join(', ');
+              convertedSql += placeholders;
+              flatParams.push(...val);
+            }
+          } else {
+            convertedSql += `$${paramIndex++}`;
+            flatParams.push(val);
+          }
+        } else {
+          convertedSql += char;
+        }
       }
     }
-    convertedSql += parts[parts.length - 1];
 
     try {
       const startTime = Date.now();

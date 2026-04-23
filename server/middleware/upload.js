@@ -16,9 +16,33 @@ const storage = multer.diskStorage({
     }
 });
 
+const allowedExtensions = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.jpg', '.jpeg', '.png', '.csv', '.zip'];
+const allowedMimeTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'image/jpeg',
+    'image/png',
+    'text/csv',
+    'application/zip',
+    'application/x-zip-compressed'
+];
+
 const upload = multer({
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            return cb(new Error(`Extensão ${ext} não permitida`), false);
+        }
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            return cb(new Error(`Tipo MIME ${file.mimetype} não permitido`), false);
+        }
+        cb(null, true);
+    }
 });
 
 export default upload;

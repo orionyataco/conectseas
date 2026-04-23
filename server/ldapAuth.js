@@ -13,8 +13,13 @@ export async function authenticateLDAP(username, password, ldapConfig) {
         }
 
         // Determine protocol (LDAPS for port 636, LDAP for 389)
-        const port = ldapConfig.port || 389;
-        const protocol = port === 636 ? 'ldaps' : 'ldap';
+        const port = ldapConfig.port || 636;
+        const protocol = (port === 636 || ldapConfig.useTls) ? 'ldaps' : 'ldap';
+        
+        if (protocol !== 'ldaps' && process.env.NODE_ENV === 'production') {
+            return resolve({ success: false, reason: 'LDAPS is required in production environment' });
+        }
+        
         const url = `${protocol}://${ldapConfig.host}:${port}`;
 
         console.log(`Connecting to LDAP: ${url}`);
@@ -25,10 +30,10 @@ export async function authenticateLDAP(username, password, ldapConfig) {
             connectTimeout: 10000
         };
 
-        // For LDAPS, add TLS options to handle self-signed certificates
+        // For LDAPS, add TLS options
         if (protocol === 'ldaps') {
             clientOptions.tlsOptions = {
-                rejectUnauthorized: false // Accept self-signed certificates
+                rejectUnauthorized: process.env.LDAP_REJECT_UNAUTHORIZED === 'false' ? false : true
             };
         }
 
@@ -92,7 +97,7 @@ export async function authenticateLDAP(username, password, ldapConfig) {
 
                     if (protocol === 'ldaps') {
                         userClientOptions.tlsOptions = {
-                            rejectUnauthorized: false
+                            rejectUnauthorized: process.env.LDAP_REJECT_UNAUTHORIZED === 'false' ? false : true
                         };
                     }
 
